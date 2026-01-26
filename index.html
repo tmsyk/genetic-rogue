@@ -3,74 +3,148 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Genetic Rogue Ver.6 - Hack & Slash</title>
+    <title>Genetic Rogue Ver.11.1 - Auto Equip</title>
     <style>
         :root {
-            --bg-color: #050505; --panel-bg: #111; --text-color: #ddd;
-            --accent-color: #00ff9d; --danger-color: #ff4d4d;
+            --bg-color: #050505; --panel-bg: #111; --text-color: #ccc;
+            --accent-color: #00ff9d; --danger-color: #ff4d4d; --warn-color: #ff9900; --info-color: #3498db;
             --tier1: #bdc3c7; --tier2: #3498db; --tier3: #9b59b6; --tier4: #e74c3c; --tier5: #f1c40f;
-            --rar-common: #ccc; --rar-rare: #00ff9d; --rar-legend: #f1c40f;
-            --log-font: 'Consolas', monospace;
+            --rar-bad: #7f8c8d; --rar-common: #ccc; --rar-good: #2ecc71; --rar-rare: #3498db; --rar-legend: #f1c40f; --rar-god: #e056fd;
+            --elem-fire: #e74c3c; --elem-water: #3498db; --elem-wind: #2ecc71; --elem-earth: #d35400; --elem-light: #f1c40f; --elem-dark: #9b59b6;
+            --log-font: 'Helvetica Neue', Arial, sans-serif;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: var(--bg-color); color: var(--text-color); font-family: 'Segoe UI', sans-serif; height: 100vh; display: flex; flex-direction: column; }
+        body { background: var(--bg-color); color: var(--text-color); font-family: var(--log-font); height: 100vh; display: flex; flex-direction: column; }
         
+        /* Layout */
         #app { display: grid; grid-template-rows: 50px 1fr 60px; height: 100%; max-width: 1400px; margin: 0 auto; width: 100%; }
         header { background: var(--panel-bg); border-bottom: 1px solid #333; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; }
         main { display: grid; grid-template-columns: 350px 1fr; gap: 1px; background: #222; overflow: hidden; }
         @media (max-width: 800px) { main { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; } }
 
         /* Logs */
-        #log-panel { background: var(--bg-color); padding: 10px; overflow-y: auto; font-family: var(--log-font); font-size: 11px; line-height: 1.4; }
-        .log-entry { margin-bottom: 2px; padding-left: 5px; border-left: 2px solid #333; }
+        #log-panel { background: var(--bg-color); padding: 10px; overflow-y: auto; font-size: 12px; line-height: 1.5; }
+        .log-entry { margin-bottom: 3px; padding-left: 5px; border-left: 2px solid #333; }
         .log-combat { color: #888; border-color: #444; }
         .log-dmg { color: #aaa; }
         .log-victory { color: #fff; border-color: var(--accent-color); }
-        .log-rare { color: var(--rar-rare); border-color: var(--rar-rare); }
-        .log-legend { color: var(--rar-legend); border-color: var(--rar-legend); font-weight: bold; }
-        .log-defeat { color: var(--danger-color); border-color: var(--danger-color); }
+        .log-item { color: var(--rar-rare); border-color: var(--rar-rare); }
+        .log-equip { color: var(--info-color); border-color: var(--info-color); }
+        .log-defeat { color: var(--danger-color); border-color: var(--danger-color); font-weight: bold; }
+        .log-elite { color: var(--warn-color); border-color: var(--warn-color); }
+        .log-trap { color: var(--warn-color); border-color: var(--danger-color); }
+        .log-skill { color: var(--info-color); border-color: var(--info-color); }
+        .log-sys { color: #888; border-color: #888; font-style: italic; }
+        .log-err { color: var(--danger-color); border-color: var(--danger-color); }
+        .log-lvlup { color: #e67e22; border-color: #e67e22; font-weight: bold; }
 
         /* Party Cards */
-        #party-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 8px; padding: 10px; }
-        .char-card { background: #1a1a1a; border: 1px solid #333; padding: 8px; border-radius: 4px; font-size: 11px; }
-        .char-header { display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 2px; }
-        .bar-wrap { background: #333; height: 4px; margin: 2px 0; position:relative; }
+        #party-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 8px; padding: 10px; overflow-y: auto; }
+        .char-card { background: #1a1a1a; border: 1px solid #333; padding: 10px; border-radius: 4px; font-size: 11px; position: relative; transition: all 0.2s; cursor: pointer; }
+        .char-card:hover { border-color: #666; background: #222; transform: translateY(-2px); }
+        .char-card.dead { opacity: 0.6; filter: grayscale(100%); border-color: #333 !important; cursor: not-allowed; }
+        .char-card.dead::after { content: "戦闘不能"; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: var(--danger-color); font-weight: bold; font-size: 20px; border: 2px solid var(--danger-color); padding: 5px 10px; transform: rotate(-10deg); }
+        
+        .char-header { display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 4px; align-items: center; }
+        .job-label { font-size: 10px; padding: 1px 4px; border-radius: 3px; background: #333; color: #fff; }
+        .personality-label { color: var(--warn-color); margin-right: 5px; font-size: 10px; }
+        
+        /* Bars */
+        .bar-container { display: flex; flex-direction: column; gap: 2px; margin: 5px 0; }
+        .bar-row { display: flex; align-items: center; gap: 5px; font-size: 9px; color: #888; }
+        .bar-wrap { flex: 1; background: #333; height: 6px; border-radius: 3px; overflow: hidden; position: relative; }
         .bar-val { height: 100%; transition: width 0.3s; }
         .hp-bar { background: var(--accent-color); }
         .exp-bar { background: #3498db; }
         
+        /* Elements */
+        .elem-icon { display:inline-block; width:12px; height:12px; border-radius:50%; margin-right:2px; vertical-align:middle; position: relative; top: -1px; }
+        .el-fire { background: var(--elem-fire); box-shadow: 0 0 4px var(--elem-fire); }
+        .el-water { background: var(--elem-water); box-shadow: 0 0 4px var(--elem-water); }
+        .el-wind { background: var(--elem-wind); box-shadow: 0 0 4px var(--elem-wind); }
+        .el-earth { background: var(--elem-earth); box-shadow: 0 0 4px var(--elem-earth); }
+        .el-light { background: var(--elem-light); box-shadow: 0 0 4px var(--elem-light); }
+        .el-dark { background: var(--elem-dark); box-shadow: 0 0 4px var(--elem-dark); }
+
         /* Stats & Equip */
-        .stat-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 2px; color: #aaa; margin-top: 4px; }
+        .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; color: #aaa; margin-top: 6px; }
+        .stat-val span { color: #fff; }
         .stat-bonus { color: var(--accent-color); }
-        .equip-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-top: 6px; border-top: 1px solid #333; padding-top: 4px; }
-        .equip-slot { background: #111; padding: 3px; border-radius: 2px; color: #666; font-size: 10px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-        .equip-active { color: #ddd; }
-        .rar-2 { color: var(--rar-rare); } .rar-3 { color: var(--rar-legend); } .rar-4, .rar-5 { color: #e74c3c; text-shadow: 0 0 2px #f00; }
+        
+        .equip-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-top: 8px; border-top: 1px solid #333; padding-top: 6px; }
+        .equip-slot { background: #111; padding: 4px; border-radius: 2px; color: #666; font-size: 10px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; cursor: help; }
+        .equip-active { color: #ddd; border: 1px solid #333; }
+        
+        /* Skills */
+        .skill-list { display: flex; flex-wrap: wrap; gap: 2px; margin-top: 5px; }
+        .skill-tag { background: #002233; color: #3498db; padding: 1px 4px; font-size: 9px; border-radius: 2px; border: 1px solid #004466; }
+
+        /* Rarity Colors */
+        .rar-1 { color: var(--rar-bad); } .rar-2 { color: var(--rar-common); } .rar-3 { color: var(--rar-good); } 
+        .rar-4 { color: var(--rar-rare); } .rar-5 { color: var(--rar-legend); text-shadow: 0 0 2px rgba(241, 196, 15, 0.5); }
+        .rar-6 { color: var(--rar-god); text-shadow: 0 0 3px rgba(224, 86, 253, 0.6); }
 
         /* Footer & Modals */
         footer { background: var(--panel-bg); border-top: 1px solid #333; display: flex; align-items: center; justify-content: center; gap: 10px; }
-        button { background: #333; color: #fff; border: 1px solid #555; padding: 8px 15px; cursor: pointer; border-radius: 3px; }
-        button:hover { background: #444; }
-        button:disabled { opacity: 0.3; }
+        button { background: #333; color: #fff; border: 1px solid #555; padding: 8px 16px; cursor: pointer; border-radius: 3px; font-size: 12px; transition: all 0.2s; }
+        button:hover:not(:disabled) { background: #444; border-color: #777; }
+        button:disabled { opacity: 0.3; cursor: not-allowed; }
+        button.primary { background: #004433; border-color: var(--accent-color); color: var(--accent-color); }
+        button.danger { border-color: var(--danger-color); color: var(--danger-color); }
+        button.icon-btn { font-size: 18px; padding: 5px 10px; border: none; background: transparent; color: #666; }
+        button.icon-btn:hover { color: #fff; background: transparent; }
         
-        .modal-overlay { position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.85); display: none; z-index: 99; justify-content: center; align-items: center; }
-        .modal-box { background: #111; width: 90%; max-width: 900px; max-height: 90vh; border: 1px solid #444; display: flex; flex-direction: column; }
-        .modal-body { padding: 15px; overflow-y: auto; }
-        .grid-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
-        .list-item { padding: 8px; border: 1px solid #333; cursor: pointer; background: #161616; position: relative; }
-        .list-item:hover { border-color: #666; }
+        .modal-overlay { position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.85); display: none; z-index: 99; justify-content: center; align-items: center; backdrop-filter: blur(2px); }
+        .modal-box { background: #111; width: 95%; max-width: 1000px; max-height: 90vh; border: 1px solid #444; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.8); }
+        .modal-header { padding: 15px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; background: #1a1a1a; }
+        .modal-body { padding: 20px; overflow-y: auto; flex: 1; }
+        
+        .grid-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+        .list-item { padding: 10px; border: 1px solid #333; cursor: pointer; background: #161616; transition: border-color 0.2s; position: relative; }
+        .list-item:hover { border-color: #666; background: #1f1f1f; }
         .list-item.selected { border-color: var(--accent-color); background: #002211; }
+        .list-item.disabled { opacity: 0.4; cursor: not-allowed; background: #222; }
+        .err-msg { color: var(--danger-color); font-size: 10px; display: block; margin-top: 2px; }
+        
+        .tab-group { display: flex; gap: 5px; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 10px; }
+        .tab-btn { background: transparent; border: none; color: #666; cursor: pointer; font-weight: bold; padding: 5px 10px; }
+        .tab-btn.active { color: var(--accent-color); border-bottom: 2px solid var(--accent-color); }
+        
+        .settings-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #222; }
+
+        /* Detail Modal */
+        .detail-header { display: flex; gap: 20px; align-items: center; border-bottom: 1px solid #333; padding-bottom: 15px; margin-bottom: 15px; }
+        .detail-title h2 { margin: 0; font-size: 24px; color: #fff; }
+        .detail-meta { color: #888; font-size: 12px; }
+        .detail-sections { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        @media (max-width: 600px) { .detail-sections { grid-template-columns: 1fr; } }
+        .detail-row { display: flex; justify-content: space-between; border-bottom: 1px solid #222; padding: 8px 0; font-size: 13px; }
+        .detail-row span:last-child { color: #fff; font-weight: bold; }
+        .detail-label { color: #888; }
+        .detail-eq-row { display: flex; justify-content: space-between; align-items: center; padding: 8px; background: #1a1a1a; margin-bottom: 5px; border-radius: 4px; }
+        
+        /* Rule Book */
+        .rule-section { margin-bottom: 20px; }
+        .rule-section h4 { color: var(--accent-color); margin-bottom: 5px; border-bottom: 1px solid #333; padding-bottom: 5px; }
+        .rule-section p, .rule-section li { color: #ccc; font-size: 13px; line-height: 1.6; }
+        .rule-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 5px; }
+        .rule-table th, .rule-table td { border: 1px solid #444; padding: 5px; text-align: left; }
     </style>
 </head>
 <body>
 
 <div id="app">
     <header>
-        <div>🧬 Genetic Rogue <span style="color:#666;">Ver.6.0</span></div>
-        <div style="font-size:14px;">
-            <span style="color:#aaa;">Floor:</span> <span id="floor-display" style="font-weight:bold; font-size:16px;">1</span>
-            <span style="color:#666; margin-left:5px;" id="floor-progress">(0/10)</span>
-            <span style="margin-left:20px; color:var(--accent-color); font-weight:bold;">Helix: <span id="helix-display">0</span></span>
+        <div>🧬 Genetic Rogue <span style="color:#666;">Ver.11.1</span></div>
+        <div style="font-size:14px; display:flex; align-items:center; gap:15px;">
+            <div>
+                <span style="color:#aaa;">階層:</span> <span id="floor-display" style="font-weight:bold; font-size:16px;">1</span>
+                <span id="floor-progress" style="color:#666; font-size:12px; margin-left:5px;">(0/30)</span>
+                <span style="color:#666; font-size:12px;">(最深: <span id="max-floor">1</span>)</span>
+            </div>
+            <div style="font-weight:bold; color:var(--accent-color);">Helix: <span id="helix-display">0</span></div>
+            <button class="icon-btn" id="btn-help" title="ルール">❓</button>
+            <button class="icon-btn" id="btn-settings" title="設定">⚙️</button>
         </div>
     </header>
 
@@ -82,517 +156,1186 @@
     </main>
 
     <footer>
-        <button id="btn-explore">探索開始</button>
+        <div style="display:flex; align-items:center; gap:5px; margin-right:10px;">
+            <span style="font-size:11px; color:#888;">開始階層:</span>
+            <select id="floor-select" style="background:#222; color:#fff; border:1px solid #444; padding:5px; border-radius:3px;">
+                <option value="1">1F</option>
+            </select>
+        </div>
+        <button id="btn-explore" class="primary">探索開始</button>
         <button id="btn-return" disabled>帰還</button>
         <span style="width:20px"></span>
-        <button id="btn-lab">ラボ</button>
+        <button id="btn-lab">ラボ / ギルド</button>
         <button id="btn-inv">装備</button>
     </footer>
 </div>
 
-<!-- Modals -->
+<!-- Modal: Lab & Guild -->
 <div id="modal-lab" class="modal-overlay">
     <div class="modal-box">
-        <div style="padding:10px; border-bottom:1px solid #333; display:flex; justify-content:space-between;">
-            <h3>Genetic Lab</h3> <button class="close-modal">Close</button>
+        <div class="modal-header">
+            <h3>遺伝子ラボ & ギルド</h3> <button class="close-modal">閉じる</button>
         </div>
         <div class="modal-body">
-            <div style="margin-bottom:10px;">
-                <button id="act-breed" disabled>配合 (50G)</button>
-                <button id="act-party" disabled>編成/解除</button>
-                <button id="act-hire">雇用 (30G)</button>
+            <div class="tab-group">
+                <button class="tab-btn active" onclick="UI.switchTab('lab-roster')">編成リスト</button>
+                <button class="tab-btn" onclick="UI.switchTab('lab-hire')">雇用 (Guild)</button>
+                <button class="tab-btn" onclick="UI.switchTab('lab-class')">転職 (Class Change)</button>
             </div>
-            <div id="lab-list" class="grid-list"></div>
+            
+            <div id="tab-lab-roster" class="tab-content">
+                <div style="margin-bottom:10px; display:flex; gap:10px; align-items:center;">
+                    <button id="act-breed" disabled>配合</button>
+                    <button id="act-party" disabled>PT編成/解除</button>
+                    <span id="breed-info" style="font-size:11px; color:#888;">※配合条件: 両親Lv30以上</span>
+                </div>
+                <div id="lab-list" class="grid-list"></div>
+            </div>
+
+            <div id="tab-lab-hire" class="tab-content" style="display:none;">
+                <p style="color:#888; margin-bottom:10px;">雇用コスト: <span id="hire-cost">30</span> Helix</p>
+                <div id="guild-list" class="grid-list"></div>
+            </div>
+
+            <div id="tab-lab-class" class="tab-content" style="display:none;">
+                <div style="display:flex; gap:20px; height:100%;">
+                    <div style="width:250px; border-right:1px solid #333;">
+                        <h4>キャラクター選択</h4>
+                        <div id="cc-char-list" style="display:flex; flex-direction:column; gap:5px; margin-top:10px;"></div>
+                    </div>
+                    <div style="flex:1;">
+                        <h4>転職先クラス</h4>
+                        <p style="font-size:12px; color:#888; margin-bottom:10px;">条件: Lv10以上, コスト: 100G. 一部職業は属性必須。</p>
+                        <div id="cc-job-list" class="grid-list"></div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
 
+<!-- Modal: Inventory -->
 <div id="modal-inv" class="modal-overlay">
     <div class="modal-box">
-        <div style="padding:10px; border-bottom:1px solid #333; display:flex; justify-content:space-between;">
-            <h3>Inventory</h3> <button class="close-modal">Close</button>
+        <div class="modal-header">
+            <h3>装備管理</h3> <button class="close-modal">閉じる</button>
         </div>
         <div class="modal-body" style="display:flex; gap:20px;">
-            <div style="width:200px; border-right:1px solid #333;">
+            <div style="width:250px; border-right:1px solid #333; padding-right:10px;">
+                <h4 style="margin-bottom:10px;">キャラクター選択</h4>
                 <div id="equip-char-list"></div>
             </div>
             <div style="flex:1;">
+                <div id="inv-header" style="margin-bottom:10px; border-bottom:1px solid #333; padding-bottom:10px;"></div>
                 <div id="inv-list" class="grid-list"></div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Load Data -->
-<script src="game_data.js"></script>
+<!-- Modal: Settings -->
+<div id="modal-settings" class="modal-overlay">
+    <div class="modal-box" style="max-width:500px;">
+        <div class="modal-header">
+            <h3>設定 (Settings)</h3> <button class="close-modal">閉じる</button>
+        </div>
+        <div class="modal-body">
+            <div class="settings-row">
+                <span>データセーブ (手動)</span>
+                <button onclick="Game.save(true)">セーブ実行</button>
+            </div>
+            <div class="settings-row">
+                <span>データロード</span>
+                <button onclick="location.reload()">リロード (再読込)</button>
+            </div>
+            <div class="settings-row">
+                <span>自動セーブ機能</span>
+                <span style="color:var(--accent-color); font-weight:bold;">ON (有効)</span>
+            </div>
+            <div class="settings-row" style="border-bottom:none; margin-top:20px;">
+                <span style="color:var(--danger-color);">セーブデータ削除</span>
+                <button class="danger" onclick="Game.resetSave()">全データ削除</button>
+            </div>
+            <p style="font-size:11px; color:#666; margin-top:10px;">※探索終了時、配合時、転職時、雇用時に自動でセーブされます。</p>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Character Detail -->
+<div id="modal-char-detail" class="modal-overlay">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h3>キャラクター詳細</h3> <button class="close-modal">閉じる</button>
+        </div>
+        <div class="modal-body" id="detail-content">
+            <!-- Content injected via JS -->
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Rule Book -->
+<div id="modal-rules" class="modal-overlay">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h3>ルールブック (Manual)</h3> <button class="close-modal">閉じる</button>
+        </div>
+        <div class="modal-body">
+            <div class="rule-section">
+                <h4>基本ステータス</h4>
+                <table class="rule-table">
+                    <tr><td>STR (腕力)</td><td>物理攻撃の威力に影響します。戦士系にとって重要。</td></tr>
+                    <tr><td>VIT (耐久)</td><td>物理防御力とHP成長率に影響します。</td></tr>
+                    <tr><td>MAG (魔力)</td><td>魔法攻撃の威力に影響します。魔法系にとって重要。</td></tr>
+                    <tr><td>INT (知力)</td><td>魔法防御力やスキルの成功率に影響します。</td></tr>
+                    <tr><td>AGI (素早)</td><td>命中率、回避率、行動順に影響します。</td></tr>
+                    <tr><td>LUC (運)</td><td>クリティカル率、アイテムドロップ率に影響します。</td></tr>
+                </table>
+            </div>
+            <div class="rule-section">
+                <h4>戦闘ルール</h4>
+                <p>攻撃タイプは職業によって「物理」か「魔法」に分かれます。</p>
+                <ul>
+                    <li><strong>物理ダメージ:</strong> (STR + 武器攻撃力) - (敵VIT / 2)</li>
+                    <li><strong>魔法ダメージ:</strong> (MAG + 武器魔力) - (敵INT / 2)</li>
+                </ul>
+            </div>
+            <div class="rule-section">
+                <h4>属性 (Elements)</h4>
+                <p>属性には有利・不利の相性があります。有利属性で攻撃するとダメージ1.5倍、不利属性だと0.5倍になります。</p>
+                <p><strong>火 > 風 > 土 > 水 > 火</strong> （4すくみ）<br>
+                <strong>光 <=> 闇</strong> （互いに大ダメージ）</p>
+            </div>
+            <div class="rule-section">
+                <h4>自動装備 (Auto Equip)</h4>
+                <p>探索中、装備可能でかつ現在より「総合ステータス」が高いアイテムを入手すると、自動的に装備を更新します。</p>
+            </div>
+        </div>
+    </div>
+</div>
 
 <script>
 /**
- * Genetic Rogue Ver.6.0
- * - Affix System
- * - Floor System
- * - Transparent Combat Math
+ * Genetic Rogue Ver.11.1
+ * - Exp Bar Fix
+ * - Floor Progress x3 (30 steps)
+ * - Auto Equip System
  */
 
-// Fallback check
-if (typeof JOB_DATA === 'undefined') { alert("Error: game_data.js missing"); throw new Error("Data Missing"); }
+// --- 1. DATA DEFINITIONS ---
+
+const ELEMENTS = {
+    fire:  { name: "火", color: "#e74c3c" },
+    water: { name: "水", color: "#3498db" },
+    wind:  { name: "風", color: "#2ecc71" },
+    earth: { name: "土", color: "#d35400" },
+    light: { name: "光", color: "#f1c40f" },
+    dark:  { name: "闇", color: "#9b59b6" }
+};
+
+const ELEMENT_CHART = {
+    fire: { weak: 'water', strong: 'wind' },
+    wind: { weak: 'fire', strong: 'earth' },
+    earth: { weak: 'wind', strong: 'water' },
+    water: { weak: 'earth', strong: 'fire' },
+    light: { weak: 'dark', strong: 'dark' },
+    dark: { weak: 'light', strong: 'light' }
+};
+
+const LINEAGE = {
+    warrior: { hp: 1.5, atk: 1.5, def: 1.2, agi: 0.8, mag: 0.2, int: 0.6, luc: 1.0, color:"#e74c3c" },
+    martial: { hp: 1.4, atk: 1.3, def: 0.9, agi: 1.5, mag: 0.5, int: 1.0, luc: 1.0, color:"#d35400" },
+    shadow:  { hp: 0.9, atk: 1.2, def: 0.7, agi: 1.7, mag: 0.6, int: 1.3, luc: 1.6, color:"#8e44ad" },
+    magic:   { hp: 0.7, atk: 0.3, def: 0.6, agi: 1.0, mag: 1.8, int: 1.6, luc: 1.0, color:"#3498db" },
+    holy:    { hp: 1.1, atk: 0.7, def: 1.2, agi: 0.9, mag: 1.4, int: 1.5, luc: 1.2, color:"#f1c40f" },
+    tech:    { hp: 1.2, atk: 1.0, def: 1.1, agi: 1.2, mag: 0.5, int: 1.6, luc: 1.1, color:"#1abc9c" },
+    special: { hp: 1.0, atk: 0.8, def: 0.8, agi: 1.0, mag: 1.0, int: 1.3, luc: 2.0, color:"#2ecc71" }
+};
+
+const PERSONALITY_DATA = {
+    "勇敢": { hp:1.2, atk:1.2 }, "冷静": { int:1.2, def:1.2 }, "臆病": { agi:1.3, def:0.8 },
+    "豪快": { atk:1.3, mag:0.7 }, "天才": { mag:1.2, int:1.2, hp:0.8 }, "幸運": { luc:1.5 },
+    "堅実": { def:1.2, hp:1.2, agi:0.8 }, "凡人": {}
+};
+
+const SKILL_POOL = {
+    phy: ["剛腕", "連撃", "鉄壁", "カウンター", "急所突き", "粉砕", "底力", "闘争本能", "受け流し", "鬼神"],
+    mag: ["魔力集中", "瞑想", "炎の知識", "マナ効率", "詠唱短縮", "属性強化", "結界", "精神統一", "古代の知恵", "魔神"],
+    spd: ["早業", "回避", "不意打ち", "残像", "軽業", "目利き", "二刀流の極意", "隠密", "俊足", "神速"],
+    tnk: ["挑発", "かばう", "忍耐", "リジェネ", "重装甲", "不屈", "ガーディアン", "自己修復", "城塞", "金剛"],
+    sup: ["祈り", "祝福", "慈愛", "応急手当", "加護", "薬の知識", "聖なる光", "献身", "女神の瞳", "奇跡"]
+};
+
+// atkType: 'phy'(Physical) or 'mag'(Magical)
+// curve: 'early'(早熟), 'avg'(普通), 'late'(晩成)
+const JOB_DATA = {
+    // T1
+    warrior:   { name:"戦士", tier:1, type:"phy", atkType:"phy", curve:"avg", equip:["sw","ax","ha","la","sh","ac"], lineage:"warrior" },
+    mage:      { name:"魔法使い", tier:1, type:"mag", atkType:"mag", curve:"late", equip:["st","dg","ro","ac"], lineage:"magic" },
+    thief:     { name:"盗賊",   tier:1, type:"spd", atkType:"phy", curve:"early", equip:["dg","bow","la","to","ac"], lineage:"shadow" },
+    priest:    { name:"僧侶",  tier:1, type:"sup", atkType:"mag", curve:"avg", equip:["st","ro","sh","ac"], lineage:"holy" },
+    merchant:  { name:"商人",tier:1, type:"spe", atkType:"phy", curve:"early", equip:["dg","la","ac"], lineage:"special" },
+    monk:      { name:"武闘家",    tier:1, type:"phy", atkType:"phy", curve:"avg", equip:["kn","la","ac"], lineage:"martial" },
+    hunter:    { name:"狩人",  tier:1, type:"tec", atkType:"phy", curve:"avg", equip:["bow","dg","la","to","ac"], lineage:"shadow" },
+    
+    // T2
+    knight:    { name:"騎士",  tier:2, type:"tnk", atkType:"phy", curve:"avg", equip:["sw","sp","ha","la","sh","ac"], lineage:"warrior", mod:{def:1.4} },
+    samurai:   { name:"侍", tier:2, type:"phy", atkType:"phy", curve:"late", equip:["sw","bow","la","ac"], lineage:"martial", mod:{atk:1.5} },
+    sorcerer:  { name:"魔術師",tier:2, type:"mag", atkType:"mag", curve:"late", equip:["st","dg","ro","ac"], lineage:"magic", mod:{mag:1.7} },
+    bard:      { name:"吟遊詩人", tier:2, type:"sup", atkType:"mag", curve:"early", equip:["ins","dg","la","ro","ac"], lineage:"special", mod:{luc:1.5} },
+    ninja:     { name:"忍者",   tier:2, type:"spd", atkType:"phy", curve:"early", equip:["sw","dg","to","la","ac"], lineage:"shadow", mod:{agi:1.6}, reqEl:['wind','dark'] },
+    gunner:    { name:"ガンマン",  tier:2, type:"tec", atkType:"phy", curve:"avg", equip:["gun","la","ac"], lineage:"tech", mod:{dex:1.5} },
+    
+    // T3
+    paladin:   { name:"聖騎士", tier:3, type:"tnk", atkType:"phy", curve:"late", equip:["sw","ha","sh","ac"], lineage:"warrior", mod:{def:1.8, mag:1.2}, reqEl:['light'] },
+    sage:      { name:"賢者",    tier:3, type:"mag", atkType:"mag", curve:"late", equip:["st","ro","ac"], lineage:"magic", mod:{mag:2.0, int:2.0}, reqEl:['light','earth','water','fire','wind'] },
+    assassin:  { name:"暗殺者",tier:3, type:"spd", atkType:"phy", curve:"early", equip:["dg","bow","to","la","ac"], lineage:"shadow", mod:{atk:2.2, agi:1.5}, reqEl:['dark'] },
+    dragoon:   { name:"竜騎士", tier:3, type:"phy", atkType:"phy", curve:"late", equip:["sp","ha","la","ac"], lineage:"warrior", mod:{atk:2.0, hp:1.5}, reqEl:['fire'] },
+    sniper:    { name:"狙撃手",  tier:3, type:"tec", atkType:"phy", curve:"avg", equip:["gun","la","to","ac"], lineage:"tech", mod:{atk:2.0, dex:2.0} },
+    
+    // T4
+    hero:      { name:"英雄",    tier:4, type:"phy", atkType:"phy", curve:"late", equip:["sw","ax","sp","ha","la","sh","ac"], lineage:"warrior", mod:{all:1.3, atk:2.5}, reqEl:['light'] },
+    cyborg:    { name:"サイボーグ",  tier:4, type:"tnk", atkType:"phy", curve:"avg", equip:["dv","ax","gun","ha","ac"], lineage:"tech", mod:{hp:2.5, def:2.0} },
+    demon:     { name:"魔神",   tier:4, type:"mag", atkType:"mag", curve:"late", equip:["st","dv","ro","ac"], lineage:"magic", mod:{mag:3.0, hp:2.0}, reqEl:['dark'] },
+    marine:    { name:"宇宙海兵",tier:4, type:"phy", atkType:"phy", curve:"avg", equip:["gun","sw","ha","dv","ac"], lineage:"tech", mod:{atk:2.5, def:1.5} },
+    psycho:    { name:"超能力者",  tier:4, type:"mag", atkType:"mag", curve:"late", equip:["dv","ro","ac"], lineage:"magic", mod:{mag:2.5, int:2.5} },
+    
+    // Special
+    jester:    { name:"遊び人",  tier:2, type:"spe", atkType:"phy", curve:"early", equip:["dg","ins","la","ro","ac"], lineage:"special", mod:{luc:3.0, hp:0.5} }
+};
+
+const TRAP_DATA = [
+    { name: "スパイク床", tier:1, type:"dmg", diff:10, dmg:20, msg:"鋭い棘が飛び出した！" },
+    { name: "毒の矢", tier:1, type:"status", status:"psn", diff:15, msg:"毒矢が飛んできた！" },
+    { name: "睡眠ガス", tier:2, type:"status", status:"slp", diff:20, msg:"催眠ガスが噴射された！" },
+    { name: "落とし穴", tier:3, type:"floor", val:-1, diff:30, dmg:30, msg:"床が抜け落ちた！" }
+];
+
+const ITEM_TEMPLATES = {
+    w1: { name:"錆びた剣", kind:"sw", type:"weapon", slot:"main_hand", base:{atk:3}, tier:1 },
+    w2: { name:"鉄の剣", kind:"sw", type:"weapon", slot:"main_hand", base:{atk:8}, tier:1 },
+    w3: { name:"鋼の斧", kind:"ax", type:"weapon", slot:"main_hand", base:{atk:15, agi:-2}, tier:2, req:{atk:20} }, // Req Str
+    w4: { name:"ビームサーベル", kind:"sw", type:"weapon", slot:"main_hand", base:{atk:45, int:5}, tier:4 },
+    w5: { name:"ウォーハンマー", kind:"ax", type:"weapon", slot:"main_hand", base:{atk:25, agi:-5}, tier:3, req:{atk:40} },
+    st1: { name:"樫の杖", kind:"st", type:"weapon", slot:"main_hand", base:{mag:5}, tier:1 },
+    st2: { name:"ルーンスタッフ", kind:"st", type:"weapon", slot:"main_hand", base:{mag:15}, tier:2 },
+    kn1: { name:"レザーナックル", kind:"kn", type:"weapon", slot:"main_hand", base:{atk:5, agi:2}, tier:1 },
+    
+    a1: { name:"ボロ服", kind:"la", type:"armor", slot:"body", base:{def:1}, tier:1 },
+    a2: { name:"革の鎧", kind:"la", type:"armor", slot:"body", base:{def:5}, tier:1 },
+    a3: { name:"プレートメイル", kind:"ha", type:"armor", slot:"body", base:{def:15, agi:-3}, tier:2, req:{def:20} }, // Req VIT
+    a4: { name:"ナノスーツ", kind:"la", type:"armor", slot:"body", base:{def:30, hp:50}, tier:4 },
+    ro1: { name:"ローブ", kind:"ro", type:"armor", slot:"body", base:{def:2, mag:2}, tier:1 },
+    
+    ac1: { name:"リング", kind:"ac", type:"accessory", slot:"accessory", base:{luc:2}, tier:1 }
+};
+
+const AFFIX_DATA = [
+    { name:"錆びた", tier:1, type:"bad", stats:{atk:-3, def:-1}, w:30 },
+    { name:"鋭利な", tier:1, type:"good", stats:{atk:3}, w:40 },
+    { name:"英雄の", tier:4, type:"legend", stats:{all:5, atk:20}, w:5 }
+];
+
+const ENEMY_BASE = [
+    { name:"スライム", hp:20, atk:5, def:2, exp:10, gold:5, elem: 'water' },
+    { name:"ネズミ", hp:15, atk:7, def:1, exp:12, gold:7, elem: 'earth' },
+    { name:"ゴブリン", hp:30, atk:8, def:3, exp:15, gold:10, elem: 'earth' },
+    { name:"オーク", hp:60, atk:15, def:5, exp:25, gold:20, elem: 'fire' },
+    { name:"ゴーレム", hp:150, atk:30, def:20, exp:80, gold:50, elem: 'earth' },
+    { name:"ウィルオウィスプ", hp:40, atk:25, def:0, exp:40, gold:30, elem: 'fire' },
+    { name:"ドラゴン", hp:500, atk:80, def:30, exp:300, gold:200, elem: 'fire' }
+];
+
+const ENEMY_PREFIXES = [
+    { name: "狂暴な", mod: { atk: 1.5, exp: 1.5 } },
+    { name: "巨大な", mod: { hp: 2.0, atk: 1.2, exp: 2.0 } },
+    { name: "神速の", mod: { agi: 2.0, exp: 1.5 } },
+    { name: "硬い", mod: { def: 2.0, exp: 1.5 } }
+];
 
 const CONFIG = {
     MAX_PARTY: 6,
-    BREED_COST: 50, HIRE_COST: 30,
-    BASE_STATS: { hp: 50, atk: 5, def: 5, agi: 5, mag: 5, int: 5, luc: 5 },
-    TIER_COLORS: { 1:'#bdc3c7', 2:'#3498db', 3:'#9b59b6', 4:'#e74c3c', 5:'#f1c40f' }
+    BREED_MIN_LV: 30, 
+    HIRE_COST: 30, CC_COST: 100,
+    MAX_LEVEL: 50,
+    BASE_STATS: { hp:50, atk:5, def:5, agi:5, mag:5, int:5, luc:5 },
+    FLOOR_STEP_MAX: 30 // Increased from 10 to 30
 };
 
-// --- Item Generator (The Core of Hack & Slash) ---
+// --- 3. LOGIC ---
+
 const LootSystem = {
     generate(floor) {
-        // 1. Pick Template based on rarity/floor
-        const keys = Object.keys(ITEM_TEMPLATES);
-        const tKey = keys[Math.floor(Math.random() * keys.length)];
-        const tpl = ITEM_TEMPLATES[tKey];
-        
-        // 2. Determine Rarity (Floor increases chance)
-        let rarity = 1; // 1:Common, 2:Rare, 3:Epic, 4:Legendary, 5:Godly
-        const rand = Math.random() + (floor * 0.01); // Boost by floor
-        if (rand > 0.98) rarity = 4;
-        else if (rand > 0.90) rarity = 3;
-        else if (rand > 0.70) rarity = 2;
+        if (Math.random() > (0.05 + floor * 0.005)) return null;
+        const maxTier = Math.min(5, Math.ceil(floor / 5));
+        const templates = Object.values(ITEM_TEMPLATES).filter(t => t.tier <= maxTier);
+        if(templates.length === 0) return null;
+        const tpl = templates[Math.floor(Math.random() * templates.length)];
 
-        if (rarity > 4 && floor > 20) rarity = 5; // Godly check
+        let rarity = 2; 
+        const rRoll = Math.random() + (floor * 0.01);
+        if (rRoll > 0.95) rarity = 5; else if (rRoll > 0.85) rarity = 4; else if (rRoll > 0.60) rarity = 3; else if (rRoll < 0.20) rarity = 1;
+        rarity = Math.min(rarity, maxTier + 2);
 
-        // 3. Create Item Instance
-        let item = {
-            uid: Math.random().toString(36).substr(2),
-            name: tpl.name,
-            type: tpl.type,
-            slot: tpl.slot,
-            stats: { ...tpl.base },
-            rarity: Math.max(tpl.rar, rarity)
+        let item = { 
+            uid: Math.random().toString(36).substr(2), 
+            name: tpl.name, kind: tpl.kind, type: tpl.type, slot: tpl.slot, 
+            stats: { ...tpl.base }, rarity: rarity, req: tpl.req 
         };
 
-        // 4. Add Affixes
-        if (item.rarity >= 2) {
-            // Pick Prefix
-            const pPool = AFFIX_DATA.prefix.filter(a => a.rar <= item.rarity);
-            if (pPool.length > 0) {
-                const affix = pPool[Math.floor(Math.random() * pPool.length)];
+        if (rarity !== 2) {
+            const pool = AFFIX_DATA.filter(a => rarity === 1 ? a.type === "bad" : a.tier <= rarity - 1);
+            if (pool.length > 0) {
+                const affix = pool[Math.floor(Math.random() * pool.length)];
                 item.name = `${affix.name}${item.name}`;
-                this.mergeStats(item.stats, affix.stats);
+                for(let k in affix.stats) {
+                    if(k === 'all') ['atk','def','agi','mag','int','luc'].forEach(s => item.stats[s] = (item.stats[s]||0) + affix.stats.all);
+                    else item.stats[k] = (item.stats[k]||0) + affix.stats[k];
+                }
             }
         }
-        
-        if (item.rarity >= 4) {
-            // Pick Title (Suffix or Name replacement)
-            const tPool = AFFIX_DATA.titles.filter(a => a.rar <= item.rarity);
-            if (tPool.length > 0) {
-                const title = tPool[Math.floor(Math.random() * tPool.length)];
-                item.name = `${title.name} ${item.name}`; // e.g. "Dragonslayer Sharp Sword"
-                this.mergeStats(item.stats, title.stats);
-            }
-        }
-
         return item;
-    },
-
-    mergeStats(base, add) {
-        for (let k in add) {
-            base[k] = (base[k] || 0) + add[k];
-        }
     }
 };
 
-// --- Character Class ---
 class Character {
-    constructor(jobKey, parents=null) {
+    constructor(jobKey, parents=null, fromLoad=null) {
+        if(fromLoad) {
+            Object.assign(this, fromLoad);
+            return;
+        }
+
         this.id = Math.random().toString(36).substr(2, 9);
         this.jobKey = jobKey;
-        this.jobData = JOB_DATA[jobKey];
         this.name = this.genName();
         this.level = 1;
         this.exp = 0;
         this.maxExp = 100;
         this.generation = parents ? Math.max(parents[0].generation, parents[1].generation)+1 : 1;
         
-        // Ver.6: Store Objects, not IDs
+        const pKeys = Object.keys(PERSONALITY_DATA);
+        this.personality = pKeys[Math.floor(Math.random()*pKeys.length)];
+        this.skills = [];
+        this.elements = parents ? this.inheritElements(parents[0], parents[1]) : this.genElements();
+        this.bonusStats = {}; 
         this.equipment = { main_hand: null, off_hand: null, head: null, body: null, accessory: null };
-
+        this.status = {};
+        
         this.baseStats = {};
         for(let k in CONFIG.BASE_STATS) {
             let base = CONFIG.BASE_STATS[k];
-            let mod = this.jobData.stats_mod[k] || 1.0;
-            if(parents) {
-                let pAvg = (parents[0].baseStats[k] + parents[1].baseStats[k]) / 2;
-                base = (base + pAvg) / 2;
-            }
-            this.baseStats[k] = Math.floor(base * mod * (0.9 + Math.random()*0.2));
+            if(parents) base = (parents[0].baseStats[k] + parents[1].baseStats[k]) / 2 * 1.1;
+            this.baseStats[k] = Math.floor(base * (0.9 + Math.random()*0.2));
+            this.bonusStats[k] = 0;
         }
         this.hp = this.totalStats.hp;
-        this.color = CONFIG.TIER_COLORS[this.jobData.tier] || '#fff';
     }
 
     genName() {
-        const pre = ["Neo","Cyber","Iron","Dark","Holy","Nano","Bio","Void"];
-        const suf = ["Alpha","Zero","X","V","Soul","Mind"];
-        return pre[Math.floor(Math.random()*pre.length)] + suf[Math.floor(Math.random()*suf.length)];
+        const n = ["アレク","ベル","シド","ダン","イヴ","フェイ","ジン","ハル","イアン","ジェイ","カイ","レオ"];
+        return n[Math.floor(Math.random()*n.length)] + Math.floor(Math.random()*99);
     }
 
-    get totalStats() {
-        let s = { ...this.baseStats };
-        // Level Growth
-        for(let k in s) {
-            let growth = (CONFIG.BASE_STATS[k]/10) * (this.jobData.stats_mod[k]||1.0);
-            s[k] += Math.floor(growth * (this.level - 1));
+    genElements() {
+        if(Math.random() < 0.3) {
+            const keys = Object.keys(ELEMENTS);
+            return [keys[Math.floor(Math.random() * keys.length)]];
         }
-        // Equip Bonus
+        return [];
+    }
+
+    inheritElements(p1, p2) {
+        const pool = [...new Set([...p1.elements, ...p2.elements])];
+        if(pool.length === 0) return [];
+        let guarantee = Math.max(1, Math.floor((p1.elements.length + p2.elements.length) / 2));
+        guarantee = Math.min(guarantee, pool.length);
+        for (let i = pool.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [pool[i], pool[j]] = [pool[j], pool[i]];
+        }
+        const childEls = pool.slice(0, guarantee);
+        for(let i = guarantee; i < pool.length; i++) {
+            let chance = 0.2 / Math.pow(2, childEls.length);
+            if(Math.random() < chance) childEls.push(pool[i]);
+        }
+        return childEls;
+    }
+
+    get job() { return JOB_DATA[this.jobKey]; }
+    get breedCost() { return 100 + (this.level * 5); }
+
+    get totalStats() {
+        let s = {};
+        let mod = this.job.mod || {};
+        let lineage = LINEAGE[this.job.lineage];
+        let pers = PERSONALITY_DATA[this.personality];
+
+        let curveMult = 1.0;
+        let progress = this.level / CONFIG.MAX_LEVEL;
+        
+        if (this.job.curve === 'early') curveMult = 1.5 - progress; 
+        else if (this.job.curve === 'late') curveMult = 0.5 + progress;
+
+        for(let k in CONFIG.BASE_STATS) {
+            let val = this.baseStats[k] + (this.bonusStats[k] || 0);
+            let growthBase = (CONFIG.BASE_STATS[k] * 0.2); 
+            let multipliers = (lineage[k] || 1.0) * (mod[k] || mod.all || 1.0) * (pers[k] || 1.0);
+            let gainedStats = growthBase * multipliers * (this.level - 1) * curveMult;
+            val += gainedStats;
+            s[k] = Math.floor(val);
+        }
         for(let slot in this.equipment) {
             let item = this.equipment[slot];
-            if(item) {
-                for(let k in item.stats) {
-                    s[k] = (s[k] || 0) + item.stats[k];
-                }
-            }
+            if(item) { for(let k in item.stats) s[k] = (s[k]||0) + item.stats[k]; }
         }
-        s.hp = Math.floor(s.hp);
         return s;
     }
 
-    // New: Helper to get split stats for UI (Base / Bonus)
-    get statDetails() {
-        let total = this.totalStats;
-        let baseWithLv = { ...this.baseStats };
-        for(let k in baseWithLv) {
-            let growth = (CONFIG.BASE_STATS[k]/10) * (this.jobData.stats_mod[k]||1.0);
-            baseWithLv[k] += Math.floor(growth * (this.level - 1));
+    get battleStats() {
+        const s = this.totalStats;
+        const isMag = this.job.atkType === 'mag';
+        let pAtk = s.atk; 
+        let mAtk = s.mag; 
+        let def = s.def; 
+        let mDef = s.int;
+        return { pAtk: pAtk, mAtk: mAtk, def: def, mDef: mDef, hit: s.agi * 1.5 + s.luc * 0.5, crit: s.luc * 0.2 + (s.dex || 0) * 0.1, isMag: isMag };
+    }
+
+    canEquip(item) {
+        if (!this.job.equip.includes(item.kind) && item.kind !== 'ac') return { ok: false, reason: "職業不可" };
+        if (item.req) {
+            const s = this.totalStats;
+            for(let key in item.req) {
+                if (s[key] < item.req[key]) return { ok: false, reason: `${key.toUpperCase()}不足` };
+            }
         }
-        
-        let display = {};
-        for(let k in total) {
-            let bonus = total[k] - (baseWithLv[k] || 0);
-            display[k] = { val: total[k], bonus: bonus };
-        }
-        return display;
+        return { ok: true };
     }
 
     equip(item) {
-        if(this.equipment[item.slot]) {
-            Game.inventory.push(this.equipment[item.slot]); // Return old
-        }
+        const check = this.canEquip(item);
+        if (!check.ok) { return false; } // Error handled by UI log or silent auto equip
+        if(this.equipment[item.slot]) Game.inventory.push(this.equipment[item.slot]);
         this.equipment[item.slot] = item;
-        this.hp = Math.min(this.hp, this.totalStats.hp); // Cap HP
+        this.hp = Math.min(this.hp, this.totalStats.hp);
+        Game.save();
+        return true;
     }
-    
     unequip(slot) {
         if(this.equipment[slot]) {
             Game.inventory.push(this.equipment[slot]);
             this.equipment[slot] = null;
+            Game.save();
         }
     }
 
-    gainExp(amt) {
-        this.exp += Math.floor(amt);
-        if(this.exp >= this.maxExp) {
-            this.exp -= this.maxExp;
-            this.level++;
-            this.maxExp = Math.floor(this.maxExp * 1.2);
-            this.hp = this.totalStats.hp; // Heal
-            return true;
+    // Helper for Auto Equip: Get item power score
+    getItemScore(item) {
+        if (!item) return 0;
+        // Check equipability
+        if (!this.canEquip(item).ok) return -1;
+
+        let s = 0;
+        // Weight stats based on job type
+        if (this.job.atkType === 'mag') {
+            s += (item.stats.mag || 0) * 1.5;
+            s += (item.stats.int || 0) * 1.0;
+            s += (item.stats.atk || 0) * 0.2;
+        } else {
+            s += (item.stats.atk || 0) * 1.5;
+            s += (item.stats.def || 0) * 0.5; // War needs def too
+            s += (item.stats.mag || 0) * 0.1;
         }
-        return false;
+        // General Stats
+        s += (item.stats.def || 0) * 1.0;
+        s += (item.stats.hp || 0) * 0.2;
+        s += (item.stats.agi || 0) * 0.8;
+        s += (item.stats.luc || 0) * 0.5;
+        return s;
+    }
+
+    gainExp(v) {
+        if(this.level >= CONFIG.MAX_LEVEL) return null;
+        this.exp += Math.floor(v);
+        if(this.exp >= this.maxExp) {
+            let oldStats = this.totalStats;
+            this.level++;
+            this.exp -= this.maxExp;
+            this.maxExp = Math.floor(this.maxExp * 1.2);
+            let newStats = this.totalStats;
+            this.hp = this.totalStats.hp;
+            let diffs = [];
+            for(let k in oldStats) {
+                let d = newStats[k] - oldStats[k];
+                if(d > 0) diffs.push(`${k.toUpperCase()}+${d}`);
+            }
+            if(this.level % 5 === 0 && this.skills.length < 10) this.learnSkill();
+            return diffs;
+        }
+        return null;
+    }
+
+    learnSkill() {
+        let type = this.job.type === 'tnk' ? 'tnk' : (this.job.type === 'spd' ? 'spd' : (this.job.type === 'mag' ? 'mag' : (this.job.type === 'sup' ? 'sup' : 'phy')));
+        let pool = SKILL_POOL[type] || SKILL_POOL['phy'];
+        for(let s of pool) {
+            if(!this.skills.includes(s)) {
+                this.skills.push(s);
+                return s;
+            }
+        }
+        return null;
+    }
+
+    classChange(newJobKey) {
+        let s = this.totalStats;
+        for(let k in CONFIG.BASE_STATS) this.bonusStats[k] = (this.bonusStats[k] || 0) + Math.floor(s[k] * 0.1);
+        this.jobKey = newJobKey;
+        this.level = 1; this.maxExp = 100; this.hp = this.totalStats.hp;
+        Game.save();
     }
 }
 
-// --- Game Logic ---
+// --- GAME ENGINE ---
+
 const Game = {
-    helix: 100, floor: 1, floorProgress: 0,
+    helix: 100, floor: 1, maxFloor: 1, floorProgress: 0,
     party: [], roster: [], inventory: [],
     exploring: false, timer: null,
 
     init() {
-        ["warrior","mage","thief","priest"].forEach(j => this.roster.push(new Character(j)));
-        this.roster.slice(0,3).forEach(c => this.party.push(c));
-        // Give starter items
-        this.inventory.push(LootSystem.generate(1));
-        this.inventory.push(LootSystem.generate(1));
+        if(localStorage.getItem('genetic_rogue_v10_save')) {
+            this.load();
+        } else {
+            ["warrior","thief","priest"].forEach(j => this.roster.push(new Character(j)));
+            this.roster.forEach(c => this.party.push(c));
+            let starter = LootSystem.generate(1);
+            if(!starter) starter = { uid: "starter", name:"粗末な剣", kind:"sw", type:"weapon", slot:"main_hand", stats:{atk:2}, rarity:1 };
+            this.inventory.push(starter);
+            this.save();
+        }
+        UI.init();
         UI.updateAll();
-        UI.log("Genetic Rogue Ver.6.0 Started.");
+        UI.log("Genetic Rogue Ver.11.1 起動。", "log-sys");
     },
 
-    explore() {
-        if(this.party.length === 0) return alert("Party empty!");
+    save(manual=false) {
+        const data = {
+            helix: this.helix, maxFloor: this.maxFloor, inventory: this.inventory,
+            roster: this.roster, partyIds: this.party.map(c => c.id)
+        };
+        localStorage.setItem('genetic_rogue_v10_save', JSON.stringify(data));
+        if(manual) UI.log("データをセーブしました。", "log-sys");
+    },
+
+    load() {
+        try {
+            const data = JSON.parse(localStorage.getItem('genetic_rogue_v10_save'));
+            if(!data) return;
+            this.helix = data.helix; this.maxFloor = data.maxFloor; this.inventory = data.inventory || [];
+            this.roster = data.roster.map(d => new Character(null, null, d));
+            this.party = [];
+            data.partyIds.forEach(id => {
+                const c = this.roster.find(x => x.id === id);
+                if(c) this.party.push(c);
+            });
+            UI.log("データをロードしました。", "log-sys");
+        } catch(e) {
+            console.error("Save data corrupt", e);
+            alert("セーブデータの読み込みに失敗しました。");
+        }
+    },
+
+    resetSave() {
+        if(confirm("本当に全データを削除しますか？復元できません。")) {
+            localStorage.removeItem('genetic_rogue_v10_save');
+            location.reload();
+        }
+    },
+
+    explore(startFloor) {
+        if(this.party.length===0) return alert("パーティがいません");
+        if(this.party.every(c => c.hp <= 0)) {
+            this.party.forEach(c => c.hp = c.totalStats.hp);
+            UI.updateAll();
+        }
+        
+        this.floor = parseInt(startFloor);
+        this.floorProgress = 0;
         this.exploring = true;
         UI.toggle(true);
-        UI.log(`--- Floor ${this.floor} Start ---`);
+        UI.log(`階層 ${this.floor} の探索を開始します`);
         this.timer = setInterval(() => this.tick(), 1000);
     },
 
     stop() {
         this.exploring = false;
         clearInterval(this.timer);
-        this.party.forEach(c => c.hp = c.totalStats.hp);
+        this.party.forEach(c => { 
+            c.hp = c.totalStats.hp;
+            c.status = {}; 
+        });
+        this.save();
         UI.toggle(false);
         UI.updateAll();
-        UI.log("Returned to base.");
+        UI.log("拠点に帰還しました。全メンバーのHPを全回復しました。");
     },
 
     tick() {
-        if(this.party.filter(c=>c.hp>0).length === 0) {
-            this.stop();
-            UI.log("Party Wipeout...", "defeat");
-            this.floor = Math.max(1, this.floor-5);
-            this.floorProgress = 0;
+        if(this.party.every(c => c.hp <= 0)) {
+            this.exploring = false;
+            clearInterval(this.timer);
+            UI.log("全滅しました... 最高到達階層リセット。", "log-defeat");
+            this.maxFloor = 1; this.floor = 1;
+            this.party.forEach(c => { c.hp = c.totalStats.hp; c.status = {}; });
+            this.save();
+            UI.toggle(false);
+            UI.updateAll();
             return;
         }
-        
-        // Floor Progress
+
+        this.party.forEach(c => {
+            if(c.hp > 0 && c.status.psn) { c.hp -= Math.ceil(c.totalStats.hp * 0.05); c.status.psn--; if(c.status.psn<=0) delete c.status.psn; }
+            if(c.status.slp) { c.status.slp--; if(c.status.slp<=0) delete c.status.slp; }
+        });
+
         this.floorProgress++;
-        if(this.floorProgress >= 10) {
+        // Increased floor steps to 30
+        if(this.floorProgress > CONFIG.FLOOR_STEP_MAX) {
             this.floor++;
             this.floorProgress = 0;
-            UI.log(`>>> Reached Floor ${this.floor}! Enemies grew stronger.`, "legend");
+            if(this.floor > this.maxFloor) this.maxFloor = this.floor;
+            UI.log(`>>> 階層 ${this.floor} へ進んだ`, "log-victory");
         }
-        UI.updateHeader();
 
-        Math.random() < 0.65 ? this.combat() : this.event();
+        UI.updateHeader();
+        const r = Math.random();
+        if (r < 0.2) this.trap();
+        else if (r < 0.8) this.combat();
+        else this.event();
         UI.renderParty();
     },
 
-    combat() {
-        // Enemy Scaling: (1 + Floor * 0.2) -> 2x stats at Floor 5
-        let scale = 1 + (this.floor * 0.2); 
-        let tier = Math.min(5, Math.ceil(this.floor / 5));
+    // --- Auto Equip Logic ---
+    autoEquip(item) {
+        if(!item) return;
+        let equippedBy = null;
         
-        let cands = ENEMY_DATA.filter(e => e.tier === tier);
-        let baseE = cands[Math.floor(Math.random() * cands.length)] || ENEMY_DATA[0];
-
-        let enemy = {
-            name: baseE.name,
-            hp: Math.floor(baseE.stats.hp * scale),
-            atk: Math.floor(baseE.stats.atk * scale),
-            def: Math.floor(baseE.stats.def * scale),
-            exp: Math.floor(baseE.stats.exp * scale),
-            gold: Math.floor(baseE.stats.gold * scale)
-        };
-
-        UI.log(`Battle: ${enemy.name} (HP:${enemy.hp})`, "combat");
-
-        this.party.forEach(c => {
-            if(c.hp <= 0 || enemy.hp <= 0) return;
-            
-            // New Transparent Formula: (ATK * Rnd) - (DEF / 2)
-            let s = c.totalStats;
-            let atkRoll = Math.floor(s.atk * (0.9 + Math.random() * 0.2));
-            let defRed = Math.floor(enemy.def / 2);
-            let dmg = Math.max(1, atkRoll - defRed);
-            
-            if(Math.random()*100 < s.luc) { dmg=Math.floor(dmg*1.5); UI.log(`${c.name} Crit!`, "log-dmg"); }
-            
-            enemy.hp -= dmg;
-            UI.log(`> ${c.name} hit (ATK:${atkRoll} vs DEF:${defRed}) -> ${dmg} dmg`, "log-dmg");
-        });
-
-        if(enemy.hp <= 0) {
-            UI.log(`Victory! +${enemy.gold}G`, "victory");
-            this.helix += enemy.gold;
-            this.party.forEach(c => c.hp>0 && c.gainExp(enemy.exp) && UI.log(`${c.name} LvUp!`));
-            
-            // Drop Rate: 30%
-            if(Math.random() < 0.3) {
-                let item = LootSystem.generate(this.floor);
-                this.inventory.push(item);
-                let style = item.rarity>=4 ? "log-legend" : (item.rarity>=2 ? "log-rare" : "");
-                UI.log(`Drop: [${item.name}]`, style);
+        // Check each party member
+        for(let c of this.party) {
+            // Can they equip?
+            if(c.canEquip(item).ok) {
+                // Is it better than current?
+                let currentItem = c.equipment[item.slot];
+                let currentScore = currentItem ? c.getItemScore(currentItem) : 0;
+                let newScore = c.getItemScore(item);
+                
+                if(newScore > currentScore) {
+                    c.equip(item);
+                    equippedBy = c.name;
+                    break; // Equip to first valid person (simple logic)
+                }
             }
+        }
+        
+        if(equippedBy) {
+            UI.log(`[自動装備] ${equippedBy} は ${item.name} を装備した！`, "log-equip");
         } else {
-            let t = this.party[Math.floor(Math.random()*this.party.length)];
-            if(t.hp > 0) {
-                let s = t.totalStats;
-                let atkRoll = Math.floor(enemy.atk * (0.9 + Math.random() * 0.2));
-                let defRed = Math.floor(s.def / 2);
-                let dmg = Math.max(1, atkRoll - defRed);
-                t.hp -= dmg;
-                UI.log(`${t.name} took (ATK:${atkRoll} vs DEF:${defRed}) -> ${dmg} dmg`, "defeat");
-            }
+            this.inventory.push(item);
+            UI.log(`戦利品: ${item.name}`, "log-item");
         }
     },
 
-    event() {
-        let g = 10 + (this.floor * 2);
-        this.helix += g;
-        UI.log(`Salvage: +${g} Helix`);
+    trap() {
+        const activeParty = this.party.filter(c => c.hp > 0 && !c.status.slp);
+        if(activeParty.length === 0) return;
+        const tier = Math.min(4, Math.ceil(this.floor / 5));
+        const pool = TRAP_DATA.filter(t => t.tier <= tier);
+        const trap = pool[Math.floor(Math.random() * pool.length)];
+        UI.log(`！ ${trap.msg}`, "log-trap");
+        
+        const detector = activeParty.reduce((p, c) => {
+            const s = c.totalStats;
+            const val = Math.max(s.int, s.agi);
+            return (val > p.val) ? {char:c, val:val} : p;
+        }, {val:0});
+        if (detector.val < trap.diff) { this.triggerTrap(trap); return; }
+        const disarmer = activeParty.reduce((p, c) => {
+            const s = c.totalStats;
+            let val = Math.max(s.dex||0, s.agi, s.luc);
+            if (['thief','ninja','hunter','assassin'].includes(c.jobKey)) val += 20; 
+            return (val > p.val) ? {char:c, val:val} : p;
+        }, {val:0});
+        if ((disarmer.val + Math.random()*10) >= trap.diff) { 
+            UI.log(`${disarmer.char.name}が解除成功！`, "log-trap-ok"); 
+            let diff = disarmer.char.gainExp(5);
+            if(diff) UI.log(`${disarmer.char.name} LvUp! [${diff.join(', ')}]`, "log-lvlup");
+        } 
+        else { UI.log(`${disarmer.char.name}は失敗した！`, "log-trap"); this.triggerTrap(trap); }
     },
 
-    breed(id1, id2) {
-        if(this.helix < CONFIG.BREED_COST) return;
-        let p1 = this.roster.find(c=>c.id===id1);
-        let p2 = this.roster.find(c=>c.id===id2);
-        let tier = Math.max(p1.jobData.tier, p2.jobData.tier);
-        if(Math.random() < 0.3) tier++;
-        let pool = Object.keys(JOB_DATA).filter(k=>JOB_DATA[k].tier <= tier);
-        let job = pool[Math.floor(Math.random()*pool.length)];
+    triggerTrap(trap) {
+        if(trap.type === "dmg") {
+            this.party.forEach(c => { if(c.hp>0){ c.hp-=trap.dmg; UI.log(`${c.name}に${trap.dmg}ダメ`,"log-dmg"); } });
+        } else if (trap.type === "status") {
+            this.party.forEach(c => { if(c.hp>0){ c.status[trap.status]=3; UI.log(`${c.name}は${trap.status==='psn'?'毒':'眠り'}を受けた`,"log-trap"); } });
+        } else if (trap.type === "floor") {
+            this.floor = Math.max(1, this.floor + trap.val); this.floorProgress = 0; UI.log(`階層${this.floor}へ落ちた！`,"log-trap");
+        }
+    },
+
+    combat(isForce=false) {
+        const activeParty = this.party.filter(c => c.hp > 0);
+        if(activeParty.length === 0) return;
         
-        this.helix -= CONFIG.BREED_COST;
-        let c = new Character(job, [p1,p2]);
+        let scale = 1 + (this.floor - 1) * 0.4;
+        let isElite = !isForce && (this.floor % 5 === 0);
+        if(isElite) scale *= 1.5;
+        
+        let eBase = ENEMY_BASE[Math.min(ENEMY_BASE.length-1, Math.floor((this.floor-1)/2))];
+        let prefix = isElite ? ENEMY_PREFIXES[Math.floor(Math.random()*ENEMY_PREFIXES.length)] : null;
+        
+        let enemy = {
+            name: (prefix ? prefix.name : "") + eBase.name,
+            hp: Math.floor(eBase.hp * scale * (prefix ? prefix.mod.hp || 1 : 1)),
+            atk: Math.floor(eBase.atk * scale * (prefix ? prefix.mod.atk || 1 : 1)),
+            def: Math.floor(eBase.def * scale * (prefix ? prefix.mod.def || 1 : 1)), 
+            agi: Math.floor(scale * 10 * (prefix ? prefix.mod.agi || 1 : 1)), 
+            exp: Math.floor(eBase.exp * scale * (prefix ? prefix.mod.exp || 1 : 1)),
+            gold: Math.floor(eBase.gold * scale),
+            elem: eBase.elem
+        };
+        
+        let eElemName = ELEMENTS[enemy.elem] ? ELEMENTS[enemy.elem].name : "無";
+        UI.log(`遭遇: ${enemy.name} (${eElemName}) HP:${enemy.hp}`, isElite?"log-elite":"log-combat");
+
+        activeParty.forEach(c => {
+            if(enemy.hp <= 0) return;
+            if(c.status.slp) return;
+            
+            const stats = c.battleStats;
+            let dmg = 0;
+            let hitChance = 0.8 + (stats.hit / (enemy.agi * 2));
+            if (Math.random() > hitChance) {
+                UI.log(`${c.name}の攻撃は外れた`, "log-dmg");
+                return;
+            }
+
+            if (stats.isMag) {
+                dmg = Math.max(1, stats.mAtk - (enemy.def * 0.8)); 
+            } else {
+                dmg = Math.max(1, stats.pAtk - enemy.def);
+            }
+            
+            dmg = Math.floor(dmg * (0.9 + Math.random() * 0.2));
+
+            let mod = 1.0;
+            if (enemy.elem && c.elements.length > 0) {
+                let bestMod = 1.0;
+                c.elements.forEach(el => {
+                    if (ELEMENT_CHART[el].strong === enemy.elem) bestMod = 1.5;
+                    else if (ELEMENT_CHART[el].weak === enemy.elem && bestMod < 1.0) bestMod = 0.5;
+                });
+                mod = bestMod;
+            }
+            dmg = Math.floor(dmg * mod);
+            let weakLog = mod > 1.0 ? "(弱点!)" : (mod < 1.0 ? "(半減)" : "");
+
+            if(Math.random() < (stats.crit / 100)) { dmg *= 2; UI.log("クリティカル！", "stat-bonus"); }
+            
+            enemy.hp -= dmg;
+            UI.log(`${c.name}の攻撃${weakLog} -> ${dmg} ダメージ`);
+        });
+
+        if(enemy.hp > 0) {
+            let target = activeParty[Math.floor(Math.random() * activeParty.length)];
+            let s = target.battleStats;
+            let dmg = Math.max(1, Math.floor(enemy.atk - s.def));
+            target.hp -= dmg;
+            UI.log(`${target.name}は ${dmg} ダメージ受けた`, "log-dmg");
+            if(target.hp <= 0) UI.log(`${target.name} は倒れた...`, "log-defeat");
+        } else {
+            UI.log(`勝利！ +${enemy.gold}G`);
+            this.helix += enemy.gold;
+            this.party.forEach(c => { 
+                if(c.hp>0) {
+                    let diff = c.gainExp(enemy.exp);
+                    if(diff) {
+                        UI.log(`${c.name} LvUp! [${diff.join(', ')}]`, "log-lvlup");
+                    }
+                } 
+            });
+            let item = LootSystem.generate(this.floor);
+            // Modified: Auto Equip Check
+            this.autoEquip(item);
+        }
+    },
+
+    event() { let g = 5 + this.floor; this.helix += g; UI.log(`${g} Helixを発見`); },
+
+    hire(targetJob) {
+        if(this.helix < CONFIG.HIRE_COST) return;
+        this.helix -= CONFIG.HIRE_COST;
+        let key = targetJob;
+        if (!key) {
+            let keys = Object.keys(JOB_DATA).filter(k=>JOB_DATA[k].tier===1);
+            key = keys[Math.floor(Math.random()*keys.length)];
+        }
+        let c = new Character(key);
         this.roster.push(c);
-        UI.log(`Born: ${c.name} (${c.jobData.name})`);
+        UI.log(`雇用: ${c.name}`);
+        this.save();
         UI.updateAll();
     },
 
-    hire() {
-        if(this.helix < CONFIG.HIRE_COST) return;
-        let pool = Object.keys(JOB_DATA).filter(k=>JOB_DATA[k].tier === 1);
-        let job = pool[Math.floor(Math.random()*pool.length)];
-        this.helix -= CONFIG.HIRE_COST;
-        let c = new Character(job);
+    breed(id1, id2) {
+        let p1 = this.roster.find(c=>c.id===id1);
+        let p2 = this.roster.find(c=>c.id===id2);
+        let cost = p1.breedCost + p2.breedCost;
+        if(this.helix < cost) return alert("Helix不足");
+        if(p1.level < CONFIG.BREED_MIN_LV || p2.level < CONFIG.BREED_MIN_LV) return alert("親はLv30以上必要です");
+        this.helix -= cost;
+        let c = new Character(p1.jobKey, [p1,p2]);
         this.roster.push(c);
-        UI.log(`Hired: ${c.name}`);
+        UI.log(`誕生: ${c.name} (属性:${c.elements.map(e=>ELEMENTS[e].name).join(',')})`);
+        this.save();
+        UI.updateAll();
+    },
+    
+    classChange(charId, jobKey) {
+        if(this.helix < CONFIG.CC_COST) return;
+        let c = this.roster.find(x=>x.id===charId);
+        if(c.level < 10) return alert("Lv10以上必要です");
+        this.helix -= CONFIG.CC_COST;
+        c.classChange(jobKey);
+        UI.log(`${c.name} は ${JOB_DATA[jobKey].name} に転職した！`);
+        this.save();
         UI.updateAll();
     }
 };
 
-// --- UI ---
+// --- UI CONTROLLER ---
 const UI = {
-    sel: [], equipTarget: null,
+    sel: [], equipChar: null, ccChar: null,
 
     init() {
-        document.getElementById('btn-explore').onclick = ()=>Game.explore();
-        document.getElementById('btn-return').onclick = ()=>Game.stop();
-        document.getElementById('btn-lab').onclick = ()=>this.openModal('modal-lab', this.rendLab);
-        document.getElementById('btn-inv').onclick = ()=>this.openModal('modal-inv', this.rendInv);
-        document.querySelectorAll('.close-modal').forEach(b=>b.onclick=()=>document.querySelectorAll('.modal-overlay').forEach(m=>m.style.display='none'));
+        document.getElementById('btn-explore').onclick = () => Game.explore(document.getElementById('floor-select').value);
+        document.getElementById('btn-return').onclick = () => Game.stop();
+        document.getElementById('btn-lab').onclick = () => this.openModal('modal-lab', this.renderLabRoster);
+        document.getElementById('btn-inv').onclick = () => this.openModal('modal-inv', this.renderInv);
+        document.getElementById('btn-settings').onclick = () => this.openModal('modal-settings');
+        document.getElementById('btn-help').onclick = () => this.openModal('modal-rules');
+        document.querySelectorAll('.close-modal').forEach(b => b.onclick = () => document.querySelectorAll('.modal-overlay').forEach(m => m.style.display='none'));
 
-        document.getElementById('act-breed').onclick = () => { if(this.sel.length===2) { Game.breed(this.sel[0], this.sel[1]); this.sel=[]; this.rendLab(); }};
+        document.getElementById('act-breed').onclick = () => { if(this.sel.length===2){ Game.breed(this.sel[0], this.sel[1]); this.sel=[]; this.renderLabRoster(); }};
         document.getElementById('act-party').onclick = () => { this.sel.forEach(id => {
             let c = Game.roster.find(x=>x.id===id);
             let idx = Game.party.indexOf(c);
             idx>-1 ? Game.party.splice(idx,1) : (Game.party.length<CONFIG.MAX_PARTY && Game.party.push(c));
-        }); this.sel=[]; this.rendLab(); };
-        document.getElementById('act-hire').onclick = () => { Game.hire(); this.rendLab(); };
+        }); this.sel=[]; this.renderLabRoster(); };
 
-        Game.init();
+        document.getElementById('hire-cost').innerText = CONFIG.HIRE_COST;
     },
 
     updateAll() { this.updateHeader(); this.renderParty(); },
     updateHeader() {
         document.getElementById('helix-display').innerText = Game.helix;
         document.getElementById('floor-display').innerText = Game.floor;
-        document.getElementById('floor-progress').innerText = `(${Game.floorProgress}/10)`;
+        document.getElementById('floor-progress').innerText = `(${Game.floorProgress}/${CONFIG.FLOOR_STEP_MAX})`;
+        document.getElementById('max-floor').innerText = Game.maxReachedFloor || Game.maxFloor;
+        const sel = document.getElementById('floor-select');
+        const currentOpt = parseInt(sel.value);
+        sel.innerHTML = "";
+        for(let i=1; i<=Game.maxFloor; i+=5) {
+            let opt = document.createElement('option');
+            opt.value = i; opt.innerText = `${i}F`;
+            if(i === 1 || i === currentOpt) opt.selected = true;
+            sel.appendChild(opt);
+        }
+        if(Game.maxFloor % 5 !== 1) {
+            let opt = document.createElement('option');
+            opt.value = Game.maxFloor; opt.innerText = `${Game.maxFloor}F`;
+            sel.appendChild(opt);
+        }
     },
     toggle(on) {
         document.getElementById('btn-explore').disabled = on;
         document.getElementById('btn-return').disabled = !on;
+        document.getElementById('floor-select').disabled = on;
     },
     log(msg, type='') {
         let d = document.getElementById('log-list');
         d.innerHTML += `<div class="log-entry ${type}">${msg}</div>`;
         document.getElementById('log-panel').scrollTop = 99999;
     },
-    openModal(id, fn) { this.sel=[]; this.equipTarget=null; document.getElementById(id).style.display='flex'; fn.call(this); },
 
     renderParty() {
-        const d = document.getElementById('party-container');
-        d.innerHTML = '';
+        const d = document.getElementById('party-container'); d.innerHTML = "";
         Game.party.forEach(c => {
             let s = c.totalStats;
-            let dets = c.statDetails; // Get split stats
-            let hpP = (c.hp/s.hp)*100;
-            let expP = (c.exp/c.maxExp)*100;
+            let hpP = (c.hp / s.hp) * 100;
+            if(c.hp <= 0) hpP = 0;
+            let expP = (c.exp / c.maxExp) * 100;
             
-            // Format Stats: 50 (+10)
-            const fmt = (k) => `<span class="${dets[k].bonus>0?'stat-bonus':''}">${dets[k].val}${dets[k].bonus>0 ? '(+'+dets[k].bonus+')':''}</span>`;
-            
-            // Equip list
-            let eqHtml = "";
-            for(let slot in c.equipment) {
-                let item = c.equipment[slot];
-                let cls = item ? `equip-active rar-${item.rarity}` : "";
-                eqHtml += `<div class="equip-slot ${cls}">${slot.substr(0,2)}: ${item ? item.name : '-'}</div>`;
-            }
+            let badges = "";
+            if(c.status.psn) badges += `<span class="status-badge st-psn">毒</span>`;
+            if(c.status.slp) badges += `<span class="status-badge st-slp">眠</span>`;
 
-            d.innerHTML += `
-            <div class="char-card" style="border-left:3px solid ${c.color}">
-                <div class="char-header"><span>${c.name}</span> <span style="color:${c.color}">${c.jobData.name}</span></div>
-                <div class="bar-wrap"><div class="bar-val hp-bar" style="width:${hpP}%"></div></div>
-                <div class="bar-wrap" style="height:2px;"><div class="bar-val exp-bar" style="width:${expP}%"></div></div>
-                <div style="font-size:10px; color:#888; text-align:right;">Lv.${c.level} (Exp:${c.exp}/${c.maxExp})</div>
-                
-                <div class="stat-grid">
-                    <span>ATK:${fmt('atk')}</span> <span>DEF:${fmt('def')}</span>
-                    <span>MAG:${fmt('mag')}</span> <span>HP:${c.hp}/${s.hp}</span>
+            let elems = c.elements.map(e => `<span class="elem-icon el-${e}" title="${ELEMENTS[e].name}"></span>`).join('');
+
+            let items = "";
+            for(let k in c.equipment) {
+                if(c.equipment[k]) items += `<div class="equip-slot equip-active rar-${c.equipment[k].rarity}">${k.substr(0,2)}: ${c.equipment[k].name}</div>`;
+                else items += `<div class="equip-slot">${k.substr(0,2)}: -</div>`;
+            }
+            let skills = c.skills.map(sk => `<span class="skill-tag">${sk}</span>`).join('');
+
+            const card = document.createElement('div');
+            card.className = `char-card ${c.hp<=0 ? 'dead' : ''}`;
+            card.style.borderLeft = `3px solid ${LINEAGE[c.job.lineage].color || '#fff'}`;
+            card.innerHTML = `
+                <div class="char-header">
+                    <span>${badges}${c.name} ${elems}</span> <span class="job-label">${c.job.name} Lv${c.level}</span>
                 </div>
-                <div class="equip-grid">${eqHtml}</div>
-            </div>`;
+                <div class="personality-label">${c.personality}</div>
+                <div class="bar-container">
+                    <div class="bar-row">
+                        <span style="width:20px;">HP</span>
+                        <div class="bar-wrap"><div class="bar-val hp-bar" style="width:${hpP}%"></div></div>
+                    </div>
+                    <div class="bar-row">
+                        <span style="width:20px;">EXP</span>
+                        <div class="bar-wrap"><div class="bar-val exp-bar" style="width:${expP}%"></div></div>
+                    </div>
+                </div>
+                <div class="stat-grid">
+                    <div class="stat-val">STR: <span>${s.atk}</span></div>
+                    <div class="stat-val">VIT: <span>${s.def}</span></div>
+                    <div class="stat-val">MAG: <span>${s.mag}</span></div>
+                    <div class="stat-val">HP: <span>${c.hp}/${s.hp}</span></div>
+                </div>
+                <div class="skill-list">${skills}</div>
+                <div class="equip-grid">${items}</div>
+            `;
+            card.onclick = (e) => {
+                UI.showCharDetail(c);
+            };
+            d.appendChild(card);
         });
     },
 
-    rendLab() {
-        const d = document.getElementById('lab-list'); d.innerHTML = '';
+    openModal(id, fn) { document.getElementById(id).style.display = 'flex'; this.sel = []; if(fn) fn.call(this); },
+    switchTab(tabName) {
+        document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+        document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+        document.getElementById('tab-'+tabName).style.display = 'block';
+        event.target.classList.add('active');
+        if(tabName==='lab-roster') this.renderLabRoster();
+        if(tabName==='lab-hire') this.renderGuild();
+        if(tabName==='lab-class') this.renderClassChange();
+    },
+
+    renderLabRoster() {
+        const d = document.getElementById('lab-list'); d.innerHTML = "";
         Game.roster.forEach(c => {
-            let inPt = Game.party.includes(c);
             let sel = this.sel.includes(c.id);
+            let inPt = Game.party.includes(c);
             let el = document.createElement('div');
             el.className = `list-item ${sel?'selected':''}`;
             if(inPt) el.style.borderRight = "3px solid var(--accent-color)";
-            el.innerHTML = `<div>${c.name}</div><div style="font-size:10px; color:#888;">${c.jobData.name} (T${c.jobData.tier})</div>`;
+            
+            let elems = c.elements.map(e => `<span class="elem-icon el-${e}"></span>`).join('');
+            
+            el.innerHTML = `
+                <div style="font-weight:bold;">${c.name} ${elems}</div>
+                <div style="font-size:10px; color:#888;">${c.job.name} Lv${c.level}</div>
+            `;
             el.onclick = () => {
                 sel ? this.sel=this.sel.filter(x=>x!==c.id) : this.sel.push(c.id);
-                this.rendLab();
-                document.getElementById('act-breed').disabled = this.sel.length!==2;
+                this.renderLabRoster();
+                const btn = document.getElementById('act-breed');
+                if(this.sel.length === 2) {
+                    let p1 = Game.roster.find(x=>x.id===this.sel[0]);
+                    let p2 = Game.roster.find(x=>x.id===this.sel[1]);
+                    btn.innerText = `配合 (${p1.breedCost + p2.breedCost}G)`;
+                    btn.disabled = false;
+                } else {
+                    btn.innerText = "配合";
+                    btn.disabled = true;
+                }
                 document.getElementById('act-party').disabled = this.sel.length===0;
             };
             d.appendChild(el);
         });
     },
-
-    rendInv() {
-        const cList = document.getElementById('equip-char-list'); cList.innerHTML='';
-        Game.party.forEach(c => {
-            let el = document.createElement('div');
-            el.className = `list-item ${this.equipTarget===c?'selected':''}`;
-            el.innerHTML = `<div>${c.name}</div><div style="font-size:10px;">${c.jobData.name}</div>`;
-            el.onclick = () => { this.equipTarget=c; this.rendInv(); };
-            cList.appendChild(el);
-        });
-
-        const iList = document.getElementById('inv-list'); iList.innerHTML='';
-        if(!this.equipTarget) { iList.innerHTML="Select Char"; return; }
-        
-        let c = this.equipTarget;
-        // Current Equip
-        let eqDiv = document.createElement('div');
-        eqDiv.style.borderBottom="1px solid #333"; eqDiv.style.marginBottom="10px";
-        for(let slot in c.equipment) {
-            let item = c.equipment[slot];
-            let info = item ? `<span class="rar-${item.rarity}">${item.name}</span>` : '<span style="color:#444">Empty</span>';
-            let btn = item ? `<button style="font-size:9px; margin-left:5px;" onclick="UI.doUnequip('${slot}')">X</button>` : '';
-            eqDiv.innerHTML += `<div style="font-size:11px; margin-bottom:2px; color:#aaa;">${slot}: ${info} ${btn}</div>`;
-        }
-        iList.appendChild(eqDiv);
-
-        // Inventory Items
-        if(Game.inventory.length===0) iList.innerHTML+="<div style='color:#666'>No Items</div>";
-        Game.inventory.forEach((item, idx) => {
+    renderGuild() {
+        const d = document.getElementById('guild-list'); d.innerHTML = "";
+        Object.keys(JOB_DATA).filter(k=>JOB_DATA[k].tier===1).forEach(k => {
+            let job = JOB_DATA[k];
             let el = document.createElement('div');
             el.className = 'list-item';
+            el.innerHTML = `<div>${job.name}</div><div style="font-size:10px;">${job.type}</div>`;
+            el.onclick = () => { Game.hire(k); this.updateAll(); };
+            d.appendChild(el);
+        });
+    },
+    renderClassChange() {
+        const cList = document.getElementById('cc-char-list'); cList.innerHTML = "";
+        Game.roster.forEach(c => {
+            let el = document.createElement('div');
+            el.className = `list-item ${this.ccChar===c?'selected':''}`;
+            el.innerHTML = `<div>${c.name}</div><div style="font-size:10px;">Lv${c.level} ${c.job.name}</div>`;
+            el.onclick = () => { this.ccChar = c; this.renderClassChange(); };
+            cList.appendChild(el);
+        });
+        const jList = document.getElementById('cc-job-list'); jList.innerHTML = "";
+        if(!this.ccChar) { jList.innerHTML = "キャラを選択"; return; }
+        Object.keys(JOB_DATA).forEach(k => {
+            let job = JOB_DATA[k];
+            let el = document.createElement('div');
+            el.className = 'list-item';
+            
+            let lvReq = this.ccChar.level >= 10;
+            let elReq = true;
+            if(job.reqEl) {
+                elReq = job.reqEl.some(r => this.ccChar.elements.includes(r));
+            }
+            let costReq = Game.helix >= CONFIG.CC_COST;
+            
+            let can = lvReq && elReq && costReq;
+            if(!can) el.classList.add('disabled');
+            
+            let reqText = job.reqEl ? `[属性:${job.reqEl.map(e=>ELEMENTS[e].name).join(',')}]` : "";
+            
+            el.innerHTML = `<div>${job.name} ${reqText}</div><div style="font-size:10px;">Tier ${job.tier}</div>`;
+            if(can) el.onclick = () => { Game.classChange(this.ccChar.id, k); this.renderClassChange(); };
+            jList.appendChild(el);
+        });
+    },
+    renderInv() {
+        const cList = document.getElementById('equip-char-list'); cList.innerHTML = "";
+        Game.party.forEach(c => {
+            let el = document.createElement('div');
+            el.className = `list-item ${this.equipChar===c?'selected':''}`;
+            el.innerHTML = `<div>${c.name}</div><div style="font-size:10px;">${c.job.name}</div>`;
+            el.onclick = () => { this.equipChar = c; this.renderInv(); };
+            cList.appendChild(el);
+        });
+        const iList = document.getElementById('inv-list'); iList.innerHTML = "";
+        const head = document.getElementById('inv-header');
+        if(!this.equipChar) { iList.innerHTML="キャラを選択してください"; return; }
+        
+        let eqHtml = "";
+        for(let slot in this.equipChar.equipment) {
+            let item = this.equipChar.equipment[slot];
+            eqHtml += `<div style="font-size:11px; margin-bottom:2px;"><span style="color:#666; display:inline-block; width:60px;">${slot.substr(0,4)}:</span>${item ? `<span class="rar-${item.rarity}">${item.name}</span> <button style="font-size:9px;" onclick="UI.doUnequip('${slot}')">外す</button>` : '空'}</div>`;
+        }
+        head.innerHTML = eqHtml;
+        if(Game.inventory.length===0) iList.innerHTML = "アイテムがありません";
+        Game.inventory.forEach((item, idx) => {
+            if (!item) return; 
+            
+            const check = this.equipChar.canEquip(item);
+            const err = check.ok ? "" : `<span class="err-msg">${check.reason}</span>`;
+            const cls = check.ok ? "" : "disabled";
+
+            let el = document.createElement('div');
+            el.className = `list-item ${cls}`;
             let stats = Object.keys(item.stats).map(k=>`${k}:${item.stats[k]}`).join(' ');
-            el.innerHTML = `
-                <div style="font-weight:bold;" class="rar-${item.rarity}">${item.name}</div>
-                <div style="font-size:10px; color:#666;">${item.type} [${item.slot}]</div>
-                <div style="font-size:10px; color:var(--accent-color);">${stats}</div>
-            `;
-            el.onclick = () => {
-                c.equip(item);
-                Game.inventory.splice(idx, 1);
-                this.rendInv(); this.renderParty();
-            };
+            el.innerHTML = `<div class="rar-${item.rarity}" style="font-weight:bold;">${item.name}</div><div style="font-size:10px; color:#888;">${item.type} [${item.slot}]</div><div style="font-size:10px;">${stats}</div>${err}`;
+            if(check.ok) {
+                el.onclick = () => { 
+                    if(this.equipChar.equip(item)) {
+                        Game.inventory.splice(idx,1); 
+                        this.renderInv(); 
+                        this.renderParty();
+                        if(document.getElementById('modal-char-detail').style.display === 'flex') {
+                            this.showCharDetail(this.equipChar);
+                        }
+                    }
+                };
+            }
             iList.appendChild(el);
         });
     },
+    doUnequip(slot) { 
+        this.equipChar.unequip(slot); 
+        this.renderInv(); 
+        this.renderParty();
+        if(document.getElementById('modal-char-detail').style.display === 'flex') {
+            this.showCharDetail(this.equipChar);
+        }
+    },
 
-    doUnequip(slot) { this.equipTarget.unequip(slot); this.rendInv(); this.renderParty(); }
+    showCharDetail(c) {
+        const s = c.totalStats;
+        const b = c.battleStats;
+        const elems = c.elements.map(e => `<span class="elem-icon el-${e}"></span> ${ELEMENTS[e].name}`).join(', ') || "なし";
+        
+        const openEquip = () => {
+            document.getElementById('modal-char-detail').style.display='none';
+            this.equipChar = c;
+            this.openModal('modal-inv', this.renderInv);
+        };
+        window.openEquipFromDetail = openEquip;
+
+        let equipRows = "";
+        for(let slot in c.equipment) {
+            let item = c.equipment[slot];
+            let name = item ? `<span class="rar-${item.rarity}">${item.name}</span>` : "装備なし";
+            let stats = item ? Object.keys(item.stats).map(k=>`${k.toUpperCase()}:${item.stats[k]}`).join(' ') : "";
+            equipRows += `
+            <div class="detail-eq-row">
+                <span style="color:#888; font-size:11px; width:80px;">${slot}</span>
+                <div>${name} <span style="font-size:10px; color:#aaa; margin-left:5px;">${stats}</span></div>
+            </div>`;
+        }
+
+        let skills = c.skills.length ? c.skills.map(sk => `<span class="skill-tag" style="font-size:12px; padding:3px 6px;">${sk}</span>`).join(' ') : "なし";
+
+        const content = `
+            <div class="detail-header">
+                <div class="detail-title">
+                    <h2>${c.name}</h2>
+                    <div class="detail-meta">${c.job.name} (${c.job.atkType==="mag"?"魔法":"物理"}) Lv.${c.level} | ${c.personality} | 世代:${c.generation}</div>
+                </div>
+            </div>
+            <div class="detail-sections">
+                <div>
+                    <h4 style="color:#888; border-bottom:1px solid #333;">基礎ステータス</h4>
+                    <div class="detail-row"><span class="detail-label">HP</span> <span>${c.hp} / ${s.hp}</span></div>
+                    <div class="detail-row"><span class="detail-label">STR (腕力)</span> <span>${s.atk}</span></div>
+                    <div class="detail-row"><span class="detail-label">VIT (耐久)</span> <span>${s.def}</span></div>
+                    <div class="detail-row"><span class="detail-label">MAG (魔力)</span> <span>${s.mag}</span></div>
+                    <div class="detail-row"><span class="detail-label">INT (知力)</span> <span>${s.int}</span></div>
+                    <div class="detail-row"><span class="detail-label">AGI (素早)</span> <span>${s.agi}</span></div>
+                    <div class="detail-row"><span class="detail-label">LUC (運)</span> <span>${s.luc}</span></div>
+                    <div class="detail-row"><span class="detail-label">属性</span> <span>${elems}</span></div>
+                    <br>
+                    <h4 style="color:#888; border-bottom:1px solid #333;">戦闘パラメータ</h4>
+                    <div class="detail-row"><span class="detail-label">物理攻撃力</span> <span>${b.pAtk}</span></div>
+                    <div class="detail-row"><span class="detail-label">魔法攻撃力</span> <span>${b.mAtk}</span></div>
+                    <div class="detail-row"><span class="detail-label">防御力</span> <span>${b.def}</span></div>
+                    <div class="detail-row"><span class="detail-label">命中率</span> <span>${Math.floor(b.hit)}</span></div>
+                    <div class="detail-row"><span class="detail-label">クリティカル</span> <span>${Math.floor(b.crit)}%</span></div>
+                </div>
+                <div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; border-bottom:1px solid #444;">
+                        <h4>装備</h4>
+                        <button onclick="openEquipFromDetail()" style="padding:2px 8px; font-size:10px;">変更</button>
+                    </div>
+                    ${equipRows}
+                    <h4 style="margin:15px 0 10px 0; border-bottom:1px solid #444;">習得スキル</h4>
+                    <div style="line-height:1.8;">${skills}</div>
+                </div>
+            </div>
+        `;
+        document.getElementById('detail-content').innerHTML = content;
+        this.openModal('modal-char-detail');
+    }
 };
 
-window.onload = ()=>UI.init();
+window.onload = () => Game.init();
+
 </script>
 </body>
 </html>
