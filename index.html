@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Genetic Rogue Ver.11.2 - Fixed</title>
+    <title>Genetic Rogue Ver.0.11.2 - Fixed</title>
     <!-- Favicon Fix: Use Emoji as Icon -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧬</text></svg>">
     <style>
@@ -703,6 +703,7 @@ const Game = {
     helix: 100, floor: 1, maxFloor: 1, floorProgress: 0,
     party: [], roster: [], inventory: [],
     exploring: false, timer: null,
+    currentEnemy: null, // 追加
 
     init() {
         // USE NEW SAVE KEY to prevent conflict
@@ -765,6 +766,7 @@ const Game = {
         this.floor = parseInt(startFloor);
         this.floorProgress = 0;
         this.exploring = true;
+        this.currentEnemy = null; // 安全のためリセット
         UI.toggle(true);
         UI.log(`階層 ${this.floor} の探索を開始します`);
         this.timer = setInterval(() => this.tick(), 1000);
@@ -777,6 +779,7 @@ const Game = {
             c.hp = c.totalStats.hp;
             c.status = {}; 
         });
+        this.currentEnemy = null; // リセット
         this.save();
         UI.toggle(false);
         UI.updateAll();
@@ -790,30 +793,38 @@ const Game = {
             UI.log("全滅しました... 最高到達階層リセット。", "log-defeat");
             this.maxFloor = 1; this.floor = 1;
             this.party.forEach(c => { c.hp = c.totalStats.hp; c.status = {}; });
+            this.currentEnemy = null;
             this.save();
             UI.toggle(false);
             UI.updateAll();
             return;
         }
 
+        // 状態異常処理
         this.party.forEach(c => {
             if(c.hp > 0 && c.status.psn) { c.hp -= Math.ceil(c.totalStats.hp * 0.05); c.status.psn--; if(c.status.psn<=0) delete c.status.psn; }
             if(c.status.slp) { c.status.slp--; if(c.status.slp<=0) delete c.status.slp; }
         });
 
-        this.floorProgress++;
-        if(this.floorProgress > CONFIG.FLOOR_STEP_MAX) {
-            this.floor++;
-            this.floorProgress = 0;
-            if(this.floor > this.maxFloor) this.maxFloor = this.floor;
-            UI.log(`>>> 階層 ${this.floor} へ進んだ`, "log-victory");
+        // ★修正: 戦闘中は歩数を進めない
+        if (this.currentEnemy) {
+            this.combat();
+        } else {
+            this.floorProgress++;
+            if(this.floorProgress > CONFIG.FLOOR_STEP_MAX) {
+                this.floor++;
+                this.floorProgress = 0;
+                if(this.floor > this.maxFloor) this.maxFloor = this.floor;
+                UI.log(`>>> 階層 ${this.floor} へ進んだ`, "log-victory");
+            }
+            UI.updateHeader();
+
+            const r = Math.random();
+            if (r < 0.2) this.trap();
+            else if (r < 0.8) this.combat(); // 新規戦闘
+            else this.event();
         }
 
-        UI.updateHeader();
-        const r = Math.random();
-        if (r < 0.2) this.trap();
-        else if (r < 0.8) this.combat();
-        else this.event();
         UI.renderParty();
     },
 
@@ -882,27 +893,36 @@ const Game = {
         const activeParty = this.party.filter(c => c.hp > 0);
         if(activeParty.length === 0) return;
         
-        let scale = 1 + (this.floor - 1) * 0.4;
-        let isElite = !isForce && (this.floor % 5 === 0);
-        if(isElite) scale *= 1.5;
-        
-        let eBase = ENEMY_BASE[Math.min(ENEMY_BASE.length-1, Math.floor((this.floor-1)/2))];
-        let prefix = isElite ? ENEMY_PREFIXES[Math.floor(Math.random()*ENEMY_PREFIXES.length)] : null;
-        
-        let enemy = {
-            name: (prefix ? prefix.name : "") + eBase.name,
-            hp: Math.floor(eBase.hp * scale * (prefix ? prefix.mod.hp || 1 : 1)),
-            atk: Math.floor(eBase.atk * scale * (prefix ? prefix.mod.atk || 1 : 1)),
-            def: Math.floor(eBase.def * scale * (prefix ? prefix.mod.def || 1 : 1)), 
-            agi: Math.floor(scale * 10 * (prefix ? prefix.mod.agi || 1 : 1)), 
-            exp: Math.floor(eBase.exp * scale * (prefix ? prefix.mod.exp || 1 : 1)),
-            gold: Math.floor(eBase.gold * scale),
-            elem: eBase.elem
-        };
-        
-        let eElemName = ELEMENTS[enemy.elem] ? ELEMENTS[enemy.elem].name : "無";
-        UI.log(`遭遇: ${enemy.name} (${eElemName}) HP:${enemy.hp}`, isElite?"log-elite":"log-combat");
+        let enemy;
 
+        if (this.currentEnemy) {
+            enemy = this.currentEnemy;
+        } else {
+            // 新規敵生成
+            let scale = 1 + (this.floor - 1) * 0.4;
+            let isElite = !isForce && (this.floor % 5 === 0);
+            if(isElite) scale *= 1.5;
+            
+            let eBase = ENEMY_BASE[Math.min(ENEMY_BASE.length-1, Math.floor((this.floor-1)/2))];
+            let prefix = isElite ? ENEMY_PREFIXES[Math.floor(Math.random()*ENEMY_PREFIXES.length)] : null;
+            
+            enemy = {
+                name: (prefix ? prefix.name : "") + eBase.name,
+                hp: Math.floor(eBase.hp * scale * (prefix ? prefix.mod.hp || 1 : 1)),
+                atk: Math.floor(eBase.atk * scale * (prefix ? prefix.mod.atk || 1 : 1)),
+                def: Math.floor(eBase.def * scale * (prefix ? prefix.mod.def || 1 : 1)), 
+                agi: Math.floor(scale * 10 * (prefix ? prefix.mod.agi || 1 : 1)), 
+                exp: Math.floor(eBase.exp * scale * (prefix ? prefix.mod.exp || 1 : 1)),
+                gold: Math.floor(eBase.gold * scale),
+                elem: eBase.elem
+            };
+            this.currentEnemy = enemy; // 戦闘開始
+            
+            let eElemName = ELEMENTS[enemy.elem] ? ELEMENTS[enemy.elem].name : "無";
+            UI.log(`遭遇: ${enemy.name} (${eElemName}) HP:${enemy.hp}`, isElite?"log-elite":"log-combat");
+        }
+
+        // プレイヤー攻撃処理
         activeParty.forEach(c => {
             if(enemy.hp <= 0) return;
             if(c.status.slp) return;
@@ -941,6 +961,7 @@ const Game = {
             UI.log(`${c.name}の攻撃${weakLog} -> ${dmg} ダメージ`);
         });
 
+        // 敵のターンまたは戦闘終了判定
         if(enemy.hp > 0) {
             let target = activeParty[Math.floor(Math.random() * activeParty.length)];
             let s = target.battleStats;
@@ -961,6 +982,7 @@ const Game = {
             });
             let item = LootSystem.generate(this.floor);
             this.autoEquip(item);
+            this.currentEnemy = null; // 戦闘終了
         }
     },
 
