@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Genetic Rogue ver0.11.3 - Single File</title>
-    <!-- Favicon: エラー回避のため空データを指定 -->
+    <title>Genetic Rogue ver0.11.4 - Recycle & Rename</title>
+    <!-- Favicon -->
     <link rel="icon" href="data:,">
     <style>
         :root {
@@ -39,6 +39,7 @@
         .log-sys { color: #888; border-color: #888; font-style: italic; }
         .log-err { color: var(--danger-color); border-color: var(--danger-color); }
         .log-lvlup { color: #e67e22; border-color: #e67e22; font-weight: bold; }
+        .log-sell { color: #f1c40f; border-color: #f1c40f; }
 
         /* Party Cards */
         #party-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 8px; padding: 10px; overflow-y: auto; }
@@ -79,7 +80,8 @@
         
         /* Skills */
         .skill-list { display: flex; flex-wrap: wrap; gap: 2px; margin-top: 5px; }
-        .skill-tag { background: #002233; color: #3498db; padding: 1px 4px; font-size: 9px; border-radius: 2px; border: 1px solid #004466; }
+        .skill-tag { background: #002233; color: #3498db; padding: 1px 4px; font-size: 9px; border-radius: 2px; border: 1px solid #004466; cursor: help; }
+        .skill-tag:hover { background: #004466; }
 
         /* Rarity Colors */
         .rar-1 { color: var(--rar-bad); } .rar-2 { color: var(--rar-common); } .rar-3 { color: var(--rar-good); } 
@@ -93,8 +95,8 @@
         button:disabled { opacity: 0.3; cursor: not-allowed; }
         button.primary { background: #004433; border-color: var(--accent-color); color: var(--accent-color); }
         button.danger { border-color: var(--danger-color); color: var(--danger-color); }
+        button.recycle { border-color: #f1c40f; color: #f1c40f; }
         
-        /* Fixed: Button visibility */
         button.icon-btn { 
             font-size: 16px; padding: 5px 12px; border: 1px solid #444; 
             background: #222; color: #eee; border-radius: 4px; cursor: pointer; 
@@ -142,7 +144,7 @@
 
 <div id="app">
     <header>
-        <div>🧬 Genetic Rogue <span style="color:#666;">ver0.11.3</span></div>
+        <div>🧬 Genetic Rogue <span style="color:#666;">ver0.11.4</span></div>
         <div style="font-size:14px; display:flex; align-items:center; gap:10px;">
             <div>
                 <span style="color:#aaa;">階層:</span> <span id="floor-display" style="font-weight:bold; font-size:16px;">1</span>
@@ -233,7 +235,10 @@
                 <div id="equip-char-list"></div>
             </div>
             <div style="flex:1;">
-                <div id="inv-header" style="margin-bottom:10px; border-bottom:1px solid #333; padding-bottom:10px;"></div>
+                <div id="inv-header" style="margin-bottom:10px; border-bottom:1px solid #333; padding-bottom:10px; display:flex; justify-content:space-between;">
+                    <span>現在の装備</span>
+                    <button id="btn-sell-trash" style="padding:2px 8px; font-size:10px;" class="recycle">コモン一括売却</button>
+                </div>
                 <div id="inv-list" class="grid-list"></div>
             </div>
         </div>
@@ -288,44 +293,25 @@
         </div>
         <div class="modal-body">
             <div class="rule-section">
-                <h4>基本ステータス</h4>
-                <table class="rule-table">
-                    <tr><td>STR (腕力)</td><td>物理攻撃の威力に影響します。戦士系にとって重要。</td></tr>
-                    <tr><td>VIT (耐久)</td><td>物理防御力とHP成長率に影響します。</td></tr>
-                    <tr><td>MAG (魔力)</td><td>魔法攻撃の威力に影響します。魔法系にとって重要。</td></tr>
-                    <tr><td>INT (知力)</td><td>魔法防御力やスキルの成功率に影響します。</td></tr>
-                    <tr><td>AGI (素早)</td><td>命中率、回避率、行動順に影響します。</td></tr>
-                    <tr><td>LUC (運)</td><td>クリティカル率、アイテムドロップ率に影響します。</td></tr>
-                </table>
+                <h4>素材システム</h4>
+                <p>装備品には素材（Material）が付与され、ステータスや属性が強化されます。</p>
+                <p>例: 「炎の」素材が付いた武器は火属性を持ち、攻撃力が上昇します。</p>
             </div>
             <div class="rule-section">
-                <h4>戦闘ルール</h4>
-                <p>攻撃タイプは職業によって「物理」か「魔法」に分かれます。</p>
-                <ul>
-                    <li><strong>物理ダメージ:</strong> (STR + 武器攻撃力) - (敵VIT / 2)</li>
-                    <li><strong>魔法ダメージ:</strong> (MAG + 武器魔力) - (敵INT / 2)</li>
-                </ul>
+                <h4>リサイクル</h4>
+                <p>インベントリ画面で不要なアイテムをリサイクル（売却）してHelixを獲得できます。</p>
             </div>
-            <div class="rule-section">
-                <h4>属性 (Elements)</h4>
-                <p>属性には有利・不利の相性があります。有利属性で攻撃するとダメージ1.5倍、不利属性だと0.5倍になります。</p>
-                <p><strong>火 > 風 > 土 > 水 > 火</strong> （4すくみ）<br>
-                <strong>光 <=> 闇</strong> （互いに大ダメージ）</p>
-            </div>
-            <div class="rule-section">
-                <h4>自動装備 (Auto Equip)</h4>
-                <p>探索中、装備可能でかつ現在より「総合ステータス」が高いアイテムを入手すると、自動的に装備を更新します。</p>
-            </div>
+            <!-- ... -->
         </div>
     </div>
 </div>
 
 <script>
 /**
- * Genetic Rogue ver0.11.3
- * - Fixed Settings Button visibility
- * - New Save Key (Fixed) + Migration Logic
- * - Auto-Data Correction for old saves
+ * Genetic Rogue ver0.11.4
+ * - Renamed Items to avoid "Mithril Iron Sword"
+ * - Recycle System (Sell Items)
+ * - Skill Tooltips
  */
 
 // --- 1. DATA DEFINITIONS ---
@@ -348,6 +334,22 @@ const ELEMENT_CHART = {
     dark: { weak: 'light', strong: 'light' }
 };
 
+// Material Data
+const MATERIAL_DATA = [
+    { name: "鉄の",       elem: null, mod: {}, w: 40 },
+    { name: "鋼の",       elem: null, mod: { atk: 2, def: 2 }, w: 30 },
+    { name: "銀の",       elem: null, mod: { mag: 3, int: 3 }, w: 20 },
+    { name: "ミスリルの", elem: null, mod: { mag: 5, agi: 3 }, w: 10 },
+    { name: "炎の",       elem: 'fire', mod: { atk: 3 }, w: 10 },
+    { name: "氷の",       elem: 'water', mod: { mag: 3 }, w: 10 },
+    { name: "雷の",       elem: 'wind', mod: { agi: 3 }, w: 10 },
+    { name: "大地の",     elem: 'earth', mod: { def: 5 }, w: 10 },
+    { name: "光の",       elem: 'light', mod: { int: 5 }, w: 5 },
+    { name: "闇の",       elem: 'dark', mod: { atk: 5, hp: -10 }, w: 5 },
+    { name: "竜鱗の",     elem: 'fire', mod: { def: 10, hp: 20 }, w: 2 },
+    { name: "魔王の",     elem: 'dark', mod: { atk: 20, mag: 20 }, w: 1 }
+];
+
 const LINEAGE = {
     warrior: { hp: 1.5, atk: 1.5, def: 1.2, agi: 0.8, mag: 0.2, int: 0.6, luc: 1.0, color:"#e74c3c" },
     martial: { hp: 1.4, atk: 1.3, def: 0.9, agi: 1.5, mag: 0.5, int: 1.0, luc: 1.0, color:"#d35400" },
@@ -364,12 +366,40 @@ const PERSONALITY_DATA = {
     "堅実": { def:1.2, hp:1.2, agi:0.8 }, "凡人": {}
 };
 
+const SKILL_DATA = {
+    "剛腕": { desc: "物理攻撃力+10%" },
+    "連撃": { desc: "20%の確率で2回攻撃" },
+    "鉄壁": { desc: "防御力+15%" },
+    "カウンター": { desc: "回避時、50%で反撃" },
+    "急所突き": { desc: "クリティカル率+10%" },
+    "魔力集中": { desc: "魔法攻撃力+10%" },
+    "瞑想": { desc: "ターン終了時MP(HP)回復" },
+    "炎の知識": { desc: "火属性ダメージ+20%" },
+    "マナ効率": { desc: "魔法スキル発動率UP" },
+    "詠唱短縮": { desc: "行動速度+10%" },
+    "早業": { desc: "命中率+20%" },
+    "回避": { desc: "回避率+10%" },
+    "不意打ち": { desc: "戦闘開始時、先制攻撃" },
+    "残像": { desc: "回避時、次ターン攻撃力UP" },
+    "軽業": { desc: "トラップ回避率UP" },
+    "挑発": { desc: "敵の攻撃を引きつける" },
+    "かばう": { desc: "瀕死の味方をかばう" },
+    "忍耐": { desc: "HP30%以下で防御UP" },
+    "リジェネ": { desc: "毎ターンHP回復" },
+    "重装甲": { desc: "物理ダメージ-10%" },
+    "祈り": { desc: "味方全体のHP回復" },
+    "祝福": { desc: "味方の攻撃力UP" },
+    "慈愛": { desc: "回復効果+20%" },
+    "応急手当": { desc: "戦闘終了時HP回復" },
+    "加護": { desc: "状態異常耐性UP" }
+};
+
 const SKILL_POOL = {
-    phy: ["剛腕", "連撃", "鉄壁", "カウンター", "急所突き", "粉砕", "底力", "闘争本能", "受け流し", "鬼神"],
-    mag: ["魔力集中", "瞑想", "炎の知識", "マナ効率", "詠唱短縮", "属性強化", "結界", "精神統一", "古代の知恵", "魔神"],
-    spd: ["早業", "回避", "不意打ち", "残像", "軽業", "目利き", "二刀流の極意", "隠密", "俊足", "神速"],
-    tnk: ["挑発", "かばう", "忍耐", "リジェネ", "重装甲", "不屈", "ガーディアン", "自己修復", "城塞", "金剛"],
-    sup: ["祈り", "祝福", "慈愛", "応急手当", "加護", "薬の知識", "聖なる光", "献身", "女神の瞳", "奇跡"]
+    phy: ["剛腕", "連撃", "鉄壁", "カウンター", "急所突き"],
+    mag: ["魔力集中", "瞑想", "炎の知識", "マナ効率", "詠唱短縮"],
+    spd: ["早業", "回避", "不意打ち", "残像", "軽業"],
+    tnk: ["挑発", "かばう", "忍耐", "リジェネ", "重装甲"],
+    sup: ["祈り", "祝福", "慈愛", "応急手当", "加護"]
 };
 
 // atkType: 'phy'(Physical) or 'mag'(Magical)
@@ -417,28 +447,54 @@ const TRAP_DATA = [
     { name: "落とし穴", tier:3, type:"floor", val:-1, diff:30, dmg:30, msg:"床が抜け落ちた！" }
 ];
 
+// Renamed Item Templates (Removed material names)
 const ITEM_TEMPLATES = {
-    w1: { name:"錆びた剣", kind:"sw", type:"weapon", slot:"main_hand", base:{atk:3}, tier:1 },
-    w2: { name:"鉄の剣", kind:"sw", type:"weapon", slot:"main_hand", base:{atk:8}, tier:1 },
-    w3: { name:"鋼の斧", kind:"ax", type:"weapon", slot:"main_hand", base:{atk:15, agi:-2}, tier:2, req:{atk:20} }, // Req Str
+    // Swords
+    w1: { name:"ショートソード", kind:"sw", type:"weapon", slot:"main_hand", base:{atk:5}, tier:1 },
+    w2: { name:"ロングソード", kind:"sw", type:"weapon", slot:"main_hand", base:{atk:10}, tier:2 },
+    w3: { name:"バスタード", kind:"sw", type:"weapon", slot:"main_hand", base:{atk:20, agi:-2}, tier:2 },
     w4: { name:"ビームサーベル", kind:"sw", type:"weapon", slot:"main_hand", base:{atk:45, int:5}, tier:4 },
-    w5: { name:"ウォーハンマー", kind:"ax", type:"weapon", slot:"main_hand", base:{atk:25, agi:-5}, tier:3, req:{atk:40} },
-    st1: { name:"樫の杖", kind:"st", type:"weapon", slot:"main_hand", base:{mag:5}, tier:1 },
-    st2: { name:"ルーンスタッフ", kind:"st", type:"weapon", slot:"main_hand", base:{mag:15}, tier:2 },
-    kn1: { name:"レザーナックル", kind:"kn", type:"weapon", slot:"main_hand", base:{atk:5, agi:2}, tier:1 },
-    
+    // Axes
+    ax1: { name:"手斧", kind:"ax", type:"weapon", slot:"main_hand", base:{atk:8, agi:-1}, tier:1 },
+    ax2: { name:"バトルアクス", kind:"ax", type:"weapon", slot:"main_hand", base:{atk:25, agi:-5}, tier:3, req:{atk:40} },
+    // Spears
+    sp1: { name:"スピア", kind:"sp", type:"weapon", slot:"main_hand", base:{atk:6, agi:2}, tier:1 },
+    sp2: { name:"ハルバード", kind:"sp", type:"weapon", slot:"main_hand", base:{atk:18}, tier:2 },
+    // Daggers
+    dg1: { name:"ナイフ", kind:"dg", type:"weapon", slot:"main_hand", base:{atk:3, agi:3}, tier:1 },
+    dg2: { name:"ダガー", kind:"dg", type:"weapon", slot:"main_hand", base:{atk:12, luc:5}, tier:2 },
+    // Bow/Gun
+    bw1: { name:"ショートボウ", kind:"bow", type:"weapon", slot:"main_hand", base:{atk:5, dex:3}, tier:1 },
+    gn1: { name:"ハンドガン", kind:"gun", type:"weapon", slot:"main_hand", base:{atk:15, dex:5}, tier:2 },
+    // Staff
+    st1: { name:"ロッド", kind:"st", type:"weapon", slot:"main_hand", base:{mag:5}, tier:1 },
+    st2: { name:"スタッフ", kind:"st", type:"weapon", slot:"main_hand", base:{mag:15, int:5}, tier:2 },
+    // Knuckles
+    kn1: { name:"バンテージ", kind:"kn", type:"weapon", slot:"main_hand", base:{atk:2, agi:5}, tier:1 },
+    kn2: { name:"ナックル", kind:"kn", type:"weapon", slot:"main_hand", base:{atk:10, agi:3}, tier:2 },
+
+    // Armor
     a1: { name:"ボロ服", kind:"la", type:"armor", slot:"body", base:{def:1}, tier:1 },
-    a2: { name:"革の鎧", kind:"la", type:"armor", slot:"body", base:{def:5}, tier:1 },
-    a3: { name:"プレートメイル", kind:"ha", type:"armor", slot:"body", base:{def:15, agi:-3}, tier:2, req:{def:20} }, // Req VIT
-    a4: { name:"ナノスーツ", kind:"la", type:"armor", slot:"body", base:{def:30, hp:50}, tier:4 },
+    a2: { name:"アーマー", kind:"la", type:"armor", slot:"body", base:{def:5}, tier:1 },
+    a3: { name:"メイル", kind:"ha", type:"armor", slot:"body", base:{def:15, agi:-3}, tier:2, req:{def:20} },
+    a4: { name:"スーツ", kind:"la", type:"armor", slot:"body", base:{def:30, hp:50}, tier:4 },
     ro1: { name:"ローブ", kind:"ro", type:"armor", slot:"body", base:{def:2, mag:2}, tier:1 },
     
-    ac1: { name:"リング", kind:"ac", type:"accessory", slot:"accessory", base:{luc:2}, tier:1 }
+    // Shield
+    sh1: { name:"バックラー", kind:"sh", type:"armor", slot:"off_hand", base:{def:2, agi:1}, tier:1 },
+    sh2: { name:"シールド", kind:"sh", type:"armor", slot:"off_hand", base:{def:10, agi:-5}, tier:2 },
+
+    // Accessories
+    ac1: { name:"リング", kind:"ac", type:"accessory", slot:"accessory", base:{luc:2}, tier:1 },
+    ac2: { name:"アミュレット", kind:"ac", type:"accessory", slot:"accessory", base:{int:3}, tier:1 },
+    ac3: { name:"ベルト", kind:"ac", type:"accessory", slot:"accessory", base:{atk:5}, tier:2 }
 };
 
 const AFFIX_DATA = [
     { name:"錆びた", tier:1, type:"bad", stats:{atk:-3, def:-1}, w:30 },
     { name:"鋭利な", tier:1, type:"good", stats:{atk:3}, w:40 },
+    { name:"頑丈な", tier:1, type:"good", stats:{def:3}, w:40 },
+    { name:"知的な", tier:2, type:"good", stats:{int:5}, w:30 },
     { name:"英雄の", tier:4, type:"legend", stats:{all:5, atk:20}, w:5 }
 ];
 
@@ -486,14 +542,28 @@ const LootSystem = {
         let item = { 
             uid: Math.random().toString(36).substr(2), 
             name: tpl.name, kind: tpl.kind, type: tpl.type, slot: tpl.slot, 
-            stats: { ...tpl.base }, rarity: rarity, req: tpl.req 
+            stats: { ...tpl.base }, rarity: rarity, req: tpl.req, tier: tpl.tier
         };
 
-        if (rarity !== 2) {
-            const pool = AFFIX_DATA.filter(a => rarity === 1 ? a.type === "bad" : a.tier <= rarity - 1);
+        // Material Roll
+        const matPool = MATERIAL_DATA; 
+        let totalW = matPool.reduce((a,b)=>a+b.w, 0);
+        let r = Math.random() * totalW;
+        let mat = matPool[0];
+        for(let m of matPool) {
+            r -= m.w;
+            if(r <= 0) { mat = m; break; }
+        }
+        
+        item.name = `${mat.name}${item.name}`;
+        if(mat.elem) item.elem = mat.elem; 
+        for(let k in mat.mod) item.stats[k] = (item.stats[k]||0) + mat.mod[k];
+
+        if (rarity > 2) {
+            const pool = AFFIX_DATA.filter(a => a.tier <= rarity - 1);
             if (pool.length > 0) {
                 const affix = pool[Math.floor(Math.random() * pool.length)];
-                item.name = `${affix.name}${item.name}`;
+                item.name = `${affix.name} ${item.name}`;
                 for(let k in affix.stats) {
                     if(k === 'all') ['atk','def','agi','mag','int','luc'].forEach(s => item.stats[s] = (item.stats[s]||0) + affix.stats.all);
                     else item.stats[k] = (item.stats[k]||0) + affix.stats[k];
@@ -508,7 +578,7 @@ class Character {
     constructor(jobKey, parents=null, fromLoad=null) {
         if(fromLoad) {
             Object.assign(this, fromLoad);
-            this.migrate(); // データの補正を行う
+            this.migrate(); 
             return;
         }
 
@@ -538,14 +608,12 @@ class Character {
         this.hp = this.totalStats.hp;
     }
 
-    // データ補正用メソッド (Migration)
     migrate() {
         if (!this.elements) this.elements = this.genElements();
         if (!this.skills) this.skills = [];
         if (!this.equipment) this.equipment = { main_hand: null, off_hand: null, head: null, body: null, accessory: null };
         if (!this.bonusStats) this.bonusStats = {};
         if (!this.baseStats) {
-             // Emergency base stats
              this.baseStats = {};
              for(let k in CONFIG.BASE_STATS) this.baseStats[k] = CONFIG.BASE_STATS[k];
         }
@@ -743,20 +811,20 @@ const Game = {
             ["warrior","thief","priest"].forEach(j => this.roster.push(new Character(j)));
             this.roster.forEach(c => this.party.push(c));
             let starter = LootSystem.generate(1);
-            if(!starter) starter = { uid: "starter", name:"粗末な剣", kind:"sw", type:"weapon", slot:"main_hand", stats:{atk:2}, rarity:1 };
+            if(!starter) starter = { uid: "starter", name:"ショートソード", kind:"sw", type:"weapon", slot:"main_hand", stats:{atk:2}, rarity:1 };
             this.inventory.push(starter);
             this.save();
         }
         UI.init();
         UI.updateAll();
-        UI.log("Genetic Rogue ver0.11.3 起動。", "log-sys");
+        UI.log("Genetic Rogue ver0.11.4 起動。", "log-sys");
     },
 
     save(manual=false) {
         const data = {
             helix: this.helix, maxFloor: this.maxFloor, inventory: this.inventory,
             roster: this.roster, partyIds: this.party.map(c => c.id),
-            version: "0.11.3"
+            version: "0.11.4"
         };
         localStorage.setItem(this.SAVE_KEY, JSON.stringify(data));
         if(manual) UI.log("データをセーブしました。", "log-sys");
@@ -830,6 +898,7 @@ const Game = {
             UI.log("全滅しました... 最高到達階層リセット。", "log-defeat");
             this.maxFloor = 1; this.floor = 1;
             this.party.forEach(c => { c.hp = c.totalStats.hp; c.status = {}; });
+            this.currentEnemy = null;
             this.save();
             UI.toggle(false);
             UI.updateAll();
@@ -884,6 +953,48 @@ const Game = {
         } else {
             this.inventory.push(item);
             UI.log(`戦利品: ${item.name}`, "log-item");
+        }
+    },
+    
+    // Recycle an item
+    recycleItem(idx) {
+        const item = this.inventory[idx];
+        if(!item) return;
+        
+        let price = (item.tier * 10) + (item.rarity * 20);
+        this.helix += price;
+        this.inventory.splice(idx, 1);
+        
+        UI.log(`リサイクル: ${item.name} (+${price}G)`, "log-sell");
+        this.save();
+        UI.renderInv(); // Refresh
+        UI.updateHeader();
+    },
+    
+    // Sell all Common items (rarity <= 2)
+    sellTrash() {
+        let soldCount = 0;
+        let totalGain = 0;
+        
+        // Iterate backwards to safely splice
+        for(let i = this.inventory.length - 1; i >= 0; i--) {
+            let item = this.inventory[i];
+            if(item && item.rarity <= 2) {
+                let price = (item.tier * 10) + (item.rarity * 20);
+                totalGain += price;
+                this.inventory.splice(i, 1);
+                soldCount++;
+            }
+        }
+        
+        if(soldCount > 0) {
+            this.helix += totalGain;
+            UI.log(`コモン一括売却: ${soldCount}個 (+${totalGain}G)`, "log-sell");
+            this.save();
+            UI.renderInv();
+            UI.updateHeader();
+        } else {
+            alert("売却可能なコモンアイテムがありません。");
         }
     },
 
@@ -1076,6 +1187,8 @@ const UI = {
         document.getElementById('btn-inv').onclick = () => this.openModal('modal-inv', this.renderInv);
         document.getElementById('btn-settings').onclick = () => this.openModal('modal-settings');
         document.getElementById('btn-help').onclick = () => this.openModal('modal-rules');
+        document.getElementById('btn-sell-trash').onclick = () => Game.sellTrash(); // New Button
+        
         document.querySelectorAll('.close-modal').forEach(b => b.onclick = () => document.querySelectorAll('.modal-overlay').forEach(m => m.style.display='none'));
 
         document.getElementById('act-breed').onclick = () => { if(this.sel.length===2){ Game.breed(this.sel[0], this.sel[1]); this.sel=[]; this.renderLabRoster(); }};
@@ -1139,7 +1252,10 @@ const UI = {
                 if(c.equipment[k]) items += `<div class="equip-slot equip-active rar-${c.equipment[k].rarity}">${k.substr(0,2)}: ${c.equipment[k].name}</div>`;
                 else items += `<div class="equip-slot">${k.substr(0,2)}: -</div>`;
             }
-            let skills = c.skills.map(sk => `<span class="skill-tag">${sk}</span>`).join('');
+            let skills = c.skills.map(sk => {
+                let desc = SKILL_DATA[sk] ? SKILL_DATA[sk].desc : "詳細不明";
+                return `<span class="skill-tag" title="${desc}">${sk}</span>`;
+            }).join('');
 
             const card = document.createElement('div');
             card.className = `char-card ${c.hp<=0 ? 'dead' : ''}`;
@@ -1281,8 +1397,33 @@ const UI = {
             let item = this.equipChar.equipment[slot];
             eqHtml += `<div style="font-size:11px; margin-bottom:2px;"><span style="color:#666; display:inline-block; width:60px;">${slot.substr(0,4)}:</span>${item ? `<span class="rar-${item.rarity}">${item.name}</span> <button style="font-size:9px;" onclick="UI.doUnequip('${slot}')">外す</button>` : '空'}</div>`;
         }
-        head.innerHTML = eqHtml;
-        if(Game.inventory.length===0) iList.innerHTML = "アイテムがありません";
+        // Insert into header
+        // Note: The parent HTML structure for inv-header was updated to have space-between.
+        // We only update the equipment list part here, or rather, we update a container below it?
+        // Actually, let's just replace the content of a container div we create or expect.
+        // Simplified: Just render equip list as string
+        
+        // Clear previous except the title row
+        // To be safe and simple, let's just use the iList area for items and put equip info in head
+        // The head has title and button. Let's append equipment info below them in a new div or just reuse inv-header carefully.
+        // Actually, let's just make a new container for current equip in JS to avoid overwriting the button
+        
+        // Re-targeting:
+        // We need a place to show current equipment.
+        // Let's create a div inside inv-header if it doesn't exist, or use a separate ID.
+        // For now, let's just append to iList before items.
+        
+        iList.innerHTML = "";
+        
+        // Current Equipment Display
+        let currDiv = document.createElement('div');
+        currDiv.style.marginBottom = "10px";
+        currDiv.style.borderBottom = "1px solid #333";
+        currDiv.style.paddingBottom = "5px";
+        currDiv.innerHTML = `<div style="font-size:12px; color:#aaa; margin-bottom:5px;">現在装備中</div>${eqHtml}`;
+        iList.appendChild(currDiv);
+
+        if(Game.inventory.length===0) iList.innerHTML += "アイテムがありません";
         Game.inventory.forEach((item, idx) => {
             if (!item) return; 
             
@@ -1293,7 +1434,19 @@ const UI = {
             let el = document.createElement('div');
             el.className = `list-item ${cls}`;
             let stats = Object.keys(item.stats).map(k=>`${k}:${item.stats[k]}`).join(' ');
-            el.innerHTML = `<div class="rar-${item.rarity}" style="font-weight:bold;">${item.name}</div><div style="font-size:10px; color:#888;">${item.type} [${item.slot}]</div><div style="font-size:10px;">${stats}</div>${err}`;
+            
+            // Sell Button
+            let sellBtn = `<button class="recycle" style="float:right; font-size:10px; padding:2px 5px;" onclick="event.stopPropagation(); Game.recycleItem(${idx})">売却</button>`;
+
+            el.innerHTML = `
+                <div style="display:flex; justify-content:space-between;">
+                    <div class="rar-${item.rarity}" style="font-weight:bold;">${item.name}</div>
+                    ${sellBtn}
+                </div>
+                <div style="font-size:10px; color:#888;">${item.type} [${item.slot}]</div>
+                <div style="font-size:10px;">${stats}</div>
+                ${err}
+            `;
             if(check.ok) {
                 el.onclick = () => { 
                     if(this.equipChar.equip(item)) {
@@ -1342,7 +1495,10 @@ const UI = {
             </div>`;
         }
 
-        let skills = c.skills.length ? c.skills.map(sk => `<span class="skill-tag" style="font-size:12px; padding:3px 6px;">${sk}</span>`).join(' ') : "なし";
+        let skills = c.skills.length ? c.skills.map(sk => {
+            let desc = SKILL_DATA[sk] ? SKILL_DATA[sk].desc : "";
+            return `<span class="skill-tag" title="${desc}" style="font-size:12px; padding:3px 6px;">${sk}</span>`
+        }).join(' ') : "なし";
 
         const content = `
             <div class="detail-header">
