@@ -1,0 +1,129 @@
+:root {
+    --bg-color: #050505; --panel-bg: #111; --text-color: #ccc;
+    --accent-color: #00ff9d; --danger-color: #ff4d4d; --warn-color: #ff9900; --info-color: #3498db;
+    --tier1: #bdc3c7; --tier2: #3498db; --tier3: #9b59b6; --tier4: #e74c3c; --tier5: #f1c40f;
+    --rar-bad: #7f8c8d; --rar-common: #ccc; --rar-good: #2ecc71; --rar-rare: #3498db; --rar-legend: #f1c40f; --rar-god: #e056fd;
+    --elem-fire: #e74c3c; --elem-water: #3498db; --elem-wind: #2ecc71; --elem-earth: #d35400; --elem-light: #f1c40f; --elem-dark: #9b59b6;
+    --log-font: 'Helvetica Neue', Arial, sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg-color); color: var(--text-color); font-family: var(--log-font); height: 100vh; display: flex; flex-direction: column; }
+
+/* Layout */
+#app { display: grid; grid-template-rows: 50px 1fr 60px; height: 100%; max-width: 1400px; margin: 0 auto; width: 100%; }
+header { background: var(--panel-bg); border-bottom: 1px solid #333; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; }
+main { display: grid; grid-template-columns: 350px 1fr; gap: 1px; background: #222; overflow: hidden; }
+@media (max-width: 800px) { main { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; } }
+
+/* Logs */
+#log-panel { background: var(--bg-color); padding: 10px; overflow-y: auto; font-size: 12px; line-height: 1.5; }
+.log-entry { margin-bottom: 3px; padding-left: 5px; border-left: 2px solid #333; }
+.log-combat { color: #888; border-color: #444; }
+.log-dmg { color: #aaa; }
+.log-victory { color: #fff; border-color: var(--accent-color); }
+.log-item { color: var(--rar-rare); border-color: var(--rar-rare); }
+.log-equip { color: var(--info-color); border-color: var(--info-color); }
+.log-defeat { color: var(--danger-color); border-color: var(--danger-color); font-weight: bold; }
+.log-elite { color: var(--warn-color); border-color: var(--warn-color); }
+.log-trap { color: var(--warn-color); border-color: var(--danger-color); }
+.log-skill { color: var(--info-color); border-color: var(--info-color); }
+.log-sys { color: #888; border-color: #888; font-style: italic; }
+.log-err { color: var(--danger-color); border-color: var(--danger-color); }
+.log-lvlup { color: #e67e22; border-color: #e67e22; font-weight: bold; }
+
+/* Party Cards */
+#party-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 8px; padding: 10px; overflow-y: auto; }
+.char-card { background: #1a1a1a; border: 1px solid #333; padding: 10px; border-radius: 4px; font-size: 11px; position: relative; transition: all 0.2s; cursor: pointer; }
+.char-card:hover { border-color: #666; background: #222; transform: translateY(-2px); }
+.char-card.dead { opacity: 0.6; filter: grayscale(100%); border-color: #333 !important; cursor: not-allowed; }
+.char-card.dead::after { content: "戦闘不能"; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: var(--danger-color); font-weight: bold; font-size: 20px; border: 2px solid var(--danger-color); padding: 5px 10px; transform: rotate(-10deg); }
+
+.char-header { display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 4px; align-items: center; }
+.job-label { font-size: 10px; padding: 1px 4px; border-radius: 3px; background: #333; color: #fff; }
+.personality-label { color: var(--warn-color); margin-right: 5px; font-size: 10px; }
+
+/* Bars */
+.bar-container { display: flex; flex-direction: column; gap: 2px; margin: 5px 0; }
+.bar-row { display: flex; align-items: center; gap: 5px; font-size: 9px; color: #888; }
+.bar-wrap { flex: 1; background: #333; height: 6px; border-radius: 3px; overflow: hidden; position: relative; }
+.bar-val { height: 100%; transition: width 0.3s; }
+.hp-bar { background: var(--accent-color); }
+.exp-bar { background: #3498db; }
+
+/* Elements */
+.elem-icon { display:inline-block; width:12px; height:12px; border-radius:50%; margin-right:2px; vertical-align:middle; position: relative; top: -1px; }
+.el-fire { background: var(--elem-fire); box-shadow: 0 0 4px var(--elem-fire); }
+.el-water { background: var(--elem-water); box-shadow: 0 0 4px var(--elem-water); }
+.el-wind { background: var(--elem-wind); box-shadow: 0 0 4px var(--elem-wind); }
+.el-earth { background: var(--elem-earth); box-shadow: 0 0 4px var(--elem-earth); }
+.el-light { background: var(--elem-light); box-shadow: 0 0 4px var(--elem-light); }
+.el-dark { background: var(--elem-dark); box-shadow: 0 0 4px var(--elem-dark); }
+
+/* Stats & Equip */
+.stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; color: #aaa; margin-top: 6px; }
+.stat-val span { color: #fff; }
+.stat-bonus { color: var(--accent-color); }
+
+.equip-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-top: 8px; border-top: 1px solid #333; padding-top: 6px; }
+.equip-slot { background: #111; padding: 4px; border-radius: 2px; color: #666; font-size: 10px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; cursor: help; }
+.equip-active { color: #ddd; border: 1px solid #333; }
+
+/* Skills */
+.skill-list { display: flex; flex-wrap: wrap; gap: 2px; margin-top: 5px; }
+.skill-tag { background: #002233; color: #3498db; padding: 1px 4px; font-size: 9px; border-radius: 2px; border: 1px solid #004466; }
+
+/* Rarity Colors */
+.rar-1 { color: var(--rar-bad); } .rar-2 { color: var(--rar-common); } .rar-3 { color: var(--rar-good); } 
+.rar-4 { color: var(--rar-rare); } .rar-5 { color: var(--rar-legend); text-shadow: 0 0 2px rgba(241, 196, 15, 0.5); }
+.rar-6 { color: var(--rar-god); text-shadow: 0 0 3px rgba(224, 86, 253, 0.6); }
+
+/* Footer & Modals */
+footer { background: var(--panel-bg); border-top: 1px solid #333; display: flex; align-items: center; justify-content: center; gap: 10px; }
+button { background: #333; color: #fff; border: 1px solid #555; padding: 8px 16px; cursor: pointer; border-radius: 3px; font-size: 12px; transition: all 0.2s; }
+button:hover:not(:disabled) { background: #444; border-color: #777; }
+button:disabled { opacity: 0.3; cursor: not-allowed; }
+button.primary { background: #004433; border-color: var(--accent-color); color: var(--accent-color); }
+button.danger { border-color: var(--danger-color); color: var(--danger-color); }
+
+/* Fixed: Button visibility */
+button.icon-btn { 
+    font-size: 16px; padding: 5px 12px; border: 1px solid #444; 
+    background: #222; color: #eee; border-radius: 4px; cursor: pointer; 
+}
+button.icon-btn:hover { background: #333; border-color: #777; }
+
+.modal-overlay { position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.85); display: none; z-index: 99; justify-content: center; align-items: center; backdrop-filter: blur(2px); }
+.modal-box { background: #111; width: 95%; max-width: 1000px; max-height: 90vh; border: 1px solid #444; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.8); }
+.modal-header { padding: 15px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; background: #1a1a1a; }
+.modal-body { padding: 20px; overflow-y: auto; flex: 1; }
+
+.grid-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+.list-item { padding: 10px; border: 1px solid #333; cursor: pointer; background: #161616; transition: border-color 0.2s; position: relative; }
+.list-item:hover { border-color: #666; background: #1f1f1f; }
+.list-item.selected { border-color: var(--accent-color); background: #002211; }
+.list-item.disabled { opacity: 0.4; cursor: not-allowed; background: #222; }
+.err-msg { color: var(--danger-color); font-size: 10px; display: block; margin-top: 2px; }
+
+.tab-group { display: flex; gap: 5px; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 10px; }
+.tab-btn { background: transparent; border: none; color: #666; cursor: pointer; font-weight: bold; padding: 5px 10px; }
+.tab-btn.active { color: var(--accent-color); border-bottom: 2px solid var(--accent-color); }
+
+.settings-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #222; }
+
+/* Detail Modal */
+.detail-header { display: flex; gap: 20px; align-items: center; border-bottom: 1px solid #333; padding-bottom: 15px; margin-bottom: 15px; }
+.detail-title h2 { margin: 0; font-size: 24px; color: #fff; }
+.detail-meta { color: #888; font-size: 12px; }
+.detail-sections { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+@media (max-width: 600px) { .detail-sections { grid-template-columns: 1fr; } }
+.detail-row { display: flex; justify-content: space-between; border-bottom: 1px solid #222; padding: 8px 0; font-size: 13px; }
+.detail-row span:last-child { color: #fff; font-weight: bold; }
+.detail-label { color: #888; }
+.detail-eq-row { display: flex; justify-content: space-between; align-items: center; padding: 8px; background: #1a1a1a; margin-bottom: 5px; border-radius: 4px; }
+
+/* Rule Book */
+.rule-section { margin-bottom: 20px; }
+.rule-section h4 { color: var(--accent-color); margin-bottom: 5px; border-bottom: 1px solid #333; padding-bottom: 5px; }
+.rule-section p, .rule-section li { color: #ccc; font-size: 13px; line-height: 1.6; }
+.rule-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 5px; }
+.rule-table th, .rule-table td { border: 1px solid #444; padding: 5px; text-align: left; }
