@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Genetic Rogue Ver.0.11.2 - Fixed</title>
+    <title>Genetic Rogue Ver.11.3 - Auto Migration</title>
     <!-- Favicon Fix: Use Emoji as Icon -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧬</text></svg>">
     <style>
@@ -94,7 +94,6 @@
         button.primary { background: #004433; border-color: var(--accent-color); color: var(--accent-color); }
         button.danger { border-color: var(--danger-color); color: var(--danger-color); }
         
-        /* Fixed: Button visibility */
         button.icon-btn { 
             font-size: 16px; padding: 5px 12px; border: 1px solid #444; 
             background: #222; color: #eee; border-radius: 4px; cursor: pointer; 
@@ -142,7 +141,7 @@
 
 <div id="app">
     <header>
-        <div>🧬 Genetic Rogue <span style="color:#666;">Ver.11.2</span></div>
+        <div>🧬 Genetic Rogue <span style="color:#666;">Ver.11.3</span></div>
         <div style="font-size:14px; display:flex; align-items:center; gap:10px;">
             <div>
                 <span style="color:#aaa;">階層:</span> <span id="floor-display" style="font-weight:bold; font-size:16px;">1</span>
@@ -322,10 +321,10 @@
 
 <script>
 /**
- * Genetic Rogue Ver.11.2
+ * Genetic Rogue Ver.11.3
  * - Fixed Settings Button visibility
- * - New Save Key (v11) to prevent conflicts
- * - Robust Initialization
+ * - New Save Key (Fixed) + Migration Logic
+ * - Auto-Data Correction for old saves
  */
 
 // --- 1. DATA DEFINITIONS ---
@@ -508,6 +507,7 @@ class Character {
     constructor(jobKey, parents=null, fromLoad=null) {
         if(fromLoad) {
             Object.assign(this, fromLoad);
+            this.migrate(); // データの補正を行う
             return;
         }
 
@@ -535,6 +535,19 @@ class Character {
             this.bonusStats[k] = 0;
         }
         this.hp = this.totalStats.hp;
+    }
+
+    // データ補正用メソッド (Migration)
+    migrate() {
+        if (!this.elements) this.elements = this.genElements();
+        if (!this.skills) this.skills = [];
+        if (!this.equipment) this.equipment = { main_hand: null, off_hand: null, head: null, body: null, accessory: null };
+        if (!this.bonusStats) this.bonusStats = {};
+        if (!this.baseStats) {
+             // Emergency base stats
+             this.baseStats = {};
+             for(let k in CONFIG.BASE_STATS) this.baseStats[k] = CONFIG.BASE_STATS[k];
+        }
     }
 
     genName() {
@@ -574,7 +587,7 @@ class Character {
         let s = {};
         let mod = this.job.mod || {};
         let lineage = LINEAGE[this.job.lineage];
-        let pers = PERSONALITY_DATA[this.personality];
+        let pers = PERSONALITY_DATA[this.personality] || {};
 
         let curveMult = 1.0;
         let progress = this.level / CONFIG.MAX_LEVEL;
@@ -583,7 +596,7 @@ class Character {
         else if (this.job.curve === 'late') curveMult = 0.5 + progress;
 
         for(let k in CONFIG.BASE_STATS) {
-            let val = this.baseStats[k] + (this.bonusStats[k] || 0);
+            let val = (this.baseStats[k] || 10) + (this.bonusStats[k] || 0);
             let growthBase = (CONFIG.BASE_STATS[k] * 0.2); 
             let multipliers = (lineage[k] || 1.0) * (mod[k] || mod.all || 1.0) * (pers[k] || 1.0);
             let gainedStats = growthBase * multipliers * (this.level - 1) * curveMult;
@@ -703,13 +716,29 @@ const Game = {
     helix: 100, floor: 1, maxFloor: 1, floorProgress: 0,
     party: [], roster: [], inventory: [],
     exploring: false, timer: null,
-    currentEnemy: null, // 追加
+    currentEnemy: null,
+
+    // SAVE KEY CONSTANT (Unified)
+    SAVE_KEY: 'genetic_rogue_save_unified',
 
     init() {
-        // USE NEW SAVE KEY to prevent conflict
-        if(localStorage.getItem('genetic_rogue_v11_save')) {
-            this.load();
-        } else {
+        // Try unified key first
+        if(localStorage.getItem(this.SAVE_KEY)) {
+            this.load(this.SAVE_KEY);
+        } 
+        // Migration from v11
+        else if(localStorage.getItem('genetic_rogue_v11_save')) {
+            console.log("Migrating from v11...");
+            this.load('genetic_rogue_v11_save');
+            this.save(); // Save to new key immediately
+        }
+        // Migration from v10
+        else if(localStorage.getItem('genetic_rogue_v10_save')) {
+            console.log("Migrating from v10...");
+            this.load('genetic_rogue_v10_save');
+            this.save();
+        }
+        else {
             ["warrior","thief","priest"].forEach(j => this.roster.push(new Character(j)));
             this.roster.forEach(c => this.party.push(c));
             let starter = LootSystem.generate(1);
@@ -719,39 +748,46 @@ const Game = {
         }
         UI.init();
         UI.updateAll();
-        UI.log("Genetic Rogue Ver.11.2 起動。", "log-sys");
+        UI.log("Genetic Rogue Ver.11.3 起動。", "log-sys");
     },
 
     save(manual=false) {
         const data = {
             helix: this.helix, maxFloor: this.maxFloor, inventory: this.inventory,
-            roster: this.roster, partyIds: this.party.map(c => c.id)
+            roster: this.roster, partyIds: this.party.map(c => c.id),
+            version: 11.3
         };
-        localStorage.setItem('genetic_rogue_v11_save', JSON.stringify(data));
+        localStorage.setItem(this.SAVE_KEY, JSON.stringify(data));
         if(manual) UI.log("データをセーブしました。", "log-sys");
     },
 
-    load() {
+    load(key) {
         try {
-            const data = JSON.parse(localStorage.getItem('genetic_rogue_v11_save'));
+            const data = JSON.parse(localStorage.getItem(key));
             if(!data) return;
-            this.helix = data.helix; this.maxFloor = data.maxFloor; this.inventory = data.inventory || [];
-            this.roster = data.roster.map(d => new Character(null, null, d));
+            this.helix = data.helix || 0; 
+            this.maxFloor = data.maxFloor || 1; 
+            this.inventory = data.inventory || [];
+            
+            // Hydrate Characters with Migration
+            this.roster = (data.roster || []).map(d => new Character(null, null, d));
             this.party = [];
-            data.partyIds.forEach(id => {
+            (data.partyIds || []).forEach(id => {
                 const c = this.roster.find(x => x.id === id);
                 if(c) this.party.push(c);
             });
             UI.log("データをロードしました。", "log-sys");
         } catch(e) {
             console.error("Save data corrupt", e);
-            // Safe fallback logic could go here
+            // Don't alert, just start fresh if corrupt to avoid loops, or let init handle fallback
         }
     },
 
     resetSave() {
         if(confirm("本当に全データを削除しますか？")) {
-            localStorage.removeItem('genetic_rogue_v11_save');
+            localStorage.removeItem(this.SAVE_KEY);
+            localStorage.removeItem('genetic_rogue_v11_save'); // Clean old
+            localStorage.removeItem('genetic_rogue_v10_save'); // Clean old
             location.reload();
         }
     },
@@ -806,7 +842,7 @@ const Game = {
             if(c.status.slp) { c.status.slp--; if(c.status.slp<=0) delete c.status.slp; }
         });
 
-        // ★修正: 戦闘中は歩数を進めない
+        // 戦闘中は歩数を進めない
         if (this.currentEnemy) {
             this.combat();
         } else {
