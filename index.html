@@ -3,95 +3,90 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Genetic Rogue Ver.5 - Equipment System</title>
+    <title>Genetic Rogue Ver.6 - Hack & Slash</title>
     <style>
         :root {
-            --bg-color: #050505;
-            --panel-bg: #111;
-            --text-color: #ddd;
-            --accent-color: #00ff9d;
+            --bg-color: #050505; --panel-bg: #111; --text-color: #ddd;
+            --accent-color: #00ff9d; --danger-color: #ff4d4d;
             --tier1: #bdc3c7; --tier2: #3498db; --tier3: #9b59b6; --tier4: #e74c3c; --tier5: #f1c40f;
-            --log-font: 'Consolas', 'Courier New', monospace;
+            --rar-common: #ccc; --rar-rare: #00ff9d; --rar-legend: #f1c40f;
+            --log-font: 'Consolas', monospace;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            background: var(--bg-color); color: var(--text-color);
-            font-family: 'Segoe UI', sans-serif; height: 100vh;
-            display: flex; flex-direction: column; overflow: hidden;
-        }
+        body { background: var(--bg-color); color: var(--text-color); font-family: 'Segoe UI', sans-serif; height: 100vh; display: flex; flex-direction: column; }
         
-        /* Layout */
         #app { display: grid; grid-template-rows: 50px 1fr 60px; height: 100%; max-width: 1400px; margin: 0 auto; width: 100%; }
         header { background: var(--panel-bg); border-bottom: 1px solid #333; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; }
         main { display: grid; grid-template-columns: 350px 1fr; gap: 1px; background: #222; overflow: hidden; }
         @media (max-width: 800px) { main { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; } }
 
-        /* Panels */
-        #log-panel { background: var(--bg-color); padding: 10px; overflow-y: auto; font-family: var(--log-font); font-size: 12px; }
-        #info-panel { background: var(--panel-bg); padding: 10px; overflow-y: auto; }
-        
+        /* Logs */
+        #log-panel { background: var(--bg-color); padding: 10px; overflow-y: auto; font-family: var(--log-font); font-size: 11px; line-height: 1.4; }
         .log-entry { margin-bottom: 2px; padding-left: 5px; border-left: 2px solid #333; }
-        .log-combat { border-color: #555; color: #999; }
-        .log-victory { border-color: var(--accent-color); color: #fff; }
-        .log-rare { border-color: var(--tier5); color: var(--tier5); }
+        .log-combat { color: #888; border-color: #444; }
+        .log-dmg { color: #aaa; }
+        .log-victory { color: #fff; border-color: var(--accent-color); }
+        .log-rare { color: var(--rar-rare); border-color: var(--rar-rare); }
+        .log-legend { color: var(--rar-legend); border-color: var(--rar-legend); font-weight: bold; }
+        .log-defeat { color: var(--danger-color); border-color: var(--danger-color); }
 
-        /* Card & Grid */
-        #party-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 8px; }
-        .char-card {
-            background: #1a1a1a; border: 1px solid #333; padding: 8px; border-radius: 4px;
-            font-size: 11px; position: relative;
-        }
+        /* Party Cards */
+        #party-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 8px; padding: 10px; }
+        .char-card { background: #1a1a1a; border: 1px solid #333; padding: 8px; border-radius: 4px; font-size: 11px; }
         .char-header { display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 2px; }
-        .bar-wrap { background: #333; height: 3px; margin: 2px 0; border-radius: 1px; }
-        .bar-val { height: 100%; background: var(--accent-color); }
+        .bar-wrap { background: #333; height: 4px; margin: 2px 0; position:relative; }
+        .bar-val { height: 100%; transition: width 0.3s; }
+        .hp-bar { background: var(--accent-color); }
+        .exp-bar { background: #3498db; }
         
-        /* Equipment Slot UI */
-        .equip-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; margin-top: 5px; border-top: 1px solid #333; padding-top: 5px; }
-        .equip-slot { background: #111; padding: 2px 4px; color: #888; font-size: 10px; border-radius: 2px; }
-        .equip-slot span { color: #ccc; }
+        /* Stats & Equip */
+        .stat-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 2px; color: #aaa; margin-top: 4px; }
+        .stat-bonus { color: var(--accent-color); }
+        .equip-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-top: 6px; border-top: 1px solid #333; padding-top: 4px; }
+        .equip-slot { background: #111; padding: 3px; border-radius: 2px; color: #666; font-size: 10px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+        .equip-active { color: #ddd; }
+        .rar-2 { color: var(--rar-rare); } .rar-3 { color: var(--rar-legend); } .rar-4, .rar-5 { color: #e74c3c; text-shadow: 0 0 2px #f00; }
 
-        /* Footer */
+        /* Footer & Modals */
         footer { background: var(--panel-bg); border-top: 1px solid #333; display: flex; align-items: center; justify-content: center; gap: 10px; }
         button { background: #333; color: #fff; border: 1px solid #555; padding: 8px 15px; cursor: pointer; border-radius: 3px; }
         button:hover { background: #444; }
         button:disabled { opacity: 0.3; }
-
-        /* Modal */
-        .modal-overlay { position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.8); display: none; z-index: 99; justify-content: center; align-items: center; }
+        
+        .modal-overlay { position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.85); display: none; z-index: 99; justify-content: center; align-items: center; }
         .modal-box { background: #111; width: 90%; max-width: 900px; max-height: 90vh; border: 1px solid #444; display: flex; flex-direction: column; }
         .modal-body { padding: 15px; overflow-y: auto; }
-        .grid-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; }
-        .list-item { padding: 8px; border: 1px solid #333; cursor: pointer; background: #161616; }
+        .grid-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
+        .list-item { padding: 8px; border: 1px solid #333; cursor: pointer; background: #161616; position: relative; }
         .list-item:hover { border-color: #666; }
         .list-item.selected { border-color: var(--accent-color); background: #002211; }
-
     </style>
 </head>
 <body>
 
 <div id="app">
     <header>
-        <div>🧬 Genetic Rogue <span style="color:#888;">Ver.5.0 (Equip System)</span></div>
-        <div style="font-weight:bold; color:var(--accent-color);">Helix: <span id="helix-display">0</span></div>
+        <div>🧬 Genetic Rogue <span style="color:#666;">Ver.6.0</span></div>
+        <div style="font-size:14px;">
+            <span style="color:#aaa;">Floor:</span> <span id="floor-display" style="font-weight:bold; font-size:16px;">1</span>
+            <span style="color:#666; margin-left:5px;" id="floor-progress">(0/10)</span>
+            <span style="margin-left:20px; color:var(--accent-color); font-weight:bold;">Helix: <span id="helix-display">0</span></span>
+        </div>
     </header>
 
     <main>
         <div id="log-panel"><div id="log-list"></div></div>
         <div id="info-panel">
-            <div style="margin-bottom:10px; color:#666;">
-                Floor: <span id="floor-display" style="color:#fff; font-weight:bold;">1</span> 
-                | Party: <span id="party-count">0</span>/6
-            </div>
             <div id="party-container"></div>
         </div>
     </main>
 
     <footer>
-        <button id="btn-explore">探索 (Explore)</button>
-        <button id="btn-return" disabled>帰還 (Return)</button>
+        <button id="btn-explore">探索開始</button>
+        <button id="btn-return" disabled>帰還</button>
         <span style="width:20px"></span>
-        <button id="btn-lab">ラボ (Lab)</button>
-        <button id="btn-inv">装備 (Equip)</button>
+        <button id="btn-lab">ラボ</button>
+        <button id="btn-inv">装備</button>
     </footer>
 </div>
 
@@ -99,8 +94,7 @@
 <div id="modal-lab" class="modal-overlay">
     <div class="modal-box">
         <div style="padding:10px; border-bottom:1px solid #333; display:flex; justify-content:space-between;">
-            <h3>Genetic Lab</h3>
-            <button class="close-modal">Close</button>
+            <h3>Genetic Lab</h3> <button class="close-modal">Close</button>
         </div>
         <div class="modal-body">
             <div style="margin-bottom:10px;">
@@ -116,49 +110,99 @@
 <div id="modal-inv" class="modal-overlay">
     <div class="modal-box">
         <div style="padding:10px; border-bottom:1px solid #333; display:flex; justify-content:space-between;">
-            <h3>Equipment & Inventory</h3>
-            <button class="close-modal">Close</button>
+            <h3>Inventory</h3> <button class="close-modal">Close</button>
         </div>
         <div class="modal-body" style="display:flex; gap:20px;">
-            <!-- Left: Party Selector -->
             <div style="width:200px; border-right:1px solid #333;">
-                <h4>Select Char</h4>
-                <div id="equip-char-list" style="margin-top:10px;"></div>
+                <div id="equip-char-list"></div>
             </div>
-            <!-- Right: Item List -->
             <div style="flex:1;">
-                <h4 id="equip-target-name">Select a character to equip</h4>
-                <div id="inv-list" class="grid-list" style="margin-top:10px;"></div>
+                <div id="inv-list" class="grid-list"></div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Load External Data -->
+<!-- Load Data -->
 <script src="game_data.js"></script>
 
 <script>
 /**
- * Genetic Rogue Ver.5.0
- * Logic & Equipment System
+ * Genetic Rogue Ver.6.0
+ * - Affix System
+ * - Floor System
+ * - Transparent Combat Math
  */
 
-// フォールバック（game_data.jsが読み込めない場合のエラー回避）
-if (typeof JOB_DATA === 'undefined') {
-    alert("エラー: game_data.js が見つかりません。同じフォルダに配置してください。");
-    throw new Error("Game Data Missing");
-}
+// Fallback check
+if (typeof JOB_DATA === 'undefined') { alert("Error: game_data.js missing"); throw new Error("Data Missing"); }
 
 const CONFIG = {
     MAX_PARTY: 6,
-    BASE_HELIX: 100,
-    BREED_COST: 50,
-    HIRE_COST: 30,
+    BREED_COST: 50, HIRE_COST: 30,
     BASE_STATS: { hp: 50, atk: 5, def: 5, agi: 5, mag: 5, int: 5, luc: 5 },
     TIER_COLORS: { 1:'#bdc3c7', 2:'#3498db', 3:'#9b59b6', 4:'#e74c3c', 5:'#f1c40f' }
 };
 
-// --- Character Class with Equipment ---
+// --- Item Generator (The Core of Hack & Slash) ---
+const LootSystem = {
+    generate(floor) {
+        // 1. Pick Template based on rarity/floor
+        const keys = Object.keys(ITEM_TEMPLATES);
+        const tKey = keys[Math.floor(Math.random() * keys.length)];
+        const tpl = ITEM_TEMPLATES[tKey];
+        
+        // 2. Determine Rarity (Floor increases chance)
+        let rarity = 1; // 1:Common, 2:Rare, 3:Epic, 4:Legendary, 5:Godly
+        const rand = Math.random() + (floor * 0.01); // Boost by floor
+        if (rand > 0.98) rarity = 4;
+        else if (rand > 0.90) rarity = 3;
+        else if (rand > 0.70) rarity = 2;
+
+        if (rarity > 4 && floor > 20) rarity = 5; // Godly check
+
+        // 3. Create Item Instance
+        let item = {
+            uid: Math.random().toString(36).substr(2),
+            name: tpl.name,
+            type: tpl.type,
+            slot: tpl.slot,
+            stats: { ...tpl.base },
+            rarity: Math.max(tpl.rar, rarity)
+        };
+
+        // 4. Add Affixes
+        if (item.rarity >= 2) {
+            // Pick Prefix
+            const pPool = AFFIX_DATA.prefix.filter(a => a.rar <= item.rarity);
+            if (pPool.length > 0) {
+                const affix = pPool[Math.floor(Math.random() * pPool.length)];
+                item.name = `${affix.name}${item.name}`;
+                this.mergeStats(item.stats, affix.stats);
+            }
+        }
+        
+        if (item.rarity >= 4) {
+            // Pick Title (Suffix or Name replacement)
+            const tPool = AFFIX_DATA.titles.filter(a => a.rar <= item.rarity);
+            if (tPool.length > 0) {
+                const title = tPool[Math.floor(Math.random() * tPool.length)];
+                item.name = `${title.name} ${item.name}`; // e.g. "Dragonslayer Sharp Sword"
+                this.mergeStats(item.stats, title.stats);
+            }
+        }
+
+        return item;
+    },
+
+    mergeStats(base, add) {
+        for (let k in add) {
+            base[k] = (base[k] || 0) + add[k];
+        }
+    }
+};
+
+// --- Character Class ---
 class Character {
     constructor(jobKey, parents=null) {
         this.id = Math.random().toString(36).substr(2, 9);
@@ -170,16 +214,9 @@ class Character {
         this.maxExp = 100;
         this.generation = parents ? Math.max(parents[0].generation, parents[1].generation)+1 : 1;
         
-        // 5 Equipment Slots
-        this.equipment = {
-            main_hand: null,
-            off_hand: null,
-            head: null,
-            body: null,
-            accessory: null
-        };
+        // Ver.6: Store Objects, not IDs
+        this.equipment = { main_hand: null, off_hand: null, head: null, body: null, accessory: null };
 
-        // Base Stats (遺伝・個体値)
         this.baseStats = {};
         for(let k in CONFIG.BASE_STATS) {
             let base = CONFIG.BASE_STATS[k];
@@ -188,84 +225,77 @@ class Character {
                 let pAvg = (parents[0].baseStats[k] + parents[1].baseStats[k]) / 2;
                 base = (base + pAvg) / 2;
             }
-            let val = base * mod;
-            val = val * (0.9 + Math.random()*0.2);
-            this.baseStats[k] = Math.floor(val);
+            this.baseStats[k] = Math.floor(base * mod * (0.9 + Math.random()*0.2));
         }
-        
-        this.hp = this.totalStats.hp; // Set current HP to max
+        this.hp = this.totalStats.hp;
         this.color = CONFIG.TIER_COLORS[this.jobData.tier] || '#fff';
     }
 
     genName() {
-        const pre = ["Neo","Cyber","Iron","Dark","Holy","Nano","Bio","Quantum","Star","Void"];
-        const suf = ["Alpha","Beta","Zero","One","X","V","Soul","Mind","Force","Edge"];
+        const pre = ["Neo","Cyber","Iron","Dark","Holy","Nano","Bio","Void"];
+        const suf = ["Alpha","Zero","X","V","Soul","Mind"];
         return pre[Math.floor(Math.random()*pre.length)] + suf[Math.floor(Math.random()*suf.length)];
     }
 
-    // ★ ステータス再計算 (Base + Level + Equip)
     get totalStats() {
         let s = { ...this.baseStats };
-        
         // Level Growth
         for(let k in s) {
             let growth = (CONFIG.BASE_STATS[k]/10) * (this.jobData.stats_mod[k]||1.0);
             s[k] += Math.floor(growth * (this.level - 1));
         }
-
-        // Equipment Bonus
+        // Equip Bonus
         for(let slot in this.equipment) {
-            let itemId = this.equipment[slot];
-            if(itemId && ITEM_DATA[itemId]) {
-                let iStat = ITEM_DATA[itemId].stat;
-                for(let k in iStat) {
-                    if(!s[k]) s[k] = 0;
-                    s[k] += iStat[k];
+            let item = this.equipment[slot];
+            if(item) {
+                for(let k in item.stats) {
+                    s[k] = (s[k] || 0) + item.stats[k];
                 }
             }
         }
-        
-        // Ensure HP is int
         s.hp = Math.floor(s.hp);
         return s;
     }
 
-    // ★ 装備メソッド
-    equipItem(itemId) {
-        const item = ITEM_DATA[itemId];
-        if(!item) return;
-
-        const slot = item.slot;
-        
-        // 既に装備しているものがあれば外す
-        if(this.equipment[slot]) {
-            Game.inventory.push(this.equipment[slot]);
+    // New: Helper to get split stats for UI (Base / Bonus)
+    get statDetails() {
+        let total = this.totalStats;
+        let baseWithLv = { ...this.baseStats };
+        for(let k in baseWithLv) {
+            let growth = (CONFIG.BASE_STATS[k]/10) * (this.jobData.stats_mod[k]||1.0);
+            baseWithLv[k] += Math.floor(growth * (this.level - 1));
         }
         
-        this.equipment[slot] = itemId;
-        
-        // HP調整（最大HPが増えた分だけ現在HPも増やす等の処理は簡易的に省略、最大を超えないようにキャップのみ）
-        const newMax = this.totalStats.hp;
-        if(this.hp > newMax) this.hp = newMax;
-        
-        return true;
+        let display = {};
+        for(let k in total) {
+            let bonus = total[k] - (baseWithLv[k] || 0);
+            display[k] = { val: total[k], bonus: bonus };
+        }
+        return display;
+    }
+
+    equip(item) {
+        if(this.equipment[item.slot]) {
+            Game.inventory.push(this.equipment[item.slot]); // Return old
+        }
+        this.equipment[item.slot] = item;
+        this.hp = Math.min(this.hp, this.totalStats.hp); // Cap HP
     }
     
-    // 装備解除
-    unequipItem(slot) {
+    unequip(slot) {
         if(this.equipment[slot]) {
             Game.inventory.push(this.equipment[slot]);
             this.equipment[slot] = null;
         }
     }
 
-    gainExp(amount) {
-        this.exp += Math.floor(amount);
+    gainExp(amt) {
+        this.exp += Math.floor(amt);
         if(this.exp >= this.maxExp) {
             this.exp -= this.maxExp;
             this.level++;
             this.maxExp = Math.floor(this.maxExp * 1.2);
-            this.hp = this.totalStats.hp; // Full heal on level up
+            this.hp = this.totalStats.hp; // Heal
             return true;
         }
         return false;
@@ -274,23 +304,22 @@ class Character {
 
 // --- Game Logic ---
 const Game = {
-    helix: CONFIG.BASE_HELIX,
-    floor: 1,
-    party: [],
-    roster: [],
-    inventory: ["w01", "b01", "w02", "o01"], // 初期アイテム
-    exploring: false,
-    timer: null,
+    helix: 100, floor: 1, floorProgress: 0,
+    party: [], roster: [], inventory: [],
+    exploring: false, timer: null,
 
     init() {
         ["warrior","mage","thief","priest"].forEach(j => this.roster.push(new Character(j)));
         this.roster.slice(0,3).forEach(c => this.party.push(c));
+        // Give starter items
+        this.inventory.push(LootSystem.generate(1));
+        this.inventory.push(LootSystem.generate(1));
         UI.updateAll();
-        UI.log("Game Start.");
+        UI.log("Genetic Rogue Ver.6.0 Started.");
     },
 
     explore() {
-        if(this.party.length === 0) return alert("No party!");
+        if(this.party.length === 0) return alert("Party empty!");
         this.exploring = true;
         UI.toggle(true);
         UI.log(`--- Floor ${this.floor} Start ---`);
@@ -309,177 +338,195 @@ const Game = {
     tick() {
         if(this.party.filter(c=>c.hp>0).length === 0) {
             this.stop();
-            UI.log("Party wiped out...", "rare");
+            UI.log("Party Wipeout...", "defeat");
             this.floor = Math.max(1, this.floor-5);
+            this.floorProgress = 0;
             return;
         }
-        Math.random() < 0.6 ? this.combat() : this.event();
+        
+        // Floor Progress
+        this.floorProgress++;
+        if(this.floorProgress >= 10) {
+            this.floor++;
+            this.floorProgress = 0;
+            UI.log(`>>> Reached Floor ${this.floor}! Enemies grew stronger.`, "legend");
+        }
+        UI.updateHeader();
+
+        Math.random() < 0.65 ? this.combat() : this.event();
         UI.renderParty();
     },
 
     combat() {
-        let t = Math.min(5, Math.ceil(this.floor/10));
-        let cands = ENEMY_DATA.filter(e=>e.tier===t);
-        let eData = cands[Math.floor(Math.random()*cands.length)] || ENEMY_DATA[0];
+        // Enemy Scaling: (1 + Floor * 0.2) -> 2x stats at Floor 5
+        let scale = 1 + (this.floor * 0.2); 
+        let tier = Math.min(5, Math.ceil(this.floor / 5));
         
-        let enemy = { ...eData, hp: Math.floor(eData.stats.hp * (1+this.floor*0.1)) };
-        UI.log(`Encounter: ${enemy.name}`, "combat");
+        let cands = ENEMY_DATA.filter(e => e.tier === tier);
+        let baseE = cands[Math.floor(Math.random() * cands.length)] || ENEMY_DATA[0];
+
+        let enemy = {
+            name: baseE.name,
+            hp: Math.floor(baseE.stats.hp * scale),
+            atk: Math.floor(baseE.stats.atk * scale),
+            def: Math.floor(baseE.stats.def * scale),
+            exp: Math.floor(baseE.stats.exp * scale),
+            gold: Math.floor(baseE.stats.gold * scale)
+        };
+
+        UI.log(`Battle: ${enemy.name} (HP:${enemy.hp})`, "combat");
 
         this.party.forEach(c => {
             if(c.hp <= 0 || enemy.hp <= 0) return;
+            
+            // New Transparent Formula: (ATK * Rnd) - (DEF / 2)
             let s = c.totalStats;
-            let dmg = Math.max(1, s.atk - enemy.stats.def);
-            if(Math.random()*100 < s.luc) { dmg=Math.floor(dmg*1.5); UI.log("Crit!", "rare"); }
+            let atkRoll = Math.floor(s.atk * (0.9 + Math.random() * 0.2));
+            let defRed = Math.floor(enemy.def / 2);
+            let dmg = Math.max(1, atkRoll - defRed);
+            
+            if(Math.random()*100 < s.luc) { dmg=Math.floor(dmg*1.5); UI.log(`${c.name} Crit!`, "log-dmg"); }
+            
             enemy.hp -= dmg;
+            UI.log(`> ${c.name} hit (ATK:${atkRoll} vs DEF:${defRed}) -> ${dmg} dmg`, "log-dmg");
         });
 
         if(enemy.hp <= 0) {
-            UI.log(`Win! +${enemy.stats.gold}G`, "victory");
-            this.helix += enemy.stats.gold;
-            this.party.forEach(c => c.hp>0 && c.gainExp(enemy.stats.exp) && UI.log(`${c.name} LvUp!`));
+            UI.log(`Victory! +${enemy.gold}G`, "victory");
+            this.helix += enemy.gold;
+            this.party.forEach(c => c.hp>0 && c.gainExp(enemy.exp) && UI.log(`${c.name} LvUp!`));
             
-            if(Math.random() < 0.3 && enemy.drop) {
-                let drop = enemy.drop[Math.floor(Math.random()*enemy.drop.length)];
-                this.inventory.push(drop);
-                UI.log(`Drop: ${ITEM_DATA[drop].name}`, "rare");
+            // Drop Rate: 30%
+            if(Math.random() < 0.3) {
+                let item = LootSystem.generate(this.floor);
+                this.inventory.push(item);
+                let style = item.rarity>=4 ? "log-legend" : (item.rarity>=2 ? "log-rare" : "");
+                UI.log(`Drop: [${item.name}]`, style);
             }
-            if(Math.random() < 0.2) { this.floor++; UI.log("Next Floor."); }
-            UI.updateHeader();
         } else {
-            let target = this.party[Math.floor(Math.random()*this.party.length)];
-            if(target.hp > 0) {
-                let dmg = Math.max(1, enemy.stats.atk - target.totalStats.def);
-                target.hp -= dmg;
-                UI.log(`${target.name} took ${dmg} dmg`);
+            let t = this.party[Math.floor(Math.random()*this.party.length)];
+            if(t.hp > 0) {
+                let s = t.totalStats;
+                let atkRoll = Math.floor(enemy.atk * (0.9 + Math.random() * 0.2));
+                let defRed = Math.floor(s.def / 2);
+                let dmg = Math.max(1, atkRoll - defRed);
+                t.hp -= dmg;
+                UI.log(`${t.name} took (ATK:${atkRoll} vs DEF:${defRed}) -> ${dmg} dmg`, "defeat");
             }
         }
     },
 
     event() {
-        let g = 5 + this.floor;
+        let g = 10 + (this.floor * 2);
         this.helix += g;
-        UI.log(`Found ${g} Helix`);
-        UI.updateHeader();
+        UI.log(`Salvage: +${g} Helix`);
     },
 
     breed(id1, id2) {
-        if(this.helix < CONFIG.BREED_COST) return alert("No Helix");
+        if(this.helix < CONFIG.BREED_COST) return;
         let p1 = this.roster.find(c=>c.id===id1);
         let p2 = this.roster.find(c=>c.id===id2);
-        
         let tier = Math.max(p1.jobData.tier, p2.jobData.tier);
         if(Math.random() < 0.3) tier++;
-        
-        let cands = Object.keys(JOB_DATA).filter(k=>JOB_DATA[k].tier <= tier);
-        let job = cands[Math.floor(Math.random()*cands.length)];
+        let pool = Object.keys(JOB_DATA).filter(k=>JOB_DATA[k].tier <= tier);
+        let job = pool[Math.floor(Math.random()*pool.length)];
         
         this.helix -= CONFIG.BREED_COST;
-        let child = new Character(job, [p1,p2]);
-        this.roster.push(child);
-        UI.log(`Born: ${child.name} (${child.jobData.name})`);
+        let c = new Character(job, [p1,p2]);
+        this.roster.push(c);
+        UI.log(`Born: ${c.name} (${c.jobData.name})`);
         UI.updateAll();
     },
-    
+
     hire() {
-        if(this.helix < CONFIG.HIRE_COST) return alert("No Helix");
-        let cands = Object.keys(JOB_DATA).filter(k=>JOB_DATA[k].tier === 1);
-        let job = cands[Math.floor(Math.random()*cands.length)];
+        if(this.helix < CONFIG.HIRE_COST) return;
+        let pool = Object.keys(JOB_DATA).filter(k=>JOB_DATA[k].tier === 1);
+        let job = pool[Math.floor(Math.random()*pool.length)];
         this.helix -= CONFIG.HIRE_COST;
         let c = new Character(job);
         this.roster.push(c);
-        UI.log(`Hired: ${c.name} (${c.jobData.name})`);
+        UI.log(`Hired: ${c.name}`);
         UI.updateAll();
     }
 };
 
 // --- UI ---
 const UI = {
-    sel: [],
-    equipTarget: null,
+    sel: [], equipTarget: null,
 
     init() {
         document.getElementById('btn-explore').onclick = ()=>Game.explore();
         document.getElementById('btn-return').onclick = ()=>Game.stop();
         document.getElementById('btn-lab').onclick = ()=>this.openModal('modal-lab', this.rendLab);
         document.getElementById('btn-inv').onclick = ()=>this.openModal('modal-inv', this.rendInv);
-        
-        document.querySelectorAll('.close-modal').forEach(b=>b.onclick=()=>{
-            document.querySelectorAll('.modal-overlay').forEach(m=>m.style.display='none');
-            this.updateAll();
-        });
+        document.querySelectorAll('.close-modal').forEach(b=>b.onclick=()=>document.querySelectorAll('.modal-overlay').forEach(m=>m.style.display='none'));
 
-        // Lab Actions
-        document.getElementById('act-breed').onclick = () => {
-            if(this.sel.length===2) { Game.breed(this.sel[0], this.sel[1]); this.sel=[]; this.rendLab(); }
-        };
-        document.getElementById('act-party').onclick = () => {
-            this.sel.forEach(id => {
-                let c = Game.roster.find(x=>x.id===id);
-                let idx = Game.party.indexOf(c);
-                if(idx>-1) Game.party.splice(idx,1);
-                else if(Game.party.length < CONFIG.MAX_PARTY) Game.party.push(c);
-            });
-            this.sel=[]; this.rendLab();
-        };
-        document.getElementById('act-hire').onclick = () => {
-             Game.hire(); this.rendLab();
-        };
+        document.getElementById('act-breed').onclick = () => { if(this.sel.length===2) { Game.breed(this.sel[0], this.sel[1]); this.sel=[]; this.rendLab(); }};
+        document.getElementById('act-party').onclick = () => { this.sel.forEach(id => {
+            let c = Game.roster.find(x=>x.id===id);
+            let idx = Game.party.indexOf(c);
+            idx>-1 ? Game.party.splice(idx,1) : (Game.party.length<CONFIG.MAX_PARTY && Game.party.push(c));
+        }); this.sel=[]; this.rendLab(); };
+        document.getElementById('act-hire').onclick = () => { Game.hire(); this.rendLab(); };
 
         Game.init();
     },
 
-    updateAll() {
-        this.updateHeader();
-        this.renderParty();
-    },
+    updateAll() { this.updateHeader(); this.renderParty(); },
     updateHeader() {
         document.getElementById('helix-display').innerText = Game.helix;
         document.getElementById('floor-display').innerText = Game.floor;
-        document.getElementById('party-count').innerText = Game.party.length;
-    },
-    log(msg, type='') {
-        let d = document.getElementById('log-list');
-        d.innerHTML += `<div class="log-entry log-${type}">${msg}</div>`;
-        document.getElementById('log-panel').scrollTop = 99999;
+        document.getElementById('floor-progress').innerText = `(${Game.floorProgress}/10)`;
     },
     toggle(on) {
         document.getElementById('btn-explore').disabled = on;
         document.getElementById('btn-return').disabled = !on;
     },
-    openModal(id, fn) {
-        this.sel=[]; this.equipTarget=null;
-        document.getElementById(id).style.display = 'flex';
-        fn.call(this);
+    log(msg, type='') {
+        let d = document.getElementById('log-list');
+        d.innerHTML += `<div class="log-entry ${type}">${msg}</div>`;
+        document.getElementById('log-panel').scrollTop = 99999;
     },
+    openModal(id, fn) { this.sel=[]; this.equipTarget=null; document.getElementById(id).style.display='flex'; fn.call(this); },
 
     renderParty() {
         const d = document.getElementById('party-container');
         d.innerHTML = '';
         Game.party.forEach(c => {
             let s = c.totalStats;
+            let dets = c.statDetails; // Get split stats
             let hpP = (c.hp/s.hp)*100;
-            // Equip display
+            let expP = (c.exp/c.maxExp)*100;
+            
+            // Format Stats: 50 (+10)
+            const fmt = (k) => `<span class="${dets[k].bonus>0?'stat-bonus':''}">${dets[k].val}${dets[k].bonus>0 ? '(+'+dets[k].bonus+')':''}</span>`;
+            
+            // Equip list
             let eqHtml = "";
             for(let slot in c.equipment) {
-                if(c.equipment[slot]) {
-                    let iname = ITEM_DATA[c.equipment[slot]].name;
-                    eqHtml += `<div class="equip-slot">${slot.substr(0,4)}: <span>${iname}</span></div>`;
-                }
+                let item = c.equipment[slot];
+                let cls = item ? `equip-active rar-${item.rarity}` : "";
+                eqHtml += `<div class="equip-slot ${cls}">${slot.substr(0,2)}: ${item ? item.name : '-'}</div>`;
             }
 
             d.innerHTML += `
             <div class="char-card" style="border-left:3px solid ${c.color}">
                 <div class="char-header"><span>${c.name}</span> <span style="color:${c.color}">${c.jobData.name}</span></div>
-                <div class="bar-wrap"><div class="bar-val" style="width:${hpP}%"></div></div>
-                <div style="font-size:10px; color:#aaa; margin-top:4px;">Lv.${c.level} HP:${c.hp}/${s.hp} ATK:${s.atk} DEF:${s.def}</div>
+                <div class="bar-wrap"><div class="bar-val hp-bar" style="width:${hpP}%"></div></div>
+                <div class="bar-wrap" style="height:2px;"><div class="bar-val exp-bar" style="width:${expP}%"></div></div>
+                <div style="font-size:10px; color:#888; text-align:right;">Lv.${c.level} (Exp:${c.exp}/${c.maxExp})</div>
+                
+                <div class="stat-grid">
+                    <span>ATK:${fmt('atk')}</span> <span>DEF:${fmt('def')}</span>
+                    <span>MAG:${fmt('mag')}</span> <span>HP:${c.hp}/${s.hp}</span>
+                </div>
                 <div class="equip-grid">${eqHtml}</div>
             </div>`;
         });
     },
 
     rendLab() {
-        const d = document.getElementById('lab-list');
-        d.innerHTML = '';
+        const d = document.getElementById('lab-list'); d.innerHTML = '';
         Game.roster.forEach(c => {
             let inPt = Game.party.includes(c);
             let sel = this.sel.includes(c.id);
@@ -488,116 +535,64 @@ const UI = {
             if(inPt) el.style.borderRight = "3px solid var(--accent-color)";
             el.innerHTML = `<div>${c.name}</div><div style="font-size:10px; color:#888;">${c.jobData.name} (T${c.jobData.tier})</div>`;
             el.onclick = () => {
-                if(sel) this.sel = this.sel.filter(x=>x!==c.id);
-                else this.sel.push(c.id);
+                sel ? this.sel=this.sel.filter(x=>x!==c.id) : this.sel.push(c.id);
                 this.rendLab();
-                document.getElementById('act-breed').disabled = this.sel.length !== 2;
-                document.getElementById('act-party').disabled = this.sel.length === 0;
+                document.getElementById('act-breed').disabled = this.sel.length!==2;
+                document.getElementById('act-party').disabled = this.sel.length===0;
             };
             d.appendChild(el);
         });
     },
 
-    // 装備UIのレンダリング
     rendInv() {
-        // 左：キャラリスト
-        const charList = document.getElementById('equip-char-list');
-        charList.innerHTML = '';
+        const cList = document.getElementById('equip-char-list'); cList.innerHTML='';
         Game.party.forEach(c => {
             let el = document.createElement('div');
-            el.className = `list-item ${this.equipTarget===c ? 'selected' : ''}`;
+            el.className = `list-item ${this.equipTarget===c?'selected':''}`;
             el.innerHTML = `<div>${c.name}</div><div style="font-size:10px;">${c.jobData.name}</div>`;
-            el.onclick = () => { this.equipTarget = c; this.rendInv(); };
-            charList.appendChild(el);
+            el.onclick = () => { this.equipTarget=c; this.rendInv(); };
+            cList.appendChild(el);
         });
 
-        // 右：インベントリ＆装備状況
-        const invList = document.getElementById('inv-list');
-        const targetName = document.getElementById('equip-target-name');
-        invList.innerHTML = '';
-
-        if(!this.equipTarget) {
-            targetName.innerText = "Select a character to equip";
-            return;
-        }
-
-        let c = this.equipTarget;
-        targetName.innerHTML = `${c.name} <span style="font-size:0.8em; color:#888;">Current Equip</span>`;
-
-        // 現在の装備を表示（解除用）
-        let slotsDiv = document.createElement('div');
-        slotsDiv.style.marginBottom = "15px";
-        slotsDiv.style.paddingBottom = "10px";
-        slotsDiv.style.borderBottom = "1px solid #333";
+        const iList = document.getElementById('inv-list'); iList.innerHTML='';
+        if(!this.equipTarget) { iList.innerHTML="Select Char"; return; }
         
+        let c = this.equipTarget;
+        // Current Equip
+        let eqDiv = document.createElement('div');
+        eqDiv.style.borderBottom="1px solid #333"; eqDiv.style.marginBottom="10px";
         for(let slot in c.equipment) {
-            let itemId = c.equipment[slot];
-            let slotName = slot.toUpperCase();
-            let itemName = itemId ? ITEM_DATA[itemId].name : "(Empty)";
-            let btn = "";
-            if(itemId) btn = `<button style="padding:2px 5px; font-size:10px; margin-left:10px;" onclick="UI.doUnequip('${slot}')">Unequip</button>`;
-            
-            slotsDiv.innerHTML += `<div style="font-size:12px; margin-bottom:4px;">
-                <span style="color:#888; display:inline-block; width:80px;">${slotName}:</span> 
-                <span style="color:${itemId?'#fff':'#444'}">${itemName}</span>
-                ${btn}
-            </div>`;
+            let item = c.equipment[slot];
+            let info = item ? `<span class="rar-${item.rarity}">${item.name}</span>` : '<span style="color:#444">Empty</span>';
+            let btn = item ? `<button style="font-size:9px; margin-left:5px;" onclick="UI.doUnequip('${slot}')">X</button>` : '';
+            eqDiv.innerHTML += `<div style="font-size:11px; margin-bottom:2px; color:#aaa;">${slot}: ${info} ${btn}</div>`;
         }
-        invList.appendChild(slotsDiv);
+        iList.appendChild(eqDiv);
 
-        // 所持品リスト
-        let itemTitle = document.createElement('div');
-        itemTitle.innerText = "Inventory (Click to Equip)";
-        itemTitle.style.marginBottom = "5px";
-        invList.appendChild(itemTitle);
-
-        if(Game.inventory.length === 0) {
-            invList.innerHTML += "<div style='color:#666;'>No items</div>";
-        }
-
-        Game.inventory.forEach((itemId, idx) => {
-            let item = ITEM_DATA[itemId];
-            if(!item) return; // Error check
-
+        // Inventory Items
+        if(Game.inventory.length===0) iList.innerHTML+="<div style='color:#666'>No Items</div>";
+        Game.inventory.forEach((item, idx) => {
             let el = document.createElement('div');
             el.className = 'list-item';
-            el.style.display = 'flex';
-            el.style.justifyContent = 'space-between';
-            
-            // ステータス文字列
-            let sStr = Object.keys(item.stat).map(k=>`${k.toUpperCase()}:${item.stat[k]}`).join(' ');
-
+            let stats = Object.keys(item.stats).map(k=>`${k}:${item.stats[k]}`).join(' ');
             el.innerHTML = `
-                <div>
-                    <div style="font-weight:bold; color:${item.rarity==='Legendary'?'#f1c40f':item.rarity==='Rare'?'#00ff9d':'#ccc'}">${item.name}</div>
-                    <div style="font-size:10px; color:#666;">${item.type} [${item.slot}]</div>
-                </div>
-                <div style="font-size:11px; text-align:right;">
-                    <div>${sStr}</div>
-                </div>
+                <div style="font-weight:bold;" class="rar-${item.rarity}">${item.name}</div>
+                <div style="font-size:10px; color:#666;">${item.type} [${item.slot}]</div>
+                <div style="font-size:10px; color:var(--accent-color);">${stats}</div>
             `;
-            // 装備実行
             el.onclick = () => {
-                c.equipItem(itemId);
-                Game.inventory.splice(idx, 1); // Remove from inventory
-                this.rendInv();
-                this.renderParty(); // Update main UI stats
+                c.equip(item);
+                Game.inventory.splice(idx, 1);
+                this.rendInv(); this.renderParty();
             };
-            invList.appendChild(el);
+            iList.appendChild(el);
         });
     },
 
-    doUnequip(slot) {
-        if(this.equipTarget) {
-            this.equipTarget.unequipItem(slot);
-            this.rendInv();
-            this.renderParty();
-        }
-    }
+    doUnequip(slot) { this.equipTarget.unequip(slot); this.rendInv(); this.renderParty(); }
 };
 
 window.onload = ()=>UI.init();
-
 </script>
 </body>
 </html>
