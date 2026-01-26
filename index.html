@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Genetic Rogue Ver.11.1 - Auto Equip</title>
+    <title>Genetic Rogue Ver.11.2 - Fixed</title>
     <style>
         :root {
             --bg-color: #050505; --panel-bg: #111; --text-color: #ccc;
@@ -91,8 +91,13 @@
         button:disabled { opacity: 0.3; cursor: not-allowed; }
         button.primary { background: #004433; border-color: var(--accent-color); color: var(--accent-color); }
         button.danger { border-color: var(--danger-color); color: var(--danger-color); }
-        button.icon-btn { font-size: 18px; padding: 5px 10px; border: none; background: transparent; color: #666; }
-        button.icon-btn:hover { color: #fff; background: transparent; }
+        
+        /* Fixed: Button visibility */
+        button.icon-btn { 
+            font-size: 16px; padding: 5px 12px; border: 1px solid #444; 
+            background: #222; color: #eee; border-radius: 4px; cursor: pointer; 
+        }
+        button.icon-btn:hover { background: #333; border-color: #777; }
         
         .modal-overlay { position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.85); display: none; z-index: 99; justify-content: center; align-items: center; backdrop-filter: blur(2px); }
         .modal-box { background: #111; width: 95%; max-width: 1000px; max-height: 90vh; border: 1px solid #444; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.8); }
@@ -135,16 +140,16 @@
 
 <div id="app">
     <header>
-        <div>🧬 Genetic Rogue <span style="color:#666;">Ver.11.1</span></div>
-        <div style="font-size:14px; display:flex; align-items:center; gap:15px;">
+        <div>🧬 Genetic Rogue <span style="color:#666;">Ver.11.2</span></div>
+        <div style="font-size:14px; display:flex; align-items:center; gap:10px;">
             <div>
                 <span style="color:#aaa;">階層:</span> <span id="floor-display" style="font-weight:bold; font-size:16px;">1</span>
                 <span id="floor-progress" style="color:#666; font-size:12px; margin-left:5px;">(0/30)</span>
                 <span style="color:#666; font-size:12px;">(最深: <span id="max-floor">1</span>)</span>
             </div>
-            <div style="font-weight:bold; color:var(--accent-color);">Helix: <span id="helix-display">0</span></div>
-            <button class="icon-btn" id="btn-help" title="ルール">❓</button>
-            <button class="icon-btn" id="btn-settings" title="設定">⚙️</button>
+            <div style="font-weight:bold; color:var(--accent-color); margin-right:10px;">Helix: <span id="helix-display">0</span></div>
+            <button class="icon-btn" id="btn-help">❓ルール</button>
+            <button class="icon-btn" id="btn-settings">⚙️設定</button>
         </div>
     </header>
 
@@ -315,10 +320,10 @@
 
 <script>
 /**
- * Genetic Rogue Ver.11.1
- * - Exp Bar Fix
- * - Floor Progress x3 (30 steps)
- * - Auto Equip System
+ * Genetic Rogue Ver.11.2
+ * - Fixed Settings Button visibility
+ * - New Save Key (v11) to prevent conflicts
+ * - Robust Initialization
  */
 
 // --- 1. DATA DEFINITIONS ---
@@ -458,7 +463,7 @@ const CONFIG = {
     HIRE_COST: 30, CC_COST: 100,
     MAX_LEVEL: 50,
     BASE_STATS: { hp:50, atk:5, def:5, agi:5, mag:5, int:5, luc:5 },
-    FLOOR_STEP_MAX: 30 // Increased from 10 to 30
+    FLOOR_STEP_MAX: 30
 };
 
 // --- 3. LOGIC ---
@@ -613,7 +618,7 @@ class Character {
 
     equip(item) {
         const check = this.canEquip(item);
-        if (!check.ok) { return false; } // Error handled by UI log or silent auto equip
+        if (!check.ok) { return false; } 
         if(this.equipment[item.slot]) Game.inventory.push(this.equipment[item.slot]);
         this.equipment[item.slot] = item;
         this.hp = Math.min(this.hp, this.totalStats.hp);
@@ -628,24 +633,19 @@ class Character {
         }
     }
 
-    // Helper for Auto Equip: Get item power score
     getItemScore(item) {
         if (!item) return 0;
-        // Check equipability
         if (!this.canEquip(item).ok) return -1;
-
         let s = 0;
-        // Weight stats based on job type
         if (this.job.atkType === 'mag') {
             s += (item.stats.mag || 0) * 1.5;
             s += (item.stats.int || 0) * 1.0;
             s += (item.stats.atk || 0) * 0.2;
         } else {
             s += (item.stats.atk || 0) * 1.5;
-            s += (item.stats.def || 0) * 0.5; // War needs def too
+            s += (item.stats.def || 0) * 0.5;
             s += (item.stats.mag || 0) * 0.1;
         }
-        // General Stats
         s += (item.stats.def || 0) * 1.0;
         s += (item.stats.hp || 0) * 0.2;
         s += (item.stats.agi || 0) * 0.8;
@@ -703,7 +703,8 @@ const Game = {
     exploring: false, timer: null,
 
     init() {
-        if(localStorage.getItem('genetic_rogue_v10_save')) {
+        // USE NEW SAVE KEY to prevent conflict
+        if(localStorage.getItem('genetic_rogue_v11_save')) {
             this.load();
         } else {
             ["warrior","thief","priest"].forEach(j => this.roster.push(new Character(j)));
@@ -715,7 +716,7 @@ const Game = {
         }
         UI.init();
         UI.updateAll();
-        UI.log("Genetic Rogue Ver.11.1 起動。", "log-sys");
+        UI.log("Genetic Rogue Ver.11.2 起動。", "log-sys");
     },
 
     save(manual=false) {
@@ -723,13 +724,13 @@ const Game = {
             helix: this.helix, maxFloor: this.maxFloor, inventory: this.inventory,
             roster: this.roster, partyIds: this.party.map(c => c.id)
         };
-        localStorage.setItem('genetic_rogue_v10_save', JSON.stringify(data));
+        localStorage.setItem('genetic_rogue_v11_save', JSON.stringify(data));
         if(manual) UI.log("データをセーブしました。", "log-sys");
     },
 
     load() {
         try {
-            const data = JSON.parse(localStorage.getItem('genetic_rogue_v10_save'));
+            const data = JSON.parse(localStorage.getItem('genetic_rogue_v11_save'));
             if(!data) return;
             this.helix = data.helix; this.maxFloor = data.maxFloor; this.inventory = data.inventory || [];
             this.roster = data.roster.map(d => new Character(null, null, d));
@@ -741,13 +742,13 @@ const Game = {
             UI.log("データをロードしました。", "log-sys");
         } catch(e) {
             console.error("Save data corrupt", e);
-            alert("セーブデータの読み込みに失敗しました。");
+            // Safe fallback logic could go here
         }
     },
 
     resetSave() {
-        if(confirm("本当に全データを削除しますか？復元できません。")) {
-            localStorage.removeItem('genetic_rogue_v10_save');
+        if(confirm("本当に全データを削除しますか？")) {
+            localStorage.removeItem('genetic_rogue_v11_save');
             location.reload();
         }
     },
@@ -799,7 +800,6 @@ const Game = {
         });
 
         this.floorProgress++;
-        // Increased floor steps to 30
         if(this.floorProgress > CONFIG.FLOOR_STEP_MAX) {
             this.floor++;
             this.floorProgress = 0;
@@ -815,30 +815,23 @@ const Game = {
         UI.renderParty();
     },
 
-    // --- Auto Equip Logic ---
     autoEquip(item) {
         if(!item) return;
         let equippedBy = null;
-        
-        // Check each party member
         for(let c of this.party) {
-            // Can they equip?
             if(c.canEquip(item).ok) {
-                // Is it better than current?
                 let currentItem = c.equipment[item.slot];
                 let currentScore = currentItem ? c.getItemScore(currentItem) : 0;
                 let newScore = c.getItemScore(item);
-                
                 if(newScore > currentScore) {
                     c.equip(item);
                     equippedBy = c.name;
-                    break; // Equip to first valid person (simple logic)
+                    break;
                 }
             }
         }
-        
         if(equippedBy) {
-            UI.log(`[自動装備] ${equippedBy} は ${item.name} を装備した！`, "log-equip");
+            UI.log(`[自動装備] ${equippedBy} は ${item.name} を装備！`, "log-equip");
         } else {
             this.inventory.push(item);
             UI.log(`戦利品: ${item.name}`, "log-item");
@@ -965,7 +958,6 @@ const Game = {
                 } 
             });
             let item = LootSystem.generate(this.floor);
-            // Modified: Auto Equip Check
             this.autoEquip(item);
         }
     },
