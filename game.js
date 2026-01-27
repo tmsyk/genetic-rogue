@@ -14,9 +14,9 @@ const Game = {
             this.load();
         } else {
             // 初期データ: Tier1の戦士と僧侶を探して雇用
-            // (data_jobs.jsで生成されたJOB_DATAから検索)
-            const warriorKey = Object.keys(JOB_DATA).find(k => k.includes("n_") && k.includes("warrior") && JOB_DATA[k].tier === 1);
-            const priestKey = Object.keys(JOB_DATA).find(k => k.includes("n_") && k.includes("priest") && JOB_DATA[k].tier === 1);
+            // ★修正: JOB_DATA -> DB.jobs
+            const warriorKey = Object.keys(DB.jobs).find(k => k.includes("n_") && k.includes("warrior") && DB.jobs[k].tier === 1);
+            const priestKey = Object.keys(DB.jobs).find(k => k.includes("n_") && k.includes("priest") && DB.jobs[k].tier === 1);
             
             if(warriorKey) this.hire(warriorKey, true); // true = free
             if(priestKey) this.hire(priestKey, true);
@@ -110,26 +110,8 @@ const Game = {
 
     encounter() {
         // 敵生成
-        // data_enemies.js のデータを使用
-        const power = 1 + (this.floor * 0.4);
-        const base = MONSTER_SPECIES[Math.floor(Math.random()*MONSTER_SPECIES.length)];
-        
-        // 5階層ごとに強敵（Prefix付き）
-        let prefix = MONSTER_PREFIXES[0]; // default empty
-        if(this.floor % 5 === 0 && Math.random() < 0.5) {
-            prefix = MONSTER_PREFIXES[Math.floor(Math.random()*(MONSTER_PREFIXES.length-1)) + 1];
-        }
-
-        this.currentEnemy = {
-            name: prefix.name + base.name,
-            hp: Math.floor(base.hp * power * prefix.mod),
-            maxHp: Math.floor(base.hp * power * prefix.mod),
-            str: Math.floor(base.str * power * prefix.mod),
-            vit: Math.floor((base.vit||0) * power * prefix.mod),
-            agi: Math.floor((base.agi||5) * power),
-            exp: Math.floor(10 * power * prefix.mod),
-            gold: Math.floor(5 * power)
-        };
+        // data_enemies.js のデータを使用 (DBマネージャー経由)
+        this.currentEnemy = DB.createEnemy(this.floor, this.floor % 5 === 0);
         UI.log(`遭遇: ${this.currentEnemy.name} (HP:${this.currentEnemy.hp})`, "log-combat");
     },
 
@@ -171,8 +153,8 @@ const Game = {
     },
 
     trap() {
-        // data_enemies.js の TRAP_TYPES を使用
-        const trap = TRAP_TYPES[Math.floor(Math.random()*TRAP_TYPES.length)];
+        // data_enemies.js の TRAP_TYPES を使用 (DBマネージャー経由)
+        const trap = DB.getRandomTrap();
         const power = 1 + (this.floor * 0.5);
         const dmg = Math.floor(trap.base * power);
         
@@ -196,24 +178,8 @@ const Game = {
     },
 
     loot() {
-        // Generate random item
-        // data_items.js の ITEM_TEMPLATES を使用
-        const keys = Object.keys(ITEM_TEMPLATES);
-        const key = keys[Math.floor(Math.random()*keys.length)];
-        const tpl = ITEM_TEMPLATES[key];
-        
-        // 簡易生成（本来はLootSystemクラスなどで詳細に行う）
-        const item = {
-            id: Math.random().toString(36),
-            name: tpl.name,
-            kind: tpl.kind,
-            slot: tpl.slot,
-            stats: {...tpl.base},
-            tier: tpl.tier,
-            rarity: 1
-        };
-        // 階層補正
-        for(let k in item.stats) item.stats[k] = Math.floor(item.stats[k] * (1 + this.floor*0.2));
+        // Generate random item via DB Manager
+        const item = DB.createRandomItem(this.floor);
         
         this.inventory.push(item);
         UI.log(`獲得: ${item.name}`, "log-item");
@@ -223,8 +189,8 @@ const Game = {
     },
 
     hire(jobId, isFree=false) {
-        if(!isFree && this.helix < CONFIG.HIRE_COST) return;
-        if(!isFree) this.helix -= CONFIG.HIRE_COST;
+        if(!isFree && this.helix < MASTER_DATA.config.HIRE_COST) return;
+        if(!isFree) this.helix -= MASTER_DATA.config.HIRE_COST;
         
         const c = new Character(jobId);
         this.roster.push(c);
@@ -238,11 +204,11 @@ const Game = {
         
         // 条件チェック（簡易）
         if(c.level < 10) return alert("Lv10以上必要です");
-        if(this.helix < CONFIG.CC_COST) return alert("Helix不足");
+        if(this.helix < MASTER_DATA.config.CC_COST) return alert("Helix不足");
 
-        this.helix -= CONFIG.CC_COST;
+        this.helix -= MASTER_DATA.config.CC_COST;
         c.jobKey = newJobId;
-        c.level = 1; // Reset Level (Bonus stats logic omitted for brevity)
+        c.level = 1; // Reset Level
         
         this.save();
         UI.updateAll();
@@ -255,27 +221,23 @@ class Character {
         if(data) { Object.assign(this, data); return; }
         this.id = Math.random().toString(36);
         this.jobKey = jobKey;
-        this.name = this.genName();
+        this.name = UTILS.genName();
         this.level = 1; this.exp = 0; this.maxExp = 100;
         this.hp = 100;
         
         // data_core.js の CONFIG.BASE_STATS を使用
-        this.baseStats = {...CONFIG.BASE_STATS};
+        this.baseStats = {...MASTER_DATA.config.BASE_STATS};
         // 個体差
         for(let k in this.baseStats) this.baseStats[k] = Math.floor(this.baseStats[k] * (0.9 + Math.random()*0.2));
         
         this.equipment = {main_hand:null, body:null, accessory:null};
     }
 
-    genName() {
-        const n = ["アレク","ベル","シド","ダン","イヴ","フェイ","ジン","ハル","イアン","ジェイ"];
-        return n[Math.floor(Math.random()*n.length)] + Math.floor(Math.random()*99);
-    }
-    
     get totalStats() {
         const s = {...this.baseStats};
-        // Job補正 (JOB_DATA[this.jobKey].mod)
-        const job = JOB_DATA[this.jobKey];
+        // Job補正 (DB.jobs[this.jobKey].mod)
+        // ★修正: JOB_DATA -> DB.jobs
+        const job = DB.jobs[this.jobKey];
         if(job && job.mod) {
             for(let k in s) {
                 let m = job.mod.all || job.mod[k] || 1.0;
@@ -317,7 +279,8 @@ class Character {
         
         if(newScore > curScore) {
             this.equipment[item.slot] = item;
-            // 古い装備は消滅（簡易実装）またはインベントリに戻す処理が必要
+            const idx = Game.inventory.indexOf(item);
+            if(idx>-1) Game.inventory.splice(idx,1);
             UI.log(`${this.name}が${item.name}を装備`, "log-equip");
         }
     }
@@ -354,7 +317,9 @@ const UI = {
         Game.party.forEach(char => {
             const div = document.createElement('div');
             div.className = "char-card";
-            const jobName = JOB_DATA[char.jobKey] ? JOB_DATA[char.jobKey].name : char.jobKey;
+            // ★修正: JOB_DATA -> DB.jobs
+            const jobData = DB.jobs[char.jobKey];
+            const jobName = jobData ? jobData.name : char.jobKey;
             div.innerHTML = `
                 <div class="char-header">${char.name} <span class="job-label">${jobName}</span></div>
                 <div>Lv.${char.level} HP:${Math.floor(char.hp)}</div>
@@ -387,7 +352,9 @@ const UI = {
             const div = document.createElement('div');
             div.className = "list-item";
             const inPt = Game.party.find(x=>x.id===c.id);
-            const jobName = JOB_DATA[c.jobKey] ? JOB_DATA[c.jobKey].name : c.jobKey;
+            // ★修正: JOB_DATA -> DB.jobs
+            const jobData = DB.jobs[c.jobKey];
+            const jobName = jobData ? jobData.name : c.jobKey;
             div.innerHTML = `${c.name} (${jobName}) ${inPt?'[PT]':''}`;
             div.onclick = () => {
                 if(inPt) Game.party = Game.party.filter(x=>x.id!==c.id);
@@ -403,12 +370,12 @@ const UI = {
         const el = document.getElementById('guild-list');
         el.innerHTML = "";
         // Only Tier 1 jobs for hire
-        Object.keys(JOB_DATA).filter(k => JOB_DATA[k].tier === 1 && k.includes('n_')).forEach(k => {
-            const job = JOB_DATA[k];
+        // ★修正: JOB_DATA -> DB.jobs
+        Object.values(DB.jobs).filter(j => j.tier === 1).forEach(j => {
             const div = document.createElement('div');
             div.className = "list-item";
-            div.innerHTML = `${job.name}`;
-            div.onclick = () => Game.hire(k);
+            div.innerHTML = `${j.name}`;
+            div.onclick = () => Game.hire(j.id);
             el.appendChild(div);
         });
     },
@@ -420,7 +387,9 @@ const UI = {
             Game.roster.forEach(c => {
                 const div = document.createElement('div');
                 div.className = "list-item";
-                const jobName = JOB_DATA[c.jobKey] ? JOB_DATA[c.jobKey].name : c.jobKey;
+                // ★修正: JOB_DATA -> DB.jobs
+                const jobData = DB.jobs[c.jobKey];
+                const jobName = jobData ? jobData.name : c.jobKey;
                 div.innerHTML = `${c.name} (${jobName})`;
                 div.onclick = () => { this.selChar = c; this.renderClass(); };
                 el.appendChild(div);
@@ -429,11 +398,12 @@ const UI = {
         }
 
         // Show Next Tier Jobs
-        const currentJob = JOB_DATA[this.selChar.jobKey];
+        // ★修正: JOB_DATA -> DB.jobs
+        const currentJob = DB.jobs[this.selChar.jobKey];
         if(!currentJob) return;
 
-        const nextJobs = Object.keys(JOB_DATA).filter(k => {
-            const j = JOB_DATA[k];
+        const nextJobs = Object.keys(DB.jobs).filter(k => {
+            const j = DB.jobs[k];
             // Simple logic: same lineage, next tier
             return j.tier === currentJob.tier + 1 && j.lineage === currentJob.lineage;
         });
@@ -441,7 +411,7 @@ const UI = {
         if(nextJobs.length === 0) el.innerHTML = "<div>転職可能な職業がありません</div>";
 
         nextJobs.forEach(k => {
-            const job = JOB_DATA[k];
+            const job = DB.jobs[k];
             const div = document.createElement('div');
             div.className = "list-item";
             div.innerHTML = `${job.name} (T${job.tier})`;

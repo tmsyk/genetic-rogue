@@ -1,5 +1,5 @@
 /**
- * Genetic Rogue - Master Database (CSV Loader Version)
+ * Genetic Rogue - Master Database (Full CSV Version)
  * スプレッドシート等で管理しているCSVデータをここに貼り付けるだけで反映されます。
  */
 
@@ -7,6 +7,94 @@
 // 1. CSVデータ貼り付けエリア
 // ==========================================
 
+// 属性定義 (相性含む)
+const CSV_ELEMENTS = `key,name,color,weak,strong
+fire,火,#e74c3c,water,wind
+water,水,#3498db,earth,fire
+wind,風,#2ecc71,fire,earth
+earth,土,#d35400,wind,water
+light,光,#f1c40f,dark,dark
+dark,闇,#9b59b6,light,light`;
+
+// 系統（Lineage）定義
+const CSV_LINEAGE = `id,mod_hp,mod_str,mod_vit,mod_mag,mod_int,mod_agi,mod_luc,color
+warrior,1.5,1.5,1.2,0.2,0.6,0.8,1.0,#e74c3c
+martial,1.4,1.3,0.9,0.5,1.0,1.5,1.0,#d35400
+shadow,0.9,1.2,0.7,0.6,1.3,1.7,1.6,#8e44ad
+magic,0.7,0.3,0.6,1.8,1.6,1.0,1.0,#3498db
+holy,1.1,0.7,1.2,1.4,1.5,0.9,1.2,#f1c40f
+tech,1.2,1.0,1.1,0.5,1.6,1.2,1.1,#1abc9c
+special,1.0,0.8,0.8,1.0,1.0,1.0,2.0,#2ecc71`;
+
+// 個性（Personality）定義
+const CSV_PERSONALITY = `name,mod_hp,mod_str,mod_vit,mod_mag,mod_int,mod_agi,mod_luc
+勇敢,1.2,1.2,1.0,1.0,1.0,1.0,1.0
+冷静,1.0,1.0,1.1,1.0,1.2,1.0,1.0
+臆病,1.0,1.0,0.9,1.0,1.0,1.3,1.0
+豪快,1.0,1.3,1.0,0.7,1.0,1.0,1.0
+天才,0.9,1.0,1.0,1.2,1.2,1.0,1.0
+幸運,1.0,1.0,1.0,1.0,1.0,1.0,1.5
+堅実,1.1,1.0,1.2,1.0,1.0,0.8,1.0
+凡人,1.0,1.0,1.0,1.0,1.0,1.0,1.0
+野心家,1.0,1.1,1.0,1.0,1.0,1.0,1.1
+慎重,1.0,1.0,1.3,1.0,1.0,0.8,1.0
+短気,1.0,1.4,0.8,1.0,1.0,1.0,1.0
+慈悲,1.0,1.0,1.0,1.1,1.3,1.0,1.0`;
+
+// スキル定義 (type: phy, mag, spd, tnk, sup)
+const CSV_SKILLS = `name,type,desc
+剛腕,phy,物理攻撃力+10%
+連撃,phy,20%の確率で2回攻撃
+鉄壁,phy,防御力+15%
+カウンター,phy,回避時50%で反撃
+急所突き,phy,クリティカル率+10%
+粉砕,phy,敵の防御を貫通する
+底力,phy,HP減少時に攻撃UP
+闘争本能,phy,ターン経過で攻撃UP
+受け流し,phy,物理ダメージ軽減
+鬼神,phy,攻撃大幅UP防御DOWN
+魔力集中,mag,魔法攻撃力+10%
+瞑想,mag,ターン終了時MP回復
+炎の知識,mag,火属性ダメージ+20%
+マナ効率,mag,スキル発動率UP
+詠唱短縮,mag,行動速度+10%
+属性強化,mag,弱点ダメージUP
+結界,mag,魔法ダメージ軽減
+精神統一,mag,状態異常耐性UP
+古代の知恵,mag,経験値獲得量UP
+魔神,mag,魔法大幅UPHP減少
+早業,spd,命中率+20%
+回避,spd,回避率+10%
+不意打ち,spd,戦闘開始時先制攻撃
+残像,spd,回避時次ターン攻撃UP
+軽業,spd,トラップ回避率UP
+目利き,spd,ドロップ率UP
+二刀流の極意,spd,サブ武器補正UP
+隠密,spd,敵に狙われにくくなる
+俊足,spd,逃走成功率UP
+神速,spd,稀に2回行動
+挑発,tnk,敵の攻撃を引きつける
+かばう,tnk,瀕死の味方をかばう
+忍耐,tnk,HP30%以下で防御UP
+リジェネ,tnk,毎ターンHP回復
+重装甲,tnk,物理ダメージ-10%
+不屈,tnk,致死ダメージを一度耐える
+ガーディアン,tnk,味方全体の防御UP
+自己修復,tnk,状態異常を自然治癒
+城塞,tnk,防御大幅UP回避DOWN
+金剛,tnk,全ダメージ軽減
+祈り,sup,味方全体のHP回復
+祝福,sup,味方の攻撃力UP
+慈愛,sup,回復効果+20%
+応急手当,sup,戦闘終了時HP回復
+加護,sup,状態異常耐性UP
+薬の知識,sup,アイテム効果UP
+聖なる光,sup,アンデッドに大ダメージ
+献身,sup,自分のHPを分け与える
+女神の瞳,sup,隠し通路発見率UP
+奇跡,sup,稀にダメージ無効化`;
+
+// 職業マスタ
 const CSV_JOBS = `id,name,tier,type,equip_types,lineage,mod_hp,mod_str,mod_vit,mod_mag,mod_int,mod_agi,mod_luc
 warrior,戦士,1,phy,"sw,ax,ha,sh",warrior,1.2,1.2,1.1,0.5,0.8,0.9,1.0
 mage,魔法使い,1,mag,"st,dg,ro,ac",magic,0.8,0.6,0.8,1.5,1.4,1.0,1.0
@@ -33,6 +121,7 @@ marine,宇宙海兵,4,phy,"gun,sw,ha",tech,1.5,1.8,1.5,0.5,1.2,1.2,1.0
 psycho,超能力者,4,mag,"dv,ro,ac",magic,0.8,0.5,0.8,2.5,2.5,1.2,1.0
 jester,遊び人,2,spe,"dg,ins,la",special,1.0,0.8,0.8,1.0,1.0,1.0,3.0`;
 
+// アイテムマスタ
 const CSV_ITEMS = `id,name,kind,type,slot,base_str,base_vit,base_mag,base_int,base_agi,base_luc,base_dex,tier,req_stat,req_val
 w1,ショートソード,sw,weapon,main_hand,5,0,0,0,0,0,0,1,,
 w2,ロングソード,sw,weapon,main_hand,10,0,0,0,0,0,0,2,,
@@ -61,6 +150,7 @@ ac1,リング,ac,accessory,accessory,0,0,0,0,0,2,0,1,,
 ac2,アミュレット,ac,accessory,accessory,0,0,0,3,0,0,0,1,,
 ac3,パワーベルト,ac,accessory,accessory,5,0,0,0,0,0,0,2,,`;
 
+// 素材マスタ
 const CSV_MATERIALS = `name,tier,mod_str,mod_vit,mod_mag,mod_int,mod_agi,mod_luc,element,spawn_weight
 鉄の,1,2,0,0,0,0,0,,40
 銅の,1,0,0,2,0,0,0,,30
@@ -79,6 +169,7 @@ const CSV_MATERIALS = `name,tier,mod_str,mod_vit,mod_mag,mod_int,mod_agi,mod_luc
 竜の,4,20,20,0,0,0,0,fire,2
 神の,5,20,20,20,20,20,20,light,1`;
 
+// 敵マスタ
 const CSV_ENEMIES = `name,hp,str,def,mag,agi,exp,gold,element
 スライム,20,5,2,0,5,10,5,water
 ネズミ,15,7,1,0,10,12,7,earth
@@ -98,24 +189,18 @@ const CSV_ENEMIES = `name,hp,str,def,mag,agi,exp,gold,element
 // ==========================================
 
 const DataParser = {
-    // CSV文字列をオブジェクトの配列に変換
     parse(csvText) {
+        if(!csvText) return [];
         const lines = csvText.trim().split('\n');
         const headers = lines[0].split(',').map(h => h.trim());
         const result = [];
-
         for (let i = 1; i < lines.length; i++) {
-            // ダブルクォート内のカンマを無視して分割する正規表現
             const row = lines[i].match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g);
             if (!row) continue;
-
             const obj = {};
             headers.forEach((header, index) => {
-                let value = row[index] ? row[index].replace(/^"|"$/g, '') : ''; // クォート削除
-                // 数値変換
-                if (!isNaN(value) && value !== '') {
-                    value = Number(value);
-                }
+                let value = row[index] ? row[index].replace(/^"|"$/g, '') : '';
+                if (!isNaN(value) && value !== '') value = Number(value);
                 obj[header] = value;
             });
             result.push(obj);
@@ -123,12 +208,11 @@ const DataParser = {
         return result;
     },
 
-    // 職業データの変換（equip_typesを配列に、mod_xxをオブジェクトに）
+    // 職業データの変換
     convertJobs(rawJobs) {
         return rawJobs.map(job => {
             const equip = typeof job.equip_types === 'string' ? job.equip_types.split(',') : [];
             const mod = {
-                // all is handled by logic if needed, but here we set specific
                 str: job.mod_str || 1.0,
                 vit: job.mod_vit || 1.0,
                 mag: job.mod_mag || 1.0,
@@ -162,19 +246,15 @@ const DataParser = {
                 luc: item.base_luc || 0,
                 dex: item.base_dex || 0
             };
-            
-            // 装備条件
             let req = null;
             if (item.req_stat && item.req_val) {
-                req = {};
-                req[item.req_stat] = item.req_val;
+                req = {}; req[item.req_stat] = item.req_val;
             }
-
             items[item.id] = {
                 name: item.name,
                 kind: item.kind,
                 slot: item.slot,
-                type: item.type, // weapon, armor, etc
+                type: item.type,
                 base: base,
                 tier: item.tier,
                 req: req
@@ -191,7 +271,6 @@ const DataParser = {
                 const key = `mod_${stat}`;
                 if(mat[key]) mod[stat] = mat[key];
             });
-            // all stats check? logic handles it usually, but let's stick to explicit
             return {
                 name: mat.name,
                 tier: mat.tier,
@@ -210,12 +289,68 @@ const DataParser = {
             str: e.str || 0,
             def: e.def || 0,
             mag: e.mag || 0,
-            vit: e.def || 0, // map def to vit
+            vit: e.def || 0,
             agi: e.agi || 10,
             exp: e.exp,
             gold: e.gold,
             elem: e.element || null
         }));
+    },
+
+    // 属性定義の変換
+    convertElements(rawElements) {
+        const result = [];
+        const chart = {};
+        rawElements.forEach(e => {
+            result.push({ key: e.key, name: e.name, color: e.color });
+            chart[e.key] = { weak: e.weak, strong: e.strong };
+        });
+        return { list: result, chart: chart };
+    },
+
+    // ペルソナ定義の変換
+    convertPersonality(rawPers) {
+        const result = {};
+        rawPers.forEach(p => {
+            const mod = {};
+            ['hp','str','vit','mag','int','agi','luc'].forEach(stat => {
+                const key = `mod_${stat}`;
+                if(p[key]) mod[stat] = p[key];
+            });
+            result[p.name] = mod;
+        });
+        return result;
+    },
+
+    // スキル定義の変換
+    convertSkills(rawSkills) {
+        const data = {};
+        const pool = { phy:[], mag:[], spd:[], tnk:[], sup:[] };
+        
+        rawSkills.forEach(s => {
+            data[s.name] = { desc: s.desc };
+            if(pool[s.type]) pool[s.type].push(s.name);
+        });
+        return { data: data, pool: pool };
+    },
+
+    // 系統定義の変換
+    convertLineage(rawLin) {
+        const result = {};
+        rawLin.forEach(l => {
+            const mod = {
+                hp: l.mod_hp,
+                str: l.mod_str,
+                vit: l.mod_vit,
+                mag: l.mod_mag,
+                int: l.mod_int,
+                agi: l.mod_agi,
+                luc: l.mod_luc,
+                color: l.color
+            };
+            result[l.id] = mod;
+        });
+        return result;
     }
 };
 
@@ -229,6 +364,19 @@ const RAW_ITEMS = DataParser.parse(CSV_ITEMS);
 const RAW_MATS = DataParser.parse(CSV_MATERIALS);
 const RAW_ENEMIES = DataParser.parse(CSV_ENEMIES);
 
+const RAW_ELEMENTS = DataParser.parse(CSV_ELEMENTS);
+const parsedElements = DataParser.convertElements(RAW_ELEMENTS);
+
+const RAW_PERSONALITY = DataParser.parse(CSV_PERSONALITY);
+const parsedPersonality = DataParser.convertPersonality(RAW_PERSONALITY);
+
+const RAW_SKILLS = DataParser.parse(CSV_SKILLS);
+const parsedSkills = DataParser.convertSkills(RAW_SKILLS);
+
+const RAW_LINEAGE = DataParser.parse(CSV_LINEAGE);
+const parsedLineage = DataParser.convertLineage(RAW_LINEAGE);
+
+
 // グローバルオブジェクトとして公開
 const MASTER_DATA = {
     config: {
@@ -240,16 +388,9 @@ const MASTER_DATA = {
         FLOOR_STEP_MAX: 30
     },
 
-    elements: [
-        { key: "fire",  name: "火", color: "#e74c3c" },
-        { key: "water", name: "水", color: "#3498db" },
-        { key: "wind",  name: "風", color: "#2ecc71" },
-        { key: "earth", name: "土", color: "#d35400" },
-        { key: "light", name: "光", color: "#f1c40f" },
-        { key: "dark",  name: "闇", color: "#9b59b6" }
-    ],
+    elements: parsedElements.list,
+    element_chart: parsedElements.chart,
 
-    // 変換済みデータをセット
     jobs: DataParser.convertJobs(RAW_JOBS),
     
     job_ranks: [
@@ -268,11 +409,11 @@ const MASTER_DATA = {
         types: DataParser.convertItems(RAW_ITEMS),
         materials: DataParser.convertMaterials(RAW_MATS),
         affixes: [
-            { name:"錆びた", tier:1, type:"bad", stats:{atk:-3, def:-1}, w:30 },
-            { name:"鋭利な", tier:1, type:"good", stats:{atk:3}, w:40 },
-            { name:"頑丈な", tier:1, type:"good", stats:{def:3}, w:40 },
+            { name:"錆びた", tier:1, type:"bad", stats:{str:-3, vit:-1}, w:30 },
+            { name:"鋭利な", tier:1, type:"good", stats:{str:3}, w:40 },
+            { name:"頑丈な", tier:1, type:"good", stats:{vit:3}, w:40 },
             { name:"知的な", tier:2, type:"good", stats:{int:5}, w:30 },
-            { name:"英雄の", tier:4, type:"legend", stats:{all:5, atk:20}, w:5 }
+            { name:"英雄の", tier:4, type:"legend", stats:{all:5, str:20}, w:5 }
         ]
     },
 
@@ -297,21 +438,9 @@ const MASTER_DATA = {
         { name: "警報", type: "summon", base: 0 }
     ],
 
-    personality: {
-        "勇敢": { hp:1.2, str:1.2 }, "冷静": { int:1.2, vit:1.1 }, "臆病": { agi:1.3, vit:0.9 },
-        "豪快": { str:1.3, mag:0.7 }, "天才": { mag:1.2, int:1.2, hp:0.8 }, "幸運": { luc:1.5 },
-        "堅実": { vit:1.2, hp:1.1 }, "凡人": {}, "野心家": { str:1.1, luc:1.1 },
-        "慎重": { vit:1.3, agi:0.8 }, "短気": { str:1.4, vit:0.8 }, "慈悲": { int:1.3, mag:1.1 }
-    },
+    personality: parsedPersonality,
     
-    // Lineage data for colors/growth (kept as object for lookup)
-    lineages: {
-        warrior: { hp: 1.5, atk: 1.5, def: 1.2, agi: 0.8, mag: 0.2, int: 0.6, luc: 1.0, color:"#e74c3c" },
-        martial: { hp: 1.4, atk: 1.3, def: 0.9, agi: 1.5, mag: 0.5, int: 1.0, luc: 1.0, color:"#d35400" },
-        shadow:  { hp: 0.9, atk: 1.2, def: 0.7, agi: 1.7, mag: 0.6, int: 1.3, luc: 1.6, color:"#8e44ad" },
-        magic:   { hp: 0.7, atk: 0.3, def: 0.6, agi: 1.0, mag: 1.8, int: 1.6, luc: 1.0, color:"#3498db" },
-        holy:    { hp: 1.1, atk: 0.7, def: 1.2, agi: 0.9, mag: 1.4, int: 1.5, luc: 1.2, color:"#f1c40f" },
-        tech:    { hp: 1.2, atk: 1.0, def: 1.1, agi: 1.2, mag: 0.5, int: 1.6, luc: 1.1, color:"#1abc9c" },
-        special: { hp: 1.0, atk: 0.8, def: 0.8, agi: 1.0, mag: 1.0, int: 1.3, luc: 2.0, color:"#2ecc71" }
-    }
+    skills: parsedSkills, // { data: {...}, pool: {...} }
+
+    lineages: parsedLineage
 };
