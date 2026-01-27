@@ -1,5 +1,5 @@
 /**
- * Genetic Rogue Ver.12.1 - Fixed
+ * Genetic Rogue Ver.12.1 - Fixed Tab Error & Hiring
  * Main Logic & UI Controller
  */
 
@@ -22,7 +22,6 @@ const Game = {
             this.load();
         } else {
             // 初期データ: Tier1の戦士と僧侶を探して雇用
-            // DB.jobsのキーは "n_1_warrior" のような形式
             const warriorKey = Object.keys(DB.jobs).find(k => k.includes("n_") && k.includes("warrior") && DB.jobs[k].tier === 1);
             const priestKey = Object.keys(DB.jobs).find(k => k.includes("n_") && k.includes("priest") && DB.jobs[k].tier === 1);
             
@@ -179,19 +178,25 @@ const Game = {
 
     hire(jobId, isFree=false) {
         if(!isFree && this.helix < MASTER_DATA.config.HIRE_COST) return;
-        if(!isFree) this.helix -= MASTER_DATA.config.HIRE_COST;
         
-        // jobIdがundefinedの場合のエラーハンドリング
-        if (!jobId) {
-             console.error("Job ID not found");
+        // IDチェック
+        if (!jobId || !DB.jobs[jobId]) {
+             console.error("Job ID not found or invalid:", jobId);
              return;
         }
 
+        // Tier 1 Check
+        if (DB.jobs[jobId].tier !== 1 && !isFree) {
+            console.warn("Only Tier 1 jobs can be hired directly.");
+            return;
+        }
+
+        if(!isFree) this.helix -= MASTER_DATA.config.HIRE_COST;
+        
         const c = new Character(jobId);
         this.roster.push(c);
         this.save();
         UI.updateAll();
-        // 修正: 雇用時のログ表示でエラーにならないように
         if (c.job) {
             UI.log(`${c.name} (${c.job.name}) を雇用しました。`);
         }
@@ -206,7 +211,7 @@ const Game = {
 
         this.helix -= MASTER_DATA.config.CC_COST;
         c.jobKey = newJobId;
-        c.level = 1;
+        c.level = 1; 
         
         this.save();
         UI.updateAll();
@@ -228,7 +233,6 @@ class Character {
         
         this.equipment = {main_hand:null, body:null, accessory:null};
         
-        // Add Personality & Elements initialization if needed
         this.personality = "凡人";
         this.elements = [];
     }
@@ -268,7 +272,6 @@ class Character {
     }
     
     canEquip(item) {
-        // Simplified check
         return true;
     }
 
@@ -295,9 +298,8 @@ const UI = {
         document.getElementById('btn-return').onclick = ()=>Game.stop();
         document.getElementById('btn-lab').onclick = ()=>this.openModal('modal-lab', ()=>this.renderLab());
         
-        document.querySelectorAll('.tab-btn').forEach(b => {
-            b.onclick = (e) => this.switchTab(e.target.dataset.tab);
-        });
+        // Remove old JS listener binding for tabs to avoid conflict with HTML onclick
+        // The HTML onclick attributes will call UI.switchTab directly.
     },
 
     updateAll() {
@@ -315,7 +317,7 @@ const UI = {
         Game.party.forEach(char => {
             const div = document.createElement('div');
             div.className = "char-card";
-            const jobData = DB.getJob(char.jobKey); // Use getter
+            const jobData = DB.getJob(char.jobKey);
             const jobName = jobData ? jobData.name : char.jobKey;
             div.innerHTML = `
                 <div class="char-header">${char.name} <span class="job-label">${jobName}</span></div>
@@ -328,10 +330,33 @@ const UI = {
     
     openModal(id, fn) { document.getElementById(id).style.display='flex'; if(fn)fn(); },
     
-    switchTab(t) {
-        this.currentTab = t;
-        document.querySelectorAll('.tab-content').forEach(e=>e.style.display='none');
-        document.getElementById('tab-lab-'+t).style.display='block';
+    // Fixed switchTab logic to handle HTML IDs properly
+    switchTab(tabId) {
+        // tabId comes from HTML onclick like 'lab-roster'
+        // But we need to update this.currentTab for renderLab('roster')
+        
+        // Extract 'roster' from 'lab-roster'
+        const mode = tabId.replace('lab-', '');
+        this.currentTab = mode;
+
+        // Hide all contents
+        document.querySelectorAll('.tab-content').forEach(e => e.style.display = 'none');
+        
+        // Show target content. The ID in HTML is 'tab-lab-roster' so 'tab-' + tabId works.
+        const target = document.getElementById('tab-' + tabId);
+        if(target) target.style.display = 'block';
+        
+        // Update Active Button Style
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            // Check if this button's onclick contains the tabId
+            const onclickVal = btn.getAttribute('onclick');
+            if(onclickVal && onclickVal.includes(`'${tabId}'`)) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+
         this.renderLab();
     },
 
@@ -364,8 +389,7 @@ const UI = {
     renderHire() {
         const el = document.getElementById('guild-list');
         el.innerHTML = "";
-        // Only Tier 1 jobs for hire (Check both direct key and DB.jobs)
-        // DB.jobs has keys like "n_1_warrior"
+        // Only Tier 1 jobs for hire
         Object.values(DB.jobs).filter(j => j.tier === 1).forEach(j => {
             const div = document.createElement('div');
             div.className = "list-item";
