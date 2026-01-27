@@ -1,13 +1,12 @@
 /**
  * Genetic Rogue - Master Database (Full CSV Version)
- * スプレッドシート等で管理しているCSVデータをここに貼り付けるだけで反映されます。
  */
 
 // ==========================================
 // 1. CSVデータ貼り付けエリア
 // ==========================================
 
-// 属性定義 (相性含む)
+// 属性定義
 const CSV_ELEMENTS = `key,name,color,weak,strong
 fire,火,#e74c3c,water,wind
 water,水,#3498db,earth,fire
@@ -16,7 +15,7 @@ earth,土,#d35400,wind,water
 light,光,#f1c40f,dark,dark
 dark,闇,#9b59b6,light,light`;
 
-// 系統（Lineage）定義
+// 系統定義
 const CSV_LINEAGE = `id,mod_hp,mod_str,mod_vit,mod_mag,mod_int,mod_agi,mod_luc,color
 warrior,1.5,1.5,1.2,0.2,0.6,0.8,1.0,#e74c3c
 martial,1.4,1.3,0.9,0.5,1.0,1.5,1.0,#d35400
@@ -26,7 +25,7 @@ holy,1.1,0.7,1.2,1.4,1.5,0.9,1.2,#f1c40f
 tech,1.2,1.0,1.1,0.5,1.6,1.2,1.1,#1abc9c
 special,1.0,0.8,0.8,1.0,1.0,1.0,2.0,#2ecc71`;
 
-// 個性（Personality）定義
+// 個性定義
 const CSV_PERSONALITY = `name,mod_hp,mod_str,mod_vit,mod_mag,mod_int,mod_agi,mod_luc
 勇敢,1.2,1.2,1.0,1.0,1.0,1.0,1.0
 冷静,1.0,1.0,1.1,1.0,1.2,1.0,1.0
@@ -41,7 +40,7 @@ const CSV_PERSONALITY = `name,mod_hp,mod_str,mod_vit,mod_mag,mod_int,mod_agi,mod
 短気,1.0,1.4,0.8,1.0,1.0,1.0,1.0
 慈悲,1.0,1.0,1.0,1.1,1.3,1.0,1.0`;
 
-// スキル定義 (type: phy, mag, spd, tnk, sup)
+// スキル定義
 const CSV_SKILLS = `name,type,desc
 剛腕,phy,物理攻撃力+10%
 連撃,phy,20%の確率で2回攻撃

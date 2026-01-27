@@ -10,8 +10,7 @@ const DB = {
     // 初期化：マスタデータから全パターンを展開
     init() {
         this.generateJobs();
-        this.generateItems(); // テンプレート生成
-        console.log(`[DB] Initialized. Jobs: ${Object.keys(this.jobs).length}, ItemTemplates: ${this.items.length}`);
+        console.log(`[DB] Initialized. Jobs: ${Object.keys(this.jobs).length}`);
     },
 
     // --- Job Generation ---
@@ -28,7 +27,21 @@ const DB = {
                     if(rank.tier === 1 && el.key !== null) return; // T1は無属性のみ
                     if(rank.tier === 5 && el.key === null) return; // T5は属性必須
 
-                    const id = `${el.key||'n'}_${rank.tier}_${base.id}`;
+                    // 修正: キー生成ルールを統一
+                    // id: [要素]_[prefix]_[baseId]
+                    // prefixが空の場合はアンダースコアを一つにする処理
+                    let id = "";
+                    if (el.key) id += el.key + "_";
+                    else id += "n_";
+                    
+                    // rank.prefix が空文字の場合の処理
+                    // id += (rank.prefix ? rank.prefix + "_" : "") + base.id;
+                    // ※ game.jsでの検索ロジックに合わせて一意のIDにする
+                    // ここではシンプルに: n_Tier_BaseID
+                    
+                    // Unique ID generation logic used in game logic search
+                    const uniqueId = `${el.key||'n'}_${rank.tier}_${base.id}`;
+                    
                     const name = `${el.name}${rank.prefix}${base.name}`;
                     
                     let mod = { all: rank.mod };
@@ -38,8 +51,8 @@ const DB = {
                     let reqJob = null;
                     if(rank.tier > 1) reqJob = base.id; // ベース職が必要
 
-                    this.jobs[id] = {
-                        id: id,
+                    this.jobs[uniqueId] = {
+                        id: uniqueId,
                         name: name,
                         tier: rank.tier,
                         type: base.type,
@@ -55,13 +68,12 @@ const DB = {
         });
     },
 
-    getJob(id) { return this.jobs[id] || this.jobs[Object.keys(this.jobs)[0]]; },
+    getJob(id) { 
+        // 存在しないIDが指定された場合のフォールバック（戦士）
+        return this.jobs[id] || this.jobs[Object.keys(this.jobs).find(k=>k.includes('warrior'))]; 
+    },
     
     // --- Item Generation Logic (Loot) ---
-    generateItems() {
-        // マスタデータからテンプレートを展開してメモリに持つ（ここでは定義のみ）
-        // 実際にはLootSystemで都度生成する
-    },
 
     // ランダムなアイテムを生成して返す
     createRandomItem(floor) {
@@ -72,7 +84,7 @@ const DB = {
         const typeKey = types[Math.floor(Math.random() * types.length)];
         const typeData = MASTER_DATA.items.types[typeKey];
 
-        // 2. 素材抽選 (Floorに応じてTier重み付けも可能だが、簡易的に全素材から)
+        // 2. 素材抽選
         const materials = MASTER_DATA.items.materials;
         // 重み付け抽選
         let totalW = materials.reduce((a,b)=>a+b.w, 0);
@@ -136,7 +148,6 @@ const DB = {
         const prefixes = MASTER_DATA.enemies.prefixes;
         
         let base = species[Math.floor(Math.random() * species.length)];
-        // Floorが進むと強い敵が出やすくするならここでフィルタリング
 
         let prefix = isElite ? prefixes[Math.floor(Math.random() * prefixes.length)] : prefixes[0];
         let scale = 1 + (floor - 1) * 0.4;

@@ -3,58 +3,196 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Genetic Rogue Ver.12.0</title>
+    <title>Genetic Rogue ver0.12.1</title>
+    <!-- Faviconエラー回避 -->
     <link rel="icon" href="data:,">
+    <!-- CSS読み込み -->
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+
 <div id="app">
     <header>
-        <div>🧬 Genetic Rogue v12</div>
-        <div>Helix: <span id="helix-display">0</span></div>
+        <div>🧬 Genetic Rogue <span style="color:#666;">ver0.12.1</span></div>
+        <div style="font-size:14px; display:flex; align-items:center; gap:10px;">
+            <div>
+                <span style="color:#aaa;">階層:</span> <span id="floor-display" style="font-weight:bold; font-size:16px;">1</span>
+                <span id="floor-progress" style="color:#666; font-size:12px; margin-left:5px;">(0/30)</span>
+                <span style="color:#666; font-size:12px;">(最深: <span id="max-floor">1</span>)</span>
+            </div>
+            <div style="font-weight:bold; color:var(--accent-color); margin-right:10px;">Helix: <span id="helix-display">0</span></div>
+            <button class="icon-btn" id="btn-help">❓ルール</button>
+            <button class="icon-btn" id="btn-settings">⚙️設定</button>
+        </div>
     </header>
+
     <main>
         <div id="log-panel"><div id="log-list"></div></div>
         <div id="info-panel">
             <div id="party-container"></div>
         </div>
     </main>
+
     <footer>
-        <button id="btn-explore" class="primary">探索</button>
-        <button id="btn-return">帰還</button>
-        <button id="btn-lab">ラボ</button>
+        <div style="display:flex; align-items:center; gap:5px; margin-right:10px;">
+            <span style="font-size:11px; color:#888;">開始階層:</span>
+            <select id="floor-select" style="background:#222; color:#fff; border:1px solid #444; padding:5px; border-radius:3px;">
+                <option value="1">1F</option>
+            </select>
+        </div>
+        <button id="btn-explore" class="primary">探索開始</button>
+        <button id="btn-return" disabled>帰還</button>
+        <span style="width:20px"></span>
+        <button id="btn-lab">ラボ / ギルド</button>
         <button id="btn-inv">装備</button>
     </footer>
 </div>
 
-<!-- Modals -->
+<!-- Modal: Lab & Guild -->
 <div id="modal-lab" class="modal-overlay" style="display:none;">
     <div class="modal-box">
-        <div class="modal-header">ラボ <button class="close-modal">X</button></div>
+        <div class="modal-header">
+            <h3>遺伝子ラボ & ギルド</h3> <button class="close-modal">閉じる</button>
+        </div>
         <div class="modal-body">
             <div class="tab-group">
-                <button class="tab-btn" data-tab="roster">編成</button>
-                <button class="tab-btn" data-tab="hire">雇用</button>
+                <button class="tab-btn active" onclick="UI.switchTab('lab-roster')">編成リスト</button>
+                <button class="tab-btn" onclick="UI.switchTab('lab-hire')">雇用 (Guild)</button>
+                <button class="tab-btn" onclick="UI.switchTab('lab-class')">転職 (Class Change)</button>
             </div>
-            <div id="tab-lab-roster" class="tab-content"><div id="lab-list" class="grid-list"></div></div>
-            <div id="tab-lab-hire" class="tab-content" style="display:none;"><div id="guild-list" class="grid-list"></div></div>
+            
+            <div id="tab-lab-roster" class="tab-content">
+                <div style="margin-bottom:10px; display:flex; gap:10px; align-items:center;">
+                    <button id="act-breed" disabled>配合</button>
+                    <button id="act-party" disabled>PT編成/解除</button>
+                    <span id="breed-info" style="font-size:11px; color:#888;">※配合条件: 両親Lv30以上</span>
+                </div>
+                <div id="lab-list" class="grid-list"></div>
+            </div>
+
+            <div id="tab-lab-hire" class="tab-content" style="display:none;">
+                <p style="color:#888; margin-bottom:10px;">雇用コスト: <span id="hire-cost">30</span> Helix</p>
+                <div id="guild-list" class="grid-list"></div>
+            </div>
+
+            <div id="tab-lab-class" class="tab-content" style="display:none;">
+                <div style="display:flex; gap:20px; height:100%;">
+                    <div style="width:250px; border-right:1px solid #333;">
+                        <h4>キャラクター選択</h4>
+                        <div id="cc-char-list" style="display:flex; flex-direction:column; gap:5px; margin-top:10px;"></div>
+                    </div>
+                    <div style="flex:1;">
+                        <h4>転職先クラス</h4>
+                        <p style="font-size:12px; color:#888; margin-bottom:10px;">条件: Lv10以上, コスト: 100G. 一部職業は属性必須。</p>
+                        <div id="cc-job-list" class="grid-list"></div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
 
-<div id="modal-inv" class="modal-overlay" style="display:none;">
+<!-- Modal: Inventory -->
+<div id="modal-inv" class="modal-overlay">
     <div class="modal-box">
-        <div class="modal-header">装備 <button class="close-modal">X</button></div>
-        <div class="modal-body">
-            <div style="margin-bottom:10px;"><button id="btn-sell-trash">コモン一括売却</button></div>
-            <div id="inv-list" class="grid-list"></div>
+        <div class="modal-header">
+            <h3>装備管理</h3> <button class="close-modal">閉じる</button>
+        </div>
+        <div class="modal-body" style="display:flex; gap:20px;">
+            <div style="width:250px; border-right:1px solid #333; padding-right:10px;">
+                <h4 style="margin-bottom:10px;">キャラクター選択</h4>
+                <div id="equip-char-list"></div>
+            </div>
+            <div style="flex:1;">
+                <div id="inv-header" style="margin-bottom:10px; border-bottom:1px solid #333; padding-bottom:10px; display:flex; justify-content:space-between;">
+                    <span>現在の装備</span>
+                    <button id="btn-sell-trash" style="padding:2px 8px; font-size:10px;" class="recycle">コモン一括売却</button>
+                </div>
+                <div id="inv-list" class="grid-list"></div>
+            </div>
         </div>
     </div>
 </div>
 
-<!-- Scripts (Order is important) -->
+<!-- Modal: Settings -->
+<div id="modal-settings" class="modal-overlay">
+    <div class="modal-box" style="max-width:500px;">
+        <div class="modal-header">
+            <h3>設定 (Settings)</h3> <button class="close-modal">閉じる</button>
+        </div>
+        <div class="modal-body">
+            <div class="settings-row">
+                <span>データセーブ (手動)</span>
+                <button onclick="Game.save(true)">セーブ実行</button>
+            </div>
+            <div class="settings-row">
+                <span>データロード</span>
+                <button onclick="location.reload()">リロード (再読込)</button>
+            </div>
+            <div class="settings-row">
+                <span>自動セーブ機能</span>
+                <span style="color:var(--accent-color); font-weight:bold;">ON (有効)</span>
+            </div>
+            <div class="settings-row" style="border-bottom:none; margin-top:20px;">
+                <span style="color:var(--danger-color);">セーブデータ削除</span>
+                <button class="danger" onclick="Game.resetSave()">全データ削除</button>
+            </div>
+            <p style="font-size:11px; color:#666; margin-top:10px;">※探索終了時、配合時、転職時、雇用時に自動でセーブされます。</p>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Character Detail -->
+<div id="modal-char-detail" class="modal-overlay">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h3>キャラクター詳細</h3> <button class="close-modal">閉じる</button>
+        </div>
+        <div class="modal-body" id="detail-content">
+            <!-- Content injected via JS -->
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Rule Book -->
+<div id="modal-rules" class="modal-overlay">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h3>ルールブック (Manual)</h3> <button class="close-modal">閉じる</button>
+        </div>
+        <div class="modal-body">
+            <div class="rule-section">
+                <h4>基本ステータス</h4>
+                <table class="rule-table">
+                    <tr><td>STR (腕力)</td><td>物理攻撃の威力に影響します。戦士系にとって重要。</td></tr>
+                    <tr><td>VIT (耐久)</td><td>物理防御力とHP成長率に影響します。</td></tr>
+                    <tr><td>MAG (魔力)</td><td>魔法攻撃の威力に影響します。魔法系にとって重要。</td></tr>
+                    <tr><td>INT (知力)</td><td>魔法防御力やスキルの成功率に影響します。</td></tr>
+                    <tr><td>AGI (素早)</td><td>命中率、回避率、行動順に影響します。</td></tr>
+                    <tr><td>LUC (運)</td><td>クリティカル率、アイテムドロップ率に影響します。</td></tr>
+                </table>
+            </div>
+            <div class="rule-section">
+                <h4>戦闘ルール</h4>
+                <p>攻撃タイプは職業によって「物理」か「魔法」に分かれます。</p>
+                <ul>
+                    <li><strong>物理ダメージ:</strong> (STR + 武器攻撃力) - (敵VIT / 2)</li>
+                    <li><strong>魔法ダメージ:</strong> (MAG + 武器魔力) - (敵INT / 2)</li>
+                </ul>
+            </div>
+            <div class="rule-section">
+                <h4>属性と素材 (Materials)</h4>
+                <p>装備品には素材（Material）が付与され、ステータスや属性が強化されます。</p>
+                <p>属性は有利な相手に1.5倍、不利な相手に0.5倍のダメージを与えます。</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- JS読み込み (順序重要) -->
 <script src="db_master.js"></script>
 <script src="db_manager.js"></script>
 <script src="game.js"></script>
+
 </body>
 </html>
