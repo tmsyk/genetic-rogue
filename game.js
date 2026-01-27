@@ -3,6 +3,14 @@
  * Main Logic & UI Controller
  */
 
+// --- UTILS (Added Fix) ---
+const UTILS = {
+    genName: () => {
+        const n = ["アレク","ベル","シド","ダン","イヴ","フェイ","ジン","ハル","イアン","ジェイ","カイ","レオ","ミナ","ノア","オロ","ピオ"];
+        return n[Math.floor(Math.random()*n.length)] + Math.floor(Math.random()*99);
+    }
+};
+
 const Game = {
     helix: 100, floor: 1, maxFloor: 1, floorProgress: 0,
     party: [], roster: [], inventory: [],
@@ -18,7 +26,8 @@ const Game = {
             const warriorKey = Object.keys(DB.jobs).find(k => k.includes("n_") && k.includes("warrior") && DB.jobs[k].tier === 1);
             const priestKey = Object.keys(DB.jobs).find(k => k.includes("n_") && k.includes("priest") && DB.jobs[k].tier === 1);
             
-            if(warriorKey) this.hire(warriorKey, true); // true = free
+            // isFree=true で無料で雇用する
+            if(warriorKey) this.hire(warriorKey, true); 
             if(priestKey) this.hire(priestKey, true);
             
             this.save();
@@ -188,14 +197,26 @@ const Game = {
         this.party.forEach(c => c.autoEquip(item));
     },
 
-    hire(jobId, isFree=false) {
-        if(!isFree && this.helix < MASTER_DATA.config.HIRE_COST) return;
-        if(!isFree) this.helix -= MASTER_DATA.config.HIRE_COST;
+    // 修正: 第2引数 isFree を追加
+    hire(targetJob, isFree = false) {
+        // 無料でない場合はコストチェック
+        if (!isFree) {
+            if(this.helix < MASTER_DATA.config.HIRE_COST) return;
+            this.helix -= MASTER_DATA.config.HIRE_COST;
+        }
+
+        let key = targetJob;
+        // 指定がない場合（念のため）
+        if (!key) {
+            let keys = Object.keys(DB.jobs).filter(k=>DB.jobs[k].tier===1);
+            key = keys[Math.floor(Math.random()*keys.length)];
+        }
         
-        const c = new Character(jobId);
+        const c = new Character(key);
         this.roster.push(c);
         this.save();
         UI.updateAll();
+        UI.log(`${c.name} (${c.job.name}) を雇用しました。`);
     },
     
     classChange(charId, newJobId) {
