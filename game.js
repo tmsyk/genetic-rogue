@@ -22,6 +22,7 @@ const Game = {
             this.load();
         } else {
             // 初期データ: Tier1の戦士と僧侶を探して雇用
+            // DB.jobsのキーは "n_1_warrior" のような形式
             const warriorKey = Object.keys(DB.jobs).find(k => k.includes("n_") && k.includes("warrior") && DB.jobs[k].tier === 1);
             const priestKey = Object.keys(DB.jobs).find(k => k.includes("n_") && k.includes("priest") && DB.jobs[k].tier === 1);
             
@@ -298,8 +299,15 @@ const UI = {
         document.getElementById('btn-return').onclick = ()=>Game.stop();
         document.getElementById('btn-lab').onclick = ()=>this.openModal('modal-lab', ()=>this.renderLab());
         
-        // Remove old JS listener binding for tabs to avoid conflict with HTML onclick
-        // The HTML onclick attributes will call UI.switchTab directly.
+        // 閉じるボタンのイベント設定（修正版）
+        document.querySelectorAll('.close-modal').forEach(b => {
+            b.onclick = () => this.closeModal();
+        });
+        
+        // キーボードイベント（Escキーで閉じる）
+        document.addEventListener('keydown', (e) => {
+            if(e.key === 'Escape') this.closeModal();
+        });
     },
 
     updateAll() {
@@ -329,6 +337,10 @@ const UI = {
     },
     
     openModal(id, fn) { document.getElementById(id).style.display='flex'; if(fn)fn(); },
+    
+    closeModal() {
+        document.querySelectorAll('.modal-overlay').forEach(e => e.style.display='none');
+    },
     
     // Fixed switchTab logic to handle HTML IDs properly
     switchTab(tabId) {
@@ -390,7 +402,8 @@ const UI = {
         const el = document.getElementById('guild-list');
         el.innerHTML = "";
         // Only Tier 1 jobs for hire
-        Object.values(DB.jobs).filter(j => j.tier === 1).forEach(j => {
+        // Added Filter: Tier 1 AND no requirement (Base Job)
+        Object.values(DB.jobs).filter(j => j.tier === 1 && !j.reqJob).forEach(j => {
             const div = document.createElement('div');
             div.className = "list-item";
             div.innerHTML = `${j.name}`;
