@@ -720,6 +720,7 @@ const DataParser = {
 
         for (let i = 1; i < lines.length; i++) {
             const line = lines[i];
+            // ダブルクォート内のカンマを無視し、空フィールドも維持するスプリット処理
             const row = [];
             let current = '';
             let inQuote = false;
@@ -742,7 +743,7 @@ const DataParser = {
 
             const obj = {};
             headers.forEach((header, index) => {
-                let value = row[index] ? row[index].replace(/^"|"$/g, '') : '';
+                let value = row[index] ? row[index].replace(/^"|"$/g, '') : ''; // クォート削除
                 if (value !== '' && !isNaN(value)) {
                     value = Number(value);
                 }
@@ -785,6 +786,13 @@ const DataParser = {
                 }
             });
 
+            // "none" 文字列対策
+            let reqJob = job.req_job;
+            if (reqJob === 'none') reqJob = null;
+
+            let reqEl = job.req_el;
+            if (reqEl === 'none') reqEl = null;
+
             return {
                 id: job.id,
                 name: job.name,
@@ -793,10 +801,10 @@ const DataParser = {
                 equip: equip,
                 lineage: job.lineage,
                 mod: mod,
-                reqJob: job.req_job || null,
+                reqJob: reqJob || null,
                 masterSkill: job.master_skill || null,
                 reqStats: reqStats,
-                reqEl: job.req_el ? String(job.req_el).split(';') : null
+                reqEl: reqEl ? String(reqEl).split(';') : null
             };
         });
     },
@@ -817,6 +825,11 @@ const DataParser = {
             if (item.req_stat && item.req_val) {
                 req = {}; req[item.req_stat] = item.req_val;
             }
+            
+            // "none" 文字列対策
+            let elem = item.element;
+            if (elem === 'none') elem = null;
+
             items[item.id] = {
                 name: item.name,
                 kind: item.kind,
@@ -825,7 +838,7 @@ const DataParser = {
                 base: base,
                 tier: item.tier || 1,
                 req: req,
-                elem: item.element || null
+                elem: elem || null
             };
         });
         return items;
@@ -891,6 +904,7 @@ const DataParser = {
         const data = {};
         const pool = { phy:[], mag:[], spd:[], tnk:[], sup:[] };
         rawSkills.forEach(s => {
+            // パッシブ補正値の読み込み
             const mod = {};
             ['hp','str','vit','mag','int','agi','luc'].forEach(stat => {
                 const key = `mod_${stat}`;
@@ -900,7 +914,7 @@ const DataParser = {
             data[s.name] = { 
                 desc: s.desc, 
                 type: s.type,
-                mod: mod
+                mod: mod // ★追加
             };
             if(pool[s.type]) pool[s.type].push(s.name);
         });
