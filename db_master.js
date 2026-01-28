@@ -1,10 +1,19 @@
 /**
- * Genetic Rogue - Master Database (Full CSV Version)
+ * Genetic Rogue - Master Database (Full Version)
+ * スプレッドシート等で管理しているCSVデータをここに貼り付けるだけで反映されます。
  */
 
 // ==========================================
-// 1. CSVデータ貼り付けエリア
+// 1. CSVデータ定義
 // ==========================================
+
+// 種族定義
+const CSV_RACES = `id,name,mod_hp,mod_str,mod_vit,mod_mag,mod_int,mod_agi,mod_luc
+human,人間,1.0,1.0,1.0,1.0,1.0,1.0,1.0
+elf,エルフ,0.8,0.8,0.8,1.2,1.2,1.1,1.0
+dwarf,ドワーフ,1.2,1.1,1.2,0.8,0.9,0.8,1.0
+beast,獣人,1.1,1.2,1.0,0.7,0.8,1.2,1.0
+halfling,小人,0.8,0.8,0.8,1.0,1.0,1.3,1.3`;
 
 // 属性定義
 const CSV_ELEMENTS = `key,name,color,weak,strong
@@ -93,32 +102,32 @@ const CSV_SKILLS = `name,type,desc
 女神の瞳,sup,隠し通路発見率UP
 奇跡,sup,稀にダメージ無効化`;
 
-// 職業マスタ
-const CSV_JOBS = `id,name,tier,type,equip_types,lineage,mod_hp,mod_str,mod_vit,mod_mag,mod_int,mod_agi,mod_luc
-warrior,戦士,1,phy,"sw,ax,ha,sh",warrior,1.2,1.2,1.1,0.5,0.8,0.9,1.0
-mage,魔法使い,1,mag,"st,dg,ro,ac",magic,0.8,0.6,0.8,1.5,1.4,1.0,1.0
-thief,盗賊,1,spd,"dg,bow,la,ac",shadow,0.9,1.2,0.8,0.8,1.2,1.5,1.5
-priest,僧侶,1,sup,"st,ro,sh,ac",holy,1.0,0.8,1.2,1.2,1.3,0.9,1.2
-merchant,商人,1,spe,"dg,la,ac",special,1.0,0.8,0.8,1.0,1.2,1.0,1.8
-monk,武闘家,1,phy,"kn,la,ac",martial,1.3,1.1,0.9,0.8,1.0,1.3,1.0
-hunter,狩人,1,tec,"bow,dg,la,ac",shadow,1.0,1.1,1.0,0.5,1.2,1.3,1.1
-knight,騎士,2,tnk,"sw,sp,ha,sh",warrior,1.4,1.2,1.4,0.6,1.0,0.8,1.0
-samurai,侍,2,phy,"sw,bow,la",martial,1.2,1.5,1.0,0.6,1.1,1.2,1.0
-sorcerer,魔術師,2,mag,"st,dg,ro",magic,0.7,0.5,0.7,1.7,1.5,1.0,1.0
-bard,吟遊詩人,2,sup,"ins,dg,la",special,1.0,0.9,0.9,1.2,1.2,1.1,1.5
-ninja,忍者,2,spd,"sw,dg,to,la",shadow,0.9,1.3,0.8,1.0,1.2,1.6,1.2
-gunner,ガンマン,2,tec,"gun,la,ac",tech,1.1,1.2,1.0,0.5,1.4,1.2,1.1
-paladin,聖騎士,3,tnk,"sw,ha,sh",warrior,1.5,1.3,1.8,1.0,1.2,0.8,1.0
-sage,賢者,3,mag,"st,ro,ac",magic,0.8,0.5,0.8,2.0,2.0,1.0,1.0
-assassin,暗殺者,3,spd,"dg,bow,la",shadow,0.9,1.5,0.7,0.8,1.3,1.8,1.3
-dragoon,竜騎士,3,phy,"sp,ha,la",warrior,1.4,1.6,1.2,0.8,1.0,1.2,1.0
-sniper,狙撃手,3,tec,"gun,la,to",tech,1.0,1.6,0.9,0.5,1.5,1.3,1.2
-hero,英雄,4,phy,"sw,ax,sp,ha",warrior,1.5,1.8,1.5,1.0,1.2,1.2,1.5
-cyborg,サイボーグ,4,tnk,"dv,ax,gun,ha",tech,1.8,1.6,2.0,0.5,1.5,1.0,0.8
-demon,魔神,4,mag,"st,dv,ro",magic,1.2,1.0,1.0,3.0,1.5,1.2,0.5
-marine,宇宙海兵,4,phy,"gun,sw,ha",tech,1.5,1.8,1.5,0.5,1.2,1.2,1.0
-psycho,超能力者,4,mag,"dv,ro,ac",magic,0.8,0.5,0.8,2.5,2.5,1.2,1.0
-jester,遊び人,2,spe,"dg,ins,la",special,1.0,0.8,0.8,1.0,1.0,1.0,3.0`;
+// 職業マスタ (前提ジョブ:req_job, ステータス要件:req_strなどを含む)
+const CSV_JOBS = `id,name,tier,type,equip_types,lineage,mod_hp,mod_str,mod_vit,mod_mag,mod_int,mod_agi,mod_luc,req_job,req_hp,req_str,req_vit,req_mag,req_int,req_agi,req_luc
+warrior,戦士,1,phy,"sw,ax,ha,sh",warrior,1.2,1.2,1.1,0.5,0.8,0.9,1.0,,,,,,,,
+mage,魔法使い,1,mag,"st,dg,ro,ac",magic,0.8,0.6,0.8,1.5,1.4,1.0,1.0,,,,,,,,
+thief,盗賊,1,spd,"dg,bow,la,ac",shadow,0.9,1.2,0.8,0.8,1.2,1.5,1.5,,,,,,,,
+priest,僧侶,1,sup,"st,ro,sh,ac",holy,1.0,0.8,1.2,1.2,1.3,0.9,1.2,,,,,,,,
+merchant,商人,1,spe,"dg,la,ac",special,1.0,0.8,0.8,1.0,1.2,1.0,1.8,,,,,,,,
+monk,武闘家,1,phy,"kn,la,ac",martial,1.3,1.1,0.9,0.8,1.0,1.3,1.0,,,,,,,,
+hunter,狩人,1,tec,"bow,dg,la,ac",shadow,1.0,1.1,1.0,0.5,1.2,1.3,1.1,,,,,,,,
+knight,騎士,2,tnk,"sw,sp,ha,sh",warrior,1.4,1.2,1.4,0.6,1.0,0.8,1.0,warrior,100,20,20,,,,
+samurai,侍,2,phy,"sw,bow,la",martial,1.2,1.5,1.0,0.6,1.1,1.2,1.0,monk,,30,,,,,
+sorcerer,魔術師,2,mag,"st,dg,ro",magic,0.7,0.5,0.7,1.7,1.5,1.0,1.0,mage,,,20,30,,,
+bard,吟遊詩人,2,sup,"ins,dg,la",special,1.0,0.9,0.9,1.2,1.2,1.1,1.5,merchant,,,,,,20,20
+ninja,忍者,2,spd,"sw,dg,to,la",shadow,0.9,1.3,0.8,1.0,1.2,1.6,1.2,thief,,,,,20,30,
+gunner,ガンマン,2,tec,"gun,la,ac",tech,1.1,1.2,1.0,0.5,1.4,1.2,1.1,hunter,,,,,,25,
+paladin,聖騎士,3,tnk,"sw,ha,sh",warrior,1.5,1.3,1.8,1.0,1.2,0.8,1.0,knight,200,40,40,20,,,
+sage,賢者,3,mag,"st,ro,ac",magic,0.8,0.5,0.8,2.0,2.0,1.0,1.0,sorcerer,,,,50,40,,
+assassin,暗殺者,3,spd,"dg,bow,la",shadow,0.9,1.5,0.7,0.8,1.3,1.8,1.3,ninja,,40,,,20,50,
+dragoon,竜騎士,3,phy,"sp,ha,la",warrior,1.4,1.6,1.2,0.8,1.0,1.2,1.0,knight,250,50,30,,,,
+sniper,狙撃手,3,tec,"gun,la,to",tech,1.0,1.6,0.9,0.5,1.5,1.3,1.2,gunner,,40,,,20,,
+hero,英雄,4,phy,"sw,ax,sp,ha",warrior,1.5,1.8,1.5,1.0,1.2,1.2,1.5,paladin,400,80,60,40,40,40,40
+cyborg,サイボーグ,4,tnk,"dv,ax,gun,ha",tech,1.8,1.6,2.0,0.5,1.5,1.0,0.8,sniper,500,70,70,,,,
+demon,魔神,4,mag,"st,dv,ro",magic,1.2,1.0,1.0,3.0,1.5,1.2,0.5,sage,,20,20,100,60,,
+marine,宇宙海兵,4,phy,"gun,sw,ha",tech,1.5,1.8,1.5,0.5,1.2,1.2,1.0,sniper,400,80,50,,,,
+psycho,超能力者,4,mag,"dv,ro,ac",magic,0.8,0.5,0.8,2.5,2.5,1.2,1.0,sage,,,,90,90,,
+jester,遊び人,2,spe,"dg,ins,la",special,1.0,0.8,0.8,1.0,1.0,1.0,3.0,merchant,,,,,,,50`;
 
 // アイテムマスタ
 const CSV_ITEMS = `id,name,kind,type,slot,base_str,base_vit,base_mag,base_int,base_agi,base_luc,base_dex,tier,req_stat,req_val
@@ -207,7 +216,17 @@ const DataParser = {
         return result;
     },
 
-    // 職業データの変換
+    convertRaces(rawRaces) {
+        const races = {};
+        rawRaces.forEach(r => {
+            races[r.id] = {
+                id: r.id, name: r.name,
+                mod: { hp:r.mod_hp, str:r.mod_str, vit:r.mod_vit, mag:r.mod_mag, int:r.mod_int, agi:r.mod_agi, luc:r.mod_luc }
+            };
+        });
+        return races;
+    },
+
     convertJobs(rawJobs) {
         return rawJobs.map(job => {
             const equip = typeof job.equip_types === 'string' ? job.equip_types.split(',') : [];
@@ -220,6 +239,16 @@ const DataParser = {
                 luc: job.mod_luc || 1.0,
                 hp: job.mod_hp || 1.0
             };
+            
+            // ステータス要件の抽出
+            const reqStats = {};
+            ['hp', 'str', 'vit', 'mag', 'int', 'agi', 'luc'].forEach(stat => {
+                const key = `req_${stat}`;
+                if (job[key] && job[key] > 0) {
+                    reqStats[stat] = job[key];
+                }
+            });
+
             return {
                 id: job.id,
                 name: job.name,
@@ -227,12 +256,13 @@ const DataParser = {
                 type: job.type,
                 equip: equip,
                 lineage: job.lineage,
-                mod: mod
+                mod: mod,
+                reqJob: job.req_job || null,
+                reqStats: reqStats
             };
         });
     },
 
-    // アイテムデータの変換
     convertItems(rawItems) {
         const items = {};
         rawItems.forEach(item => {
@@ -262,7 +292,6 @@ const DataParser = {
         return items;
     },
     
-    // 素材データの変換
     convertMaterials(rawMats) {
         return rawMats.map(mat => {
             const mod = {};
@@ -280,7 +309,6 @@ const DataParser = {
         });
     },
     
-    // 敵データの変換
     convertEnemies(rawEnemies) {
         return rawEnemies.map(e => ({
             name: e.name,
@@ -296,7 +324,6 @@ const DataParser = {
         }));
     },
 
-    // 属性定義の変換
     convertElements(rawElements) {
         const result = [];
         const chart = {};
@@ -307,7 +334,6 @@ const DataParser = {
         return { list: result, chart: chart };
     },
 
-    // ペルソナ定義の変換
     convertPersonality(rawPers) {
         const result = {};
         rawPers.forEach(p => {
@@ -321,7 +347,6 @@ const DataParser = {
         return result;
     },
 
-    // スキル定義の変換
     convertSkills(rawSkills) {
         const data = {};
         const pool = { phy:[], mag:[], spd:[], tnk:[], sup:[] };
@@ -333,7 +358,6 @@ const DataParser = {
         return { data: data, pool: pool };
     },
 
-    // 系統定義の変換
     convertLineage(rawLin) {
         const result = {};
         rawLin.forEach(l => {
@@ -357,26 +381,21 @@ const DataParser = {
 // 3. MASTER_DATA 構築
 // ==========================================
 
-// パース実行
 const RAW_JOBS = DataParser.parse(CSV_JOBS);
 const RAW_ITEMS = DataParser.parse(CSV_ITEMS);
 const RAW_MATS = DataParser.parse(CSV_MATERIALS);
 const RAW_ENEMIES = DataParser.parse(CSV_ENEMIES);
-
 const RAW_ELEMENTS = DataParser.parse(CSV_ELEMENTS);
 const parsedElements = DataParser.convertElements(RAW_ELEMENTS);
-
 const RAW_PERSONALITY = DataParser.parse(CSV_PERSONALITY);
 const parsedPersonality = DataParser.convertPersonality(RAW_PERSONALITY);
-
 const RAW_SKILLS = DataParser.parse(CSV_SKILLS);
 const parsedSkills = DataParser.convertSkills(RAW_SKILLS);
-
 const RAW_LINEAGE = DataParser.parse(CSV_LINEAGE);
 const parsedLineage = DataParser.convertLineage(RAW_LINEAGE);
+const RAW_RACES = DataParser.parse(CSV_RACES);
+const parsedRaces = DataParser.convertRaces(RAW_RACES);
 
-
-// グローバルオブジェクトとして公開
 const MASTER_DATA = {
     config: {
         MAX_PARTY: 6,
@@ -386,12 +405,9 @@ const MASTER_DATA = {
         BASE_STATS: { hp:50, str:5, vit:5, mag:5, int:5, agi:5, luc:5 },
         FLOOR_STEP_MAX: 30
     },
-
     elements: parsedElements.list,
     element_chart: parsedElements.chart,
-
     jobs: DataParser.convertJobs(RAW_JOBS),
-    
     job_ranks: [
         { tier: 1, prefix: "見習い", mod: 0.8 },
         { tier: 1, prefix: "", mod: 1.0 },
@@ -403,7 +419,6 @@ const MASTER_DATA = {
         { tier: 4, prefix: "覚醒", mod: 2.2 },
         { tier: 5, prefix: "神話の", mod: 3.0 }
     ],
-
     items: {
         types: DataParser.convertItems(RAW_ITEMS),
         materials: DataParser.convertMaterials(RAW_MATS),
@@ -415,7 +430,6 @@ const MASTER_DATA = {
             { name:"英雄の", tier:4, type:"legend", stats:{all:5, str:20}, w:5 }
         ]
     },
-
     enemies: {
         species: DataParser.convertEnemies(RAW_ENEMIES),
         prefixes: [
@@ -428,7 +442,6 @@ const MASTER_DATA = {
             { name: "エンシェント", mod: 5.0 }
         ]
     },
-
     traps: [
         { name: "スパイク", type: "dmg", base: 20 },
         { name: "毒矢", type: "status", status: "psn", base: 10 },
@@ -436,10 +449,8 @@ const MASTER_DATA = {
         { name: "爆発", type: "dmg", base: 50 },
         { name: "警報", type: "summon", base: 0 }
     ],
-
     personality: parsedPersonality,
-    
-    skills: parsedSkills, // { data: {...}, pool: {...} }
-
-    lineages: parsedLineage
+    skills: parsedSkills,
+    lineages: parsedLineage,
+    races: parsedRaces
 };

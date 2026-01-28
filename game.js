@@ -1,5 +1,5 @@
 /**
- * Genetic Rogue Ver.12.1 - Fixed Tab Error & Hiring
+ * Genetic Rogue Ver.12.1 - Fixed
  * Main Logic & UI Controller
  */
 
@@ -185,10 +185,13 @@ const Game = {
              console.error("Job ID not found or invalid:", jobId);
              return;
         }
+        
+        const job = DB.jobs[jobId];
+        const baseJobDef = MASTER_DATA.jobs.find(def => def.id === job.baseId);
+        const isBaseTier1 = baseJobDef ? (baseJobDef.tier === 1) : true;
 
-        // Tier 1 Check
-        if (DB.jobs[jobId].tier !== 1 && !isFree) {
-            console.warn("Only Tier 1 jobs can be hired directly.");
+        if ((job.tier !== 1 || !isBaseTier1) && !isFree) {
+            console.warn("Only pure Tier 1 jobs can be hired directly.");
             return;
         }
 
@@ -236,6 +239,10 @@ class Character {
         
         this.personality = "凡人";
         this.elements = [];
+        
+        // Default Race
+        const races = Object.keys(MASTER_DATA.races);
+        this.race = races[Math.floor(Math.random()*races.length)];
     }
 
     get job() { return DB.getJob(this.jobKey); }
@@ -243,11 +250,12 @@ class Character {
     get totalStats() {
         const s = {...this.baseStats};
         const job = this.job;
-        if(job && job.mod) {
-            for(let k in s) {
-                let m = job.mod.all || job.mod[k] || 1.0;
-                s[k] = Math.floor(s[k] * m);
-            }
+        const raceMod = MASTER_DATA.races[this.race] ? MASTER_DATA.races[this.race].mod : null;
+
+        for(let k in s) {
+            let m = (job && job.mod) ? (job.mod.all || job.mod[k] || 1.0) : 1.0;
+            if (raceMod && raceMod[k]) m *= raceMod[k];
+            s[k] = Math.floor(s[k] * m);
         }
         for(let k in this.equipment) {
             const it = this.equipment[k];
@@ -308,6 +316,14 @@ const UI = {
         document.addEventListener('keydown', (e) => {
             if(e.key === 'Escape') this.closeModal();
         });
+        
+        // タブ切り替え処理の修正
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.onclick = (e) => {
+                const tabId = e.target.getAttribute('data-tab');
+                if(tabId) this.switchTab(tabId);
+            };
+        });
     },
 
     updateAll() {
@@ -336,37 +352,25 @@ const UI = {
         });
     },
     
-    openModal(id, fn) { document.getElementById(id).style.display='flex'; if(fn)fn(); },
+    openModal(id, fn) { 
+        document.getElementById(id).style.display='flex'; 
+        if(fn) fn(); 
+    },
     
     closeModal() {
         document.querySelectorAll('.modal-overlay').forEach(e => e.style.display='none');
     },
     
-    // Fixed switchTab logic to handle HTML IDs properly
-    switchTab(tabId) {
-        // tabId comes from HTML onclick like 'lab-roster'
-        // But we need to update this.currentTab for renderLab('roster')
-        
-        // Extract 'roster' from 'lab-roster'
-        const mode = tabId.replace('lab-', '');
+    // Fixed switchTab logic
+    switchTab(mode) {
         this.currentTab = mode;
-
-        // Hide all contents
         document.querySelectorAll('.tab-content').forEach(e => e.style.display = 'none');
-        
-        // Show target content. The ID in HTML is 'tab-lab-roster' so 'tab-' + tabId works.
-        const target = document.getElementById('tab-' + tabId);
+        const target = document.getElementById('tab-lab-' + mode);
         if(target) target.style.display = 'block';
         
-        // Update Active Button Style
         document.querySelectorAll('.tab-btn').forEach(btn => {
-            // Check if this button's onclick contains the tabId
-            const onclickVal = btn.getAttribute('onclick');
-            if(onclickVal && onclickVal.includes(`'${tabId}'`)) {
-                btn.classList.add('active');
-            } else {
-                btn.classList.remove('active');
-            }
+            if(btn.getAttribute('data-tab') === mode) btn.classList.add('active');
+            else btn.classList.remove('active');
         });
 
         this.renderLab();
@@ -401,9 +405,13 @@ const UI = {
     renderHire() {
         const el = document.getElementById('guild-list');
         el.innerHTML = "";
-        // Only Tier 1 jobs for hire
-        // Added Filter: Tier 1 AND no requirement (Base Job)
-        Object.values(DB.jobs).filter(j => j.tier === 1 && !j.reqJob).forEach(j => {
+        // Only pure Tier 1 jobs
+        Object.values(DB.jobs).filter(j => {
+            if (j.tier !== 1) return false;
+            if (j.reqJob) return false;
+            const baseJobDef = MASTER_DATA.jobs.find(def => def.id === j.baseId);
+            return baseJobDef && baseJobDef.tier === 1;
+        }).forEach(j => {
             const div = document.createElement('div');
             div.className = "list-item";
             div.innerHTML = `${j.name}`;
