@@ -1,5 +1,5 @@
 /**
- * Genetic Rogue Ver.12.2 - Title & CharMake (Fixed)
+ * Genetic Rogue Ver.12.3 - Inventory UI Improvement
  * Main Logic & UI Controller
  */
 
@@ -15,15 +15,13 @@ const Game = {
     helix: 100, floor: 1, maxFloor: 1, floorProgress: 0,
     party: [], roster: [], inventory: [],
     exploring: false, timer: null, currentEnemy: null,
-    SAVE_KEY: 'genetic_rogue_v12_2', // Version Key Update
+    SAVE_KEY: 'genetic_rogue_v12_3',
 
     init() {
         UI.init();
-        // いきなりロードせず、タイトル画面を表示
         UI.showTitleScreen();
     },
 
-    // 新規ゲーム開始
     startNewGame(raceId, jobKey) {
         this.helix = 100;
         this.floor = 1;
@@ -34,12 +32,10 @@ const Game = {
         this.inventory = [];
         this.currentEnemy = null;
 
-        // 最初のキャラクター生成 (指定された種族・職業)
         const c = new Character(jobKey, null, { race: raceId });
         this.roster.push(c);
         this.party.push(c);
 
-        // おまけアイテム (修正: LootSystem -> DB.createRandomItem)
         let starter = DB.createRandomItem(1);
         if(!starter) starter = { uid: "starter", name:"粗末な剣", kind:"sw", type:"weapon", slot:"main_hand", stats:{atk:2}, rarity:1 };
         this.inventory.push(starter);
@@ -85,7 +81,6 @@ const Game = {
         return !!localStorage.getItem(this.SAVE_KEY);
     },
 
-    // --- Actions ---
     explore(f) {
         if(this.party.length===0) return alert("パーティがいません");
         if(this.party.every(c=>c.hp<=0)) {
@@ -188,8 +183,7 @@ const Game = {
             if(trap.type === 'dmg') {
                 this.party.forEach(c => { if(c.hp>0) c.hp -= dmg; });
                 UI.log(`全員に ${dmg} ダメージ！`, "log-dmg");
-            }
-            else {
+            } else {
                 UI.log("毒を受けた！（未実装効果）", "log-trap");
             }
         }
@@ -198,7 +192,6 @@ const Game = {
     loot() {
         const item = DB.createRandomItem(this.floor);
         
-        // 自動装備ロジック
         let isEquipped = false;
         for (const char of this.party) {
             if (char.autoEquip(item)) {
@@ -272,7 +265,7 @@ const Game = {
             UI.log(`売却: ${sold}個 (+${gain} Helix)`, "log-item");
             this.save();
             UI.updateAll();
-            UI.renderInv();
+            UI.renderInv(); // インベントリ再描画
         } else {
             alert("売却できるアイテム（コモン以下）がありません。");
         }
@@ -281,7 +274,6 @@ const Game = {
 
 class Character {
     constructor(jobKey, parents, data) {
-        // ロード時またはオプション指定時
         if(data && data.id) { 
             Object.assign(this, data); 
             return; 
@@ -301,12 +293,10 @@ class Character {
         this.personality = "凡人";
         this.elements = [];
         
-        // Race initialization
         const races = Object.keys(MASTER_DATA.races);
         if (data && data.race) {
             this.race = data.race;
         } else {
-            // Default random
             this.race = races[Math.floor(Math.random()*races.length)];
         }
     }
@@ -347,12 +337,33 @@ class Character {
     }
     
     canEquip(item) {
-        return true; 
+        if (!item || !item.kind) return { ok: false, reason: "無効アイテム" };
+
+        const job = this.job;
+        // 職業の装備可能種別チェック
+        if (job && job.equip && !job.equip.includes(item.kind) && item.kind !== 'ac') {
+            return { ok: false, reason: "職業不可" };
+        }
+        
+        // ステータス要件チェック
+        if (item.req) {
+            const stats = this.totalStats;
+            for (let key in item.req) {
+                if ((stats[key] || 0) < item.req[key]) {
+                    return { ok: false, reason: `${key.toUpperCase()}不足` };
+                }
+            }
+        }
+        
+        return { ok: true, reason: "" };
     }
 
     autoEquip(item) {
         if(!item.slot) return false;
         
+        const check = this.canEquip(item);
+        if(!check.ok) return false;
+
         const cur = this.equipment[item.slot];
         const curScore = cur ? Object.values(cur.stats).reduce((a,b)=>a+b,0) : 0;
         const newScore = Object.values(item.stats).reduce((a,b)=>a+b,0);
@@ -366,6 +377,20 @@ class Character {
         return false;
     }
     
+    equip(item) {
+        const check = this.canEquip(item);
+        if(!check.ok) {
+            UI.log(`装備不可: ${check.reason}`, "log-err");
+            return false;
+        }
+
+        if (this.equipment[item.slot]) {
+            Game.inventory.push(this.equipment[item.slot]);
+        }
+        this.equipment[item.slot] = item;
+        return true;
+    }
+
     unequip(slot) {
         if(this.equipment[slot]) {
             Game.inventory.push(this.equipment[slot]);
@@ -378,6 +403,8 @@ class Character {
 const UI = {
     currentTab: 'roster',
     selChar: null,
+    equipChar: null,
+    invFilter: 'all', // all, weapon, armor, accessory
 
     init() {
         const bind = (id, fn) => {
@@ -409,7 +436,6 @@ const UI = {
         });
     },
 
-    // タイトル画面表示（新規追加）
     showTitleScreen() {
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
@@ -423,11 +449,10 @@ const UI = {
         modal.innerHTML = `
             <div class="modal-box" style="text-align:center; padding:40px;">
                 <h1 style="color:var(--accent-color); font-size:32px; margin-bottom:10px;">🧬 Genetic Rogue</h1>
-                <p style="color:#888; margin-bottom:40px;">Ver.12.2</p>
-                
+                <p style="color:#888; margin-bottom:40px;">Ver.12.3</p>
                 <div style="display:flex; flex-direction:column; gap:20px; width:200px; margin:0 auto;">
-                    <button id="title-load" style="padding:15px; font-weight:bold; font-size:16px; ${loadStyle}" ${loadDisabled}>続きから (Load)</button>
-                    <button id="title-new" style="padding:15px; font-size:16px;">はじめから (New Game)</button>
+                    <button id="title-load" style="padding:15px; font-weight:bold; font-size:16px; ${loadStyle}" ${loadDisabled}>続きから</button>
+                    <button id="title-new" style="padding:15px; font-size:16px;">はじめから</button>
                 </div>
             </div>
         `;
@@ -449,13 +474,11 @@ const UI = {
         };
     },
 
-    // キャラクター作成画面（新規追加）
     showCharMake() {
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
         modal.style.display = 'flex';
 
-        // 選択可能な職業リスト (Tier 1 & No Req)
         const jobOptions = Object.values(DB.jobs)
             .filter(j => j.tier === 1 && !j.reqJob && MASTER_DATA.jobs.find(def => def.id === j.baseId).tier === 1)
             .map(j => `<option value="${j.id}">${j.name}</option>`)
@@ -471,19 +494,13 @@ const UI = {
                 <div class="modal-body">
                     <div style="margin-bottom:15px;">
                         <label>種族:</label>
-                        <select id="cm-race" style="padding:5px; background:#222; color:#fff; border:1px solid #444;">
-                            ${raceOptions}
-                        </select>
+                        <select id="cm-race" style="padding:5px; background:#222; color:#fff; border:1px solid #444;">${raceOptions}</select>
                     </div>
                     <div style="margin-bottom:15px;">
                         <label>職業:</label>
-                        <select id="cm-job" style="padding:5px; background:#222; color:#fff; border:1px solid #444;">
-                            ${jobOptions}
-                        </select>
+                        <select id="cm-job" style="padding:5px; background:#222; color:#fff; border:1px solid #444;">${jobOptions}</select>
                     </div>
-                    <div id="cm-preview" style="background:#1a1a1a; border:1px solid #333; padding:10px; border-radius:4px; margin-bottom:20px;">
-                        <!-- Preview -->
-                    </div>
+                    <div id="cm-preview" style="background:#1a1a1a; border:1px solid #333; padding:10px; border-radius:4px; margin-bottom:20px;"></div>
                     <button id="cm-start" class="primary" style="width:100%; padding:15px;">冒険を始める</button>
                 </div>
             </div>
@@ -492,17 +509,9 @@ const UI = {
 
         const updatePreview = () => {
             const r = document.getElementById('cm-race').value;
-            const j = document.getElementById('cm-job').value;
             const raceData = MASTER_DATA.races[r];
-            const jobData = DB.jobs[j];
-            
-            let html = "<h4 style='color:var(--accent-color); margin:0 0 5px 0;'>ステータス補正プレビュー</h4>";
-            html += `<div style="font-size:12px; line-height:1.6;">`;
-            html += `HP: x${raceData.mod.hp}<br>`;
-            html += `STR: x${raceData.mod.str}<br>`;
-            html += `MAG: x${raceData.mod.mag}<br>`;
-            html += `AGI: x${raceData.mod.agi}<br>`;
-            html += `</div>`;
+            let html = "<h4 style='color:var(--accent-color); margin:0 0 5px 0;'>ステータス補正</h4>";
+            html += `<div style="font-size:12px; line-height:1.6;">HP: x${raceData.mod.hp} | STR: x${raceData.mod.str}<br>MAG: x${raceData.mod.mag} | AGI: x${raceData.mod.agi}</div>`;
             document.getElementById('cm-preview').innerHTML = html;
         };
         
@@ -514,7 +523,6 @@ const UI = {
             Game.startNewGame(r, j);
             modal.remove();
         };
-        
         updatePreview();
     },
 
@@ -522,7 +530,6 @@ const UI = {
         document.getElementById('helix-display').innerText = Game.helix;
         const fd = document.getElementById('floor-display');
         if(fd) fd.innerText = Game.floor;
-        
         this.renderParty();
         if(document.getElementById('modal-lab').style.display === 'flex') this.renderLab();
     },
@@ -539,7 +546,6 @@ const UI = {
             const jobName = jobData ? jobData.name : char.jobKey;
             const raceName = MASTER_DATA.races[char.race] ? MASTER_DATA.races[char.race].name : "不明";
             const stats = char.totalStats;
-            
             const hpPct = Math.max(0, Math.min(100, (char.hp / stats.hp) * 100));
             const expPct = Math.min(100, (char.exp / char.maxExp) * 100);
             
@@ -553,16 +559,11 @@ const UI = {
             equipHtml += '</div>';
 
             div.innerHTML = `
-                <div class="char-header">
-                    <span>${char.name}</span> 
-                    <span class="job-label">${jobName}</span>
-                </div>
+                <div class="char-header"><span>${char.name}</span> <span class="job-label">${jobName}</span></div>
                 <div style="font-size:10px; color:#888;">${raceName} Lv.${char.level}</div>
-                
                 <div class="bar-wrap"><div class="bar-val hp-bar" style="width:${hpPct}%"></div></div>
                 <div style="text-align:right; font-size:9px;">HP: ${Math.floor(char.hp)}/${stats.hp}</div>
                 <div class="bar-wrap" style="height:2px;"><div class="bar-val exp-bar" style="width:${expPct}%"></div></div>
-                
                 <div class="stat-grid">
                     <div class="stat-val">STR:<span>${stats.str}</span></div>
                     <div class="stat-val">MAG:<span>${stats.mag}</span></div>
@@ -576,26 +577,18 @@ const UI = {
         });
     },
     
-    openModal(id, fn) { 
-        document.getElementById(id).style.display='flex'; 
-        if(fn) fn(); 
-    },
-    
-    closeModal() {
-        document.querySelectorAll('.modal-overlay').forEach(e => e.style.display='none');
-    },
+    openModal(id, fn) { document.getElementById(id).style.display='flex'; if(fn) fn(); },
+    closeModal() { document.querySelectorAll('.modal-overlay').forEach(e => e.style.display='none'); },
     
     switchTab(mode) {
         this.currentTab = mode;
         document.querySelectorAll('.tab-content').forEach(e => e.style.display = 'none');
         const target = document.getElementById('tab-lab-' + mode);
         if(target) target.style.display = 'block';
-        
         document.querySelectorAll('.tab-btn').forEach(btn => {
             if(btn.getAttribute('data-tab') === mode) btn.classList.add('active');
             else btn.classList.remove('active');
         });
-
         this.renderLab();
     },
 
@@ -628,8 +621,6 @@ const UI = {
     renderHire() {
         const el = document.getElementById('guild-list');
         el.innerHTML = "";
-        
-        // Filter: Tier 1 & Base Job & No Requirement
         Object.values(DB.jobs).filter(j => {
             if (j.tier !== 1) return false;
             if (j.reqJob) return false;
@@ -662,7 +653,6 @@ const UI = {
             });
             return;
         }
-
         const currentJob = DB.getJob(this.selChar.jobKey);
         if(!currentJob) return;
 
@@ -687,7 +677,9 @@ const UI = {
         el.appendChild(back);
     },
     
-    renderInv() {
+    // Improved Render Inv
+    renderInv(filter = 'all') {
+        this.invFilter = filter;
         const cList = document.getElementById('equip-char-list'); 
         cList.innerHTML = "";
         
@@ -695,7 +687,7 @@ const UI = {
             let el = document.createElement('div');
             el.className = `list-item ${this.equipChar===c?'selected':''}`;
             el.innerHTML = `<div>${c.name}</div><div style="font-size:10px;">${c.job.name}</div>`;
-            el.onclick = () => { this.equipChar = c; this.renderInv(); };
+            el.onclick = () => { this.equipChar = c; this.renderInv(this.invFilter); };
             cList.appendChild(el);
         });
 
@@ -707,44 +699,78 @@ const UI = {
             return;
         }
         
-        const head = document.createElement('div');
-        head.style.marginBottom = "10px";
-        head.style.borderBottom = "1px solid #333";
+        // Filter Buttons
+        const filters = ['all', 'weapon', 'armor', 'accessory'];
+        const filterLabels = {all:'すべて', weapon:'武器', armor:'防具', accessory:'装飾'};
+        let filterHtml = '<div style="display:flex; gap:5px; margin-bottom:10px;">';
+        filters.forEach(f => {
+            const active = this.invFilter === f ? 'border-color:var(--accent-color); color:var(--accent-color);' : '';
+            filterHtml += `<button style="font-size:10px; padding:3px 8px; ${active}" onclick="UI.renderInv('${f}')">${filterLabels[f]}</button>`;
+        });
+        filterHtml += '</div>';
+
+        // Current Equipment Area (Visual separation)
+        let equipArea = `<div style="background:#222; padding:10px; border-radius:4px; margin-bottom:15px;">`;
+        equipArea += `<div style="font-size:12px; color:#888; margin-bottom:5px;">装備中</div>`;
         for(let slot in this.equipChar.equipment) {
             let item = this.equipChar.equipment[slot];
-            let name = item ? `<span style="color:var(--accent-color)">${item.name}</span>` : "なし";
+            let name = item ? `<span style="color:var(--accent-color)">${item.name}</span>` : "<span style='color:#666'>なし</span>";
             let btn = item ? `<button style="font-size:9px; margin-left:5px;" onclick="UI.doUnequip('${slot}')">外す</button>` : "";
-            head.innerHTML += `<div style="font-size:11px; margin-bottom:2px;">${slot.substr(0,4)}: ${name} ${btn}</div>`;
+            equipArea += `<div style="font-size:11px; margin-bottom:2px; display:flex; justify-content:space-between;"><span>${slot.substr(0,4).toUpperCase()}</span> <span>${name} ${btn}</span></div>`;
         }
-        iList.appendChild(head);
+        equipArea += `</div>`;
 
-        if(Game.inventory.length === 0) {
-            iList.innerHTML += "<div>アイテムがありません</div>";
+        iList.innerHTML = equipArea + filterHtml + `<div style="font-size:12px; color:#888; margin-bottom:5px;">所持品リスト</div>`;
+
+        // Item List with Filter
+        let displayItems = Game.inventory.filter(item => {
+            if(this.invFilter === 'all') return true;
+            return item.type === this.invFilter;
+        });
+
+        if(displayItems.length === 0) {
+            iList.innerHTML += "<div style='color:#666; padding:10px;'>アイテムがありません</div>";
             return;
         }
 
-        Game.inventory.forEach((item, idx) => {
+        displayItems.forEach((item) => {
+            const realIdx = Game.inventory.indexOf(item); // Original index
             const div = document.createElement('div');
-            div.className = "list-item";
             
             const check = this.equipChar.canEquip(item);
-            const style = check ? "" : "opacity:0.5; cursor:not-allowed;";
+            // Highlight logic
+            let style = "";
+            let statusBadge = "";
+            if (check.ok) {
+                // Highlighting equippable items
+                style = "border-left: 3px solid var(--accent-color); background: #1a2a22;";
+                statusBadge = `<span style="color:var(--accent-color); font-size:9px;">[装備可]</span>`;
+            } else {
+                style = "opacity:0.6; cursor:not-allowed;";
+                statusBadge = `<span style="color:var(--danger-color); font-size:9px;">${check.reason}</span>`;
+            }
+
+            div.className = "list-item";
+            div.style = style;
             
             let stats = "";
             for(let k in item.stats) if(item.stats[k]!==0) stats += `${k}:${item.stats[k]} `;
 
-            div.style = style;
             div.innerHTML = `
-                <div style="font-weight:bold; color:var(--info-color)">${item.name}</div>
-                <div style="font-size:10px; color:#888;">${item.type} [${item.slot}]</div>
-                <div style="font-size:10px;">${stats}</div>
+                <div style="font-weight:bold; color:var(--info-color)">${item.name} ${statusBadge}</div>
+                <div style="font-size:10px; color:#888;">${item.type} [${item.slot}] ${stats}</div>
             `;
-            if(check) {
+            
+            if(check.ok) {
                 div.onclick = () => {
-                    this.equipChar.equip(item);
-                    Game.inventory.splice(idx, 1);
-                    this.renderInv();
-                    this.renderParty(); 
+                    if(this.equipChar.equip(item)) {
+                        Game.inventory.splice(realIdx, 1);
+                        this.renderInv(this.invFilter);
+                        this.renderParty(); 
+                        if(document.getElementById('modal-char-detail').style.display === 'flex') {
+                            this.showCharDetail(this.equipChar);
+                        }
+                    }
                 };
             }
             iList.appendChild(div);
@@ -752,9 +778,15 @@ const UI = {
     },
 
     doUnequip(slot) {
-        this.equipChar.unequip(slot);
-        this.renderInv();
-        this.renderParty();
+        if(this.equipChar) {
+            this.equipChar.unequip(slot);
+            Game.save();
+            this.renderInv(this.invFilter);
+            this.renderParty();
+            if(document.getElementById('modal-char-detail').style.display === 'flex') {
+                this.showCharDetail(this.equipChar);
+            }
+        }
     },
     
     showCharDetail(c) {
@@ -802,8 +834,10 @@ const UI = {
     
     openEquipFor(charId) {
         this.closeModal(); 
-        this.equipChar = Game.party.find(c=>c.id===charId); 
-        this.openModal('modal-inv', ()=>this.renderInv());
+        this.equipChar = Game.roster.find(c=>c.id===charId); 
+        if (this.equipChar) {
+            this.openModal('modal-inv', ()=>this.renderInv());
+        }
     },
 
     toggle(on) {
