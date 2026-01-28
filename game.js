@@ -1,5 +1,5 @@
 /**
- * Genetic Rogue Ver.12.7 JP - Fix CharMake List & UI
+ * Genetic Rogue Ver.12.8 - Simplified Filtering
  * Main Logic & UI Controller
  */
 
@@ -15,7 +15,7 @@ const Game = {
     helix: 100, floor: 1, maxFloor: 1, floorProgress: 0,
     party: [], roster: [], inventory: [],
     exploring: false, timer: null, currentEnemy: null,
-    SAVE_KEY: 'genetic_rogue_v12_7', // Key update
+    SAVE_KEY: 'genetic_rogue_v12_8', // Update Key
 
     init() {
         UI.init();
@@ -147,16 +147,21 @@ const Game = {
         
         activeParty.forEach(c => {
             if(enemy.hp <= 0) return;
+            
+            // 属性補正計算
             let elemMod = 1.0;
             let atkElem = c.attackElement;
             if(atkElem && enemy.elem) {
                 if(MASTER_DATA.element_chart[atkElem].strong === enemy.elem) elemMod = 1.5;
                 else if(MASTER_DATA.element_chart[atkElem].weak === enemy.elem) elemMod = 0.5;
             }
+
             let dmg = Math.max(1, Math.floor(c.totalStats.str - (enemy.vit/2)));
+            // 魔法職ならMAG依存
             if (c.job.type === 'mag' || c.job.type === 'sup') {
                 dmg = Math.max(1, Math.floor(c.totalStats.mag - (enemy.mag/2)));
             }
+
             dmg = Math.floor(dmg * elemMod * (0.9 + Math.random()*0.2));
             enemy.hp -= dmg;
             
@@ -173,7 +178,18 @@ const Game = {
         } else {
             const target = activeParty[Math.floor(Math.random()*activeParty.length)];
             if(target) {
+                // 敵の属性攻撃
+                let elemMod = 1.0;
+                if(enemy.elem) {
+                    const defElems = target.defenseElements;
+                    for(let de of defElems) {
+                        if(MASTER_DATA.element_chart[de].strong === enemy.elem) elemMod *= 0.7;
+                        if(MASTER_DATA.element_chart[de].weak === enemy.elem) elemMod *= 1.3;
+                    }
+                }
+
                 let dmg = Math.max(1, Math.floor(enemy.str - (target.totalStats.vit/2)));
+                dmg = Math.floor(dmg * elemMod);
                 target.hp -= dmg;
                 UI.log(`${target.name} に ${dmg} のダメージ`, "log-dmg");
                 if(target.hp <= 0) UI.log(`${target.name} は倒れた...`, "log-defeat");
@@ -185,9 +201,12 @@ const Game = {
         const trap = DB.getRandomTrap();
         const power = 1 + (this.floor * 0.5);
         const dmg = Math.floor(trap.base * power);
+        
         UI.log(`罠だ！ ${trap.name} (Lv.${this.floor})`, "log-trap");
+        
         const maxAgi = Math.max(...this.party.map(c=>c.hp>0?c.totalStats.agi:0));
         const diff = this.floor * 10;
+        
         if(maxAgi > diff + (Math.random()*20)) {
             UI.log("回避に成功した！");
         } else {
@@ -202,10 +221,15 @@ const Game = {
 
     loot() {
         const item = DB.createRandomItem(this.floor);
+        
         let isEquipped = false;
         for (const char of this.party) {
-            if (char.autoEquip(item)) { isEquipped = true; break; }
+            if (char.autoEquip(item)) {
+                isEquipped = true;
+                break; 
+            }
         }
+
         if (!isEquipped) {
             this.inventory.push(item);
             UI.log(`獲得: ${item.name}`, "log-item");
@@ -214,33 +238,46 @@ const Game = {
 
     hire(jobId, isFree=false) {
         if(!isFree && this.helix < MASTER_DATA.config.HIRE_COST) return;
-        if (!jobId || !DB.jobs[jobId]) return console.error("無効なJobIDです");
+        if (!jobId || !DB.jobs[jobId]) return console.error("Invalid JobID");
         
         const job = DB.jobs[jobId];
-        // 厳密なTier 1チェック
-        if ((job.tier !== 1 || job.reqJob) && !isFree) return console.warn("雇用できるのはTier 1のみです");
+        
+        // ★修正: シンプルなTierチェック (Tier 1 & No Req)
+        if ((job.tier !== 1 || job.reqJob) && !isFree) {
+            console.warn("Only pure Tier 1 jobs can be hired directly.");
+            return;
+        }
 
         if(!isFree) this.helix -= MASTER_DATA.config.HIRE_COST;
+        
         const c = new Character(jobId);
         this.roster.push(c);
         this.save();
         UI.updateAll();
-        if (c.job) UI.log(`${c.name} (${c.job.name}) を雇用しました。`);
+        if (c.job) {
+            UI.log(`${c.name} (${c.job.name}) を雇用しました。`);
+        }
     },
     
     classChange(charId, newJobId) {
         const c = this.roster.find(x=>x.id===charId);
         if(!c) return;
+        
         if(c.level < 10) return alert("Lv10以上必要です");
         if(this.helix < MASTER_DATA.config.CC_COST) return alert("Helix不足");
+
         this.helix -= MASTER_DATA.config.CC_COST;
-        c.classChange(newJobId);
+        c.jobKey = newJobId;
+        c.level = 1; 
+        
+        this.save();
         UI.updateAll();
         alert(`${c.name} は転職しました！`);
     },
     
     sellTrash() {
-        let sold = 0; let gain = 0;
+        let sold = 0;
+        let gain = 0;
         for(let i=this.inventory.length-1; i>=0; i--) {
             if(this.inventory[i].rarity <= 2) {
                 gain += 10 + (this.inventory[i].tier * 5);
@@ -251,7 +288,9 @@ const Game = {
         if(sold > 0) {
             this.helix += gain;
             UI.log(`売却: ${sold}個 (+${gain} Helix)`, "log-item");
-            this.save(); UI.updateAll(); UI.renderInv();
+            this.save();
+            UI.updateAll();
+            UI.renderInv();
         } else {
             alert("売却できるアイテム（コモン以下）がありません。");
         }
@@ -265,6 +304,7 @@ class Character {
             if (!data.equipment.accessory1) data.equipment.accessory1 = data.equipment.accessory;
             if (!data.equipment.accessory2) data.equipment.accessory2 = null;
             delete data.equipment.accessory;
+
             Object.assign(this, data); 
             return; 
         }
@@ -352,27 +392,33 @@ class Character {
             this.exp = 0;
             this.maxExp *= 1.2;
             this.hp = this.totalStats.hp;
-            UI.log(`${this.name} レベルアップ! (Lv.${this.level})`);
+            UI.log(`${this.name} Level Up! (Lv.${this.level})`);
         }
     }
     
     canEquip(item) {
         if (!item || !item.kind) return { ok: false, reason: "無効アイテム" };
+
         const job = this.job;
         if (job && job.equip && !job.equip.includes(item.kind) && item.kind !== 'ac') {
             return { ok: false, reason: "職業不可" };
         }
+        
         if (item.req) {
             const stats = this.totalStats;
             for (let key in item.req) {
-                if ((stats[key] || 0) < item.req[key]) return { ok: false, reason: `${key.toUpperCase()}不足` };
+                if ((stats[key] || 0) < item.req[key]) {
+                    return { ok: false, reason: `${key.toUpperCase()}不足` };
+                }
             }
         }
+        
         return { ok: true, reason: "" };
     }
 
     autoEquip(item) {
         if(!item.slot) return false;
+        
         const check = this.canEquip(item);
         if(!check.ok) return false;
 
@@ -390,7 +436,7 @@ class Character {
         if(newScore > curScore) {
             if(cur) Game.inventory.push(cur);
             this.equipment[targetSlot] = item;
-            UI.log(`${this.name}が${item.name}を装備しました`, "log-equip");
+            UI.log(`${this.name}が${item.name}を装備`, "log-equip");
             return true;
         }
         return false;
@@ -398,14 +444,21 @@ class Character {
     
     equip(item) {
         const check = this.canEquip(item);
-        if(!check.ok) { UI.log(`装備不可: ${check.reason}`, "log-err"); return false; }
+        if(!check.ok) {
+            UI.log(`装備不可: ${check.reason}`, "log-err");
+            return false;
+        }
+
         let targetSlot = item.slot;
         if (item.slot === 'accessory') {
             if (!this.equipment.accessory1) targetSlot = 'accessory1';
             else if (!this.equipment.accessory2) targetSlot = 'accessory2';
             else targetSlot = 'accessory1';
         }
-        if (this.equipment[targetSlot]) Game.inventory.push(this.equipment[targetSlot]);
+
+        if (this.equipment[targetSlot]) {
+            Game.inventory.push(this.equipment[targetSlot]);
+        }
         this.equipment[targetSlot] = item;
         return true;
     }
@@ -470,23 +523,23 @@ const UI = {
                 <h1 style="color:var(--accent-color); font-size:32px; margin-bottom:10px;">🧬 Genetic Rogue</h1>
                 <p style="color:#888; margin-bottom:40px;">Ver.12.7</p>
                 <div style="display:flex; flex-direction:column; gap:20px; width:200px; margin:0 auto;">
-                    <button id="title-load" style="padding:15px; font-weight:bold; font-size:16px; ${loadStyle}" ${loadDisabled}>続きから</button>
-                    <button id="title-new" style="padding:15px; font-size:16px;">はじめから</button>
+                    <button id="title-load" style="padding:15px; font-weight:bold; font-size:16px; ${loadStyle}" ${loadDisabled}>続きから (Load)</button>
+                    <button id="title-new" style="padding:15px; font-size:16px;">はじめから (New Game)</button>
                 </div>
             </div>
         `;
         document.body.appendChild(modal);
 
         document.getElementById('title-load').onclick = () => {
-            if (Game.load()) {
+            if(Game.load()) {
                 modal.remove();
             } else {
-                alert("データの読み込みに失敗しました。");
+                alert("セーブデータの読み込みに失敗しました");
             }
         };
         document.getElementById('title-new').onclick = () => {
-            if (hasData) {
-                if (!confirm("セーブデータがあります。上書きして新しく始めますか？")) return;
+            if(hasData) {
+                if(!confirm("セーブデータが存在します。上書きして新規開始しますか？")) return;
             }
             modal.remove();
             this.showCharMake();
@@ -498,7 +551,7 @@ const UI = {
         modal.className = 'modal-overlay';
         modal.style.display = 'flex';
 
-        // 職業選択肢の生成
+        // ★修正: 職業選択肢のフィルタリング (Tier 1 & No Req)
         const jobOptions = Object.values(DB.jobs)
             .filter(j => j.tier === 1 && !j.reqJob)
             .map(j => `<option value="${j.id}">${j.name}</option>`)
@@ -546,7 +599,7 @@ const UI = {
         document.getElementById('cm-start').onclick = () => {
             const r = document.getElementById('cm-race').value;
             const j = document.getElementById('cm-job').value;
-            if (!j) return alert("職業を選択してください");
+            if(!j) return alert("職業を選択してください");
             Game.startNewGame(r, j);
             modal.remove();
         };
@@ -648,11 +701,11 @@ const UI = {
     renderHire() {
         const el = document.getElementById('guild-list');
         el.innerHTML = "";
+        // ★修正: 雇用リストも同様にフィルタリング
         Object.values(DB.jobs).filter(j => {
             if (j.tier !== 1) return false;
             if (j.reqJob) return false;
-            const baseJobDef = MASTER_DATA.jobs.find(def => def.id === j.baseId);
-            return baseJobDef && baseJobDef.tier === 1;
+            return true;
         }).forEach(j => {
             const div = document.createElement('div');
             div.className = "list-item";

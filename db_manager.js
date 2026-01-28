@@ -1,5 +1,6 @@
 /**
  * Genetic Rogue - Database Manager
+ * Updated: Prevent generating lower tier versions of high tier jobs.
  */
 
 const DB = {
@@ -18,6 +19,10 @@ const DB = {
 
         MASTER_DATA.jobs.forEach(base => {
             ranks.forEach(rank => {
+                // ★追加: 元の職業ランクより低いTierは生成しない
+                // 例: 騎士(Tier 2) は Tier 1 のランクを生成しない
+                if (rank.tier < base.tier) return;
+
                 allElements.forEach(el => {
                     if(rank.tier === 1 && el.key !== null) return; 
                     if(rank.tier === 5 && el.key === null) return; 
@@ -35,7 +40,7 @@ const DB = {
                         reqJob = base.id; 
                     }
 
-                    // ★修正: 属性要件の継承（属性付きジョブの場合、その属性も必須条件に加える）
+                    // 属性要件の継承
                     let reqEl = base.reqEl ? [...base.reqEl] : [];
                     if (el.key) reqEl.push(el.key);
 
@@ -47,7 +52,7 @@ const DB = {
                         equip: base.equip,
                         lineage: base.lineage,
                         mod: mod,
-                        reqEl: reqEl.length > 0 ? reqEl : null, // ★更新
+                        reqEl: reqEl.length > 0 ? reqEl : null,
                         reqJob: reqJob,
                         reqStats: base.reqStats, 
                         baseId: base.id,
@@ -63,7 +68,6 @@ const DB = {
         return this.jobs[id] || this.jobs[Object.keys(this.jobs)[0]]; 
     },
     
-    // ... (アイテム・敵生成ロジックはVer.12.6と同じ)
     createRandomItem(floor) {
         const maxTier = Math.max(1, Math.min(5, Math.ceil(floor / 5)));
         const types = Object.keys(MASTER_DATA.items.types);
@@ -96,7 +100,7 @@ const DB = {
             stats: { ...typeData.base },
             rarity: rarity,
             tier: Math.max(1, mat.tier), 
-            elem: mat.elem || null
+            elem: mat.elem || typeData.elem || null
         };
         for(let k in mat.mod) {
             if(k==='all') ['str','vit','mag','int','agi','luc'].forEach(s => item.stats[s] = (item.stats[s]||0) + mat.mod.all);
