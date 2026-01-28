@@ -141,7 +141,7 @@ bio_soldier,強化兵士,4,phy,gn,kn,su,tech,1.9,1.8,1.7,0.4,1,1.4,0.7,commando,
 nano_healer,ナノ医術師,4,sup,dv,gun,su,tech,1.1,0.8,1.2,1.2,2.2,1.1,1,high_priest,ナノ再生,40,0,0,0,80,0,0,light;thunder
 plasma_gunner,重火器兵,4,tec,gn,ax,ha,tech,1.5,1.6,1.6,0.8,1.1,0.9,1,sniper,火力支援,40,60,0,0,0,0,70,thunder;fire
 shadow_stalker,影の追跡者,4,spd,kat,dg,su,shadow,1.1,1.5,1,0.8,1.5,2,1.2,assassin,影渡り,40,0,0,0,50,80,0,dark
-ceo,ＣＥＯ,4,spe,dv,ac,su,special,1,0.8,0.9,0.5,2.5,1,2.5,merchant,買収,60,0,0,0,90,0,90,
+ceo,最高経営責任者,4,spe,dv,ac,su,special,1,0.8,0.9,0.5,2.5,1,2.5,merchant,買収,60,0,0,0,90,0,90,
 pilot,パイロット,4,tec,dv,gun,su,tech,1.2,1,1.1,0.5,1.6,1.4,1.4,inventor,操縦技術,40,0,0,0,60,60,70,thunder
 net_diver,電脳探偵,4,tec,dv,kat,su,tech,0.9,1.2,0.8,1.2,2.3,1.5,1.3,hacker,ダイブ,40,0,0,0,80,0,0,thunder
 chronomancer,時魔道士,4,mag,st,bk,ro,magic,1,0.6,0.9,2.2,2.1,1.4,1.1,sage,時の歯車,40,0,0,80,70,60,0,wind
