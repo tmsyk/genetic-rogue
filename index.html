@@ -3,9 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Genetic Rogue Ver.13.1 - Elements Map</title>
-    <!-- Favicon -->
+    <title>Genetic Rogue Ver.13.1</title>
+    <!-- Faviconエラー回避 -->
     <link rel="icon" href="data:,">
+    <!-- CSS読み込み -->
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -51,7 +52,9 @@
 <div id="modal-lab" class="modal-overlay" style="display:none;">
     <div class="modal-box">
         <div class="modal-header">
-            <h3>遺伝子ラボ & ギルド</h3> <button class="close-modal">閉じる</button>
+            <!-- ★修正: Helix表示を追加 -->
+            <h3>遺伝子ラボ & ギルド <span style="font-size:16px; color:var(--accent-color); margin-left:15px;">Helix: <span id="lab-helix-display">0</span></span></h3> 
+            <button class="close-modal">閉じる</button>
         </div>
         <div class="modal-body">
             <div class="tab-group">
@@ -70,7 +73,7 @@
             </div>
 
             <div id="tab-lab-hire" class="tab-content" style="display:none;">
-                <p style="color:#888; margin-bottom:10px;">雇用コスト: <span id="hire-cost">30</span> Helix</p>
+                <p style="color:#888; margin-bottom:10px;">雇用コスト: <span id="hire-cost">100</span> Helix</p>
                 <div id="guild-list" class="grid-list"></div>
             </div>
 
@@ -114,7 +117,7 @@
 </div>
 
 <!-- Modal: Settings -->
-<div id="modal-settings" class="modal-overlay" style="display:none;">
+<div id="modal-settings" class="modal-overlay">
     <div class="modal-box" style="max-width:500px;">
         <div class="modal-header">
             <h3>設定 (Settings)</h3> <button class="close-modal">閉じる</button>
@@ -200,11 +203,24 @@
                     <tr><td>LUC (運)</td><td>クリティカル率、アイテムドロップ率に影響します。</td></tr>
                 </table>
             </div>
+            <div class="rule-section">
+                <h4>戦闘ルール</h4>
+                <p>攻撃タイプは職業によって「物理」か「魔法」に分かれます。</p>
+                <ul>
+                    <li><strong>物理ダメージ:</strong> (STR + 武器攻撃力) - (敵VIT / 2)</li>
+                    <li><strong>魔法ダメージ:</strong> (MAG + 武器魔力) - (敵INT / 2)</li>
+                </ul>
+            </div>
+            <div class="rule-section">
+                <h4>属性と素材 (Materials)</h4>
+                <p>装備品には素材（Material）が付与され、ステータスや属性が強化されます。</p>
+                <p>属性は有利な相手に1.5倍、不利な相手に0.5倍のダメージを与えます。</p>
+            </div>
         </div>
     </div>
 </div>
 
-<!-- JS読み込み -->
+<!-- JS読み込み (順序重要) -->
 <script src="db_master.js"></script>
 <script src="db_manager.js"></script>
 <script src="game.js"></script>
