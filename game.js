@@ -1,5 +1,5 @@
 /**
- * Genetic Rogue Ver.13.0 - Job Mastery & Inheritance
+ * Genetic Rogue Ver.12.7 - Fix CharMake List
  * Main Logic & UI Controller
  */
 
@@ -15,11 +15,14 @@ const Game = {
     helix: 100, floor: 1, maxFloor: 1, floorProgress: 0,
     party: [], roster: [], inventory: [],
     exploring: false, timer: null, currentEnemy: null,
-    SAVE_KEY: 'genetic_rogue_v13_0', // Key Update
+    SAVE_KEY: 'genetic_rogue_v12_7', // Key update to reset bad data
 
     init() {
         UI.init();
-        if (!DB || !DB.jobs || Object.keys(DB.jobs).length === 0) return alert("DB Error");
+        if (!DB || !DB.jobs || Object.keys(DB.jobs).length === 0) {
+            alert("職業データが読み込めません。DB初期化エラー。");
+            return;
+        }
         UI.showTitleScreen();
     },
 
@@ -71,14 +74,19 @@ const Game = {
             UI.updateAll();
             UI.log("データをロードしました。", "log-sys");
             return true;
-        } catch(e) { console.error(e); return false; }
+        } catch(e) { 
+            console.error(e); 
+            return false;
+        }
     },
 
     hasSaveData() { return !!localStorage.getItem(this.SAVE_KEY); },
 
     explore(f) {
         if(this.party.length===0) return alert("パーティがいません");
-        if(this.party.every(c=>c.hp<=0)) this.party.forEach(c=>c.hp=c.totalStats.hp);
+        if(this.party.every(c=>c.hp<=0)) {
+             this.party.forEach(c=>c.hp=c.totalStats.hp);
+        }
         this.floor = parseInt(f);
         this.floorProgress = 0;
         this.exploring = true;
@@ -128,9 +136,7 @@ const Game = {
 
     encounter() {
         this.currentEnemy = DB.createEnemy(this.floor, this.floor % 5 === 0);
-        const ename = this.currentEnemy.name;
-        const eElem = this.currentEnemy.elem ? `[${MASTER_DATA.elements.find(e=>e.key===this.currentEnemy.elem).name}]` : "";
-        UI.log(`遭遇: ${ename} ${eElem} (HP:${this.currentEnemy.hp})`, "log-combat");
+        UI.log(`遭遇: ${this.currentEnemy.name} (HP:${this.currentEnemy.hp})`, "log-combat");
     },
 
     combatRound() {
@@ -139,51 +145,31 @@ const Game = {
         
         activeParty.forEach(c => {
             if(enemy.hp <= 0) return;
-            
             let elemMod = 1.0;
             let atkElem = c.attackElement;
             if(atkElem && enemy.elem) {
                 if(MASTER_DATA.element_chart[atkElem].strong === enemy.elem) elemMod = 1.5;
                 else if(MASTER_DATA.element_chart[atkElem].weak === enemy.elem) elemMod = 0.5;
             }
-
             let dmg = Math.max(1, Math.floor(c.totalStats.str - (enemy.vit/2)));
             if (c.job.type === 'mag' || c.job.type === 'sup') {
                 dmg = Math.max(1, Math.floor(c.totalStats.mag - (enemy.mag/2)));
             }
-
             dmg = Math.floor(dmg * elemMod * (0.9 + Math.random()*0.2));
             enemy.hp -= dmg;
-            
-            let modText = elemMod > 1 ? "(弱点!)" : (elemMod < 1 ? "(半減)" : "");
-            UI.log(`${c.name}の攻撃${modText} -> ${dmg}`);
+            UI.log(`${c.name}の攻撃 -> ${dmg}`);
         });
 
         if(enemy.hp <= 0) {
             UI.log("勝利！", "log-victory");
             this.helix += enemy.gold;
-            // Character Exp + Job Exp
-            const exp = enemy.exp;
-            activeParty.forEach(c => {
-                c.gainExp(exp);
-                c.gainJobExp(Math.floor(exp * 0.5)); // JobExp is 50% of Exp
-            });
+            activeParty.forEach(c => c.gainExp(enemy.exp));
             if(Math.random() < 0.3) this.loot();
             this.currentEnemy = null;
         } else {
             const target = activeParty[Math.floor(Math.random()*activeParty.length)];
             if(target) {
-                let elemMod = 1.0;
-                if(enemy.elem) {
-                    const defElems = target.defenseElements;
-                    for(let de of defElems) {
-                        if(MASTER_DATA.element_chart[de].strong === enemy.elem) elemMod *= 0.7;
-                        if(MASTER_DATA.element_chart[de].weak === enemy.elem) elemMod *= 1.3;
-                    }
-                }
-
                 let dmg = Math.max(1, Math.floor(enemy.str - (target.totalStats.vit/2)));
-                dmg = Math.floor(dmg * elemMod);
                 target.hp -= dmg;
                 UI.log(`${target.name} に ${dmg} のダメージ`, "log-dmg");
                 if(target.hp <= 0) UI.log(`${target.name} は倒れた...`, "log-defeat");
@@ -195,12 +181,9 @@ const Game = {
         const trap = DB.getRandomTrap();
         const power = 1 + (this.floor * 0.5);
         const dmg = Math.floor(trap.base * power);
-        
         UI.log(`罠だ！ ${trap.name} (Lv.${this.floor})`, "log-trap");
-        
         const maxAgi = Math.max(...this.party.map(c=>c.hp>0?c.totalStats.agi:0));
         const diff = this.floor * 10;
-        
         if(maxAgi > diff + (Math.random()*20)) {
             UI.log("回避に成功した！");
         } else {
@@ -230,13 +213,9 @@ const Game = {
         if (!jobId || !DB.jobs[jobId]) return console.error("Invalid JobID");
         
         const job = DB.jobs[jobId];
-        const baseJobDef = MASTER_DATA.jobs.find(def => def.id === job.baseId);
-        const isBaseTier1 = baseJobDef ? (baseJobDef.tier === 1) : true;
-
-        if ((job.tier !== 1 || !isBaseTier1) && !isFree) return console.warn("Only Tier 1 allowed");
+        if (job.tier !== 1 && !isFree) return console.warn("Only Tier 1 allowed");
 
         if(!isFree) this.helix -= MASTER_DATA.config.HIRE_COST;
-        
         const c = new Character(jobId);
         this.roster.push(c);
         this.save();
@@ -249,7 +228,6 @@ const Game = {
         if(!c) return;
         if(c.level < 10) return alert("Lv10以上必要です");
         if(this.helix < MASTER_DATA.config.CC_COST) return alert("Helix不足");
-
         this.helix -= MASTER_DATA.config.CC_COST;
         c.classChange(newJobId);
         UI.updateAll();
@@ -257,8 +235,7 @@ const Game = {
     },
     
     sellTrash() {
-        let sold = 0;
-        let gain = 0;
+        let sold = 0; let gain = 0;
         for(let i=this.inventory.length-1; i>=0; i--) {
             if(this.inventory[i].rarity <= 2) {
                 gain += 10 + (this.inventory[i].tier * 5);
@@ -269,44 +246,20 @@ const Game = {
         if(sold > 0) {
             this.helix += gain;
             UI.log(`売却: ${sold}個 (+${gain} Helix)`, "log-item");
-            this.save();
-            UI.updateAll();
-            UI.renderInv();
+            this.save(); UI.updateAll(); UI.renderInv();
         } else {
             alert("売却できるアイテム（コモン以下）がありません。");
         }
-    },
-
-    breed(id1, id2) {
-        let p1 = this.roster.find(c=>c.id===id1);
-        let p2 = this.roster.find(c=>c.id===id2);
-        let cost = p1.breedCost + p2.breedCost;
-        if(this.helix < cost) return alert("Helix不足");
-        if(p1.level < 30 || p2.level < 30) return alert("親はLv30以上必要です");
-        this.helix -= cost;
-        
-        // Pass parents for inheritance logic
-        let c = new Character(p1.jobKey, [p1,p2], { race: p1.race }); // Default to p1 race, or random? Character class handles it.
-        this.roster.push(c);
-        UI.log(`誕生: ${c.name} (属性:${c.elements.map(e=>MASTER_DATA.elements.find(x=>x.key===e).name).join(',')})`);
-        this.save();
-        UI.updateAll();
     }
 };
 
 class Character {
     constructor(jobKey, parents, data) {
         if(data && data.id) { 
-            // Migration for new properties
-            if (data.jobExp === undefined) data.jobExp = 0;
-            if (!data.learnedSkills) data.learnedSkills = [];
-            if (!data.masteredJobs) data.masteredJobs = [];
-
             if (!data.equipment.head) data.equipment.head = null;
             if (!data.equipment.accessory1) data.equipment.accessory1 = data.equipment.accessory;
             if (!data.equipment.accessory2) data.equipment.accessory2 = null;
             delete data.equipment.accessory;
-
             Object.assign(this, data); 
             return; 
         }
@@ -317,48 +270,22 @@ class Character {
         this.level = 1; this.exp = 0; this.maxExp = 100;
         this.hp = 100;
         
-        // Job Mastery Properties
-        this.jobExp = 0;
-        this.learnedSkills = [];
-        this.masteredJobs = [];
-
         this.baseStats = {...MASTER_DATA.config.BASE_STATS};
         for(let k in this.baseStats) this.baseStats[k] = Math.floor(this.baseStats[k] * (0.9 + Math.random()*0.2));
         
-        this.equipment = {
-            main_hand: null, off_hand: null, head: null, body: null, 
-            accessory1: null, accessory2: null
-        };
-        
+        this.equipment = {main_hand:null, off_hand:null, head:null, body:null, accessory1:null, accessory2:null};
         this.personality = "凡人";
         this.elements = [];
         
         const races = Object.keys(MASTER_DATA.races);
-        if (data && data.race) {
-            this.race = data.race;
-        } else if (parents) {
-             // 50/50 chance from parents
-             this.race = Math.random() < 0.5 ? parents[0].race : parents[1].race;
-        } else {
-            this.race = races[Math.floor(Math.random()*races.length)];
-        }
+        if (data && data.race) { this.race = data.race; } 
+        else { this.race = races[Math.floor(Math.random()*races.length)]; }
 
         if (parents) {
-            // Inheritance Logic
             this.pedigree = {
                 f: { name: parents[0].name, race: MASTER_DATA.races[parents[0].race].name, job: parents[0].job.name },
                 m: { name: parents[1].name, race: MASTER_DATA.races[parents[1].race].name, job: parents[1].job.name }
             };
-            
-            // Skill Inheritance: Mix learned skills and pick up to 4
-            const parentSkills = [...new Set([...parents[0].learnedSkills, ...parents[1].learnedSkills])];
-            // Shuffle
-            for (let i = parentSkills.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [parentSkills[i], parentSkills[j]] = [parentSkills[j], parentSkills[i]];
-            }
-            this.learnedSkills = parentSkills.slice(0, 4);
-
         } else {
             this.pedigree = { f: null, m: null };
         }
@@ -371,42 +298,16 @@ class Character {
         const job = this.job;
         const raceMod = MASTER_DATA.races[this.race] ? MASTER_DATA.races[this.race].mod : null;
 
-        // Apply Passive Skills Mods
-        this.learnedSkills.forEach(skName => {
-            const skData = MASTER_DATA.skills.data[skName];
-            if (skData && skData.mod) {
-                for (let k in skData.mod) {
-                     // Check if mod is a multiplier (small value) or flat add?
-                     // Assuming multipliers (e.g., 1.1) for now based on CSV structure
-                     // We need to apply them to multipliers?
-                     // Let's add them to a separate multiplier var
-                }
-            }
-        });
-
         for(let k in s) {
             let m = (job && job.mod) ? (job.mod.all || job.mod[k] || 1.0) : 1.0;
             if (raceMod && raceMod[k]) m *= raceMod[k];
-            
-            // Apply Passive Skill Modifiers
-            this.learnedSkills.forEach(skName => {
-                const skData = MASTER_DATA.skills.data[skName];
-                if (skData && skData.mod && skData.mod[k]) {
-                     m *= skData.mod[k];
-                }
-            });
-
             s[k] = Math.floor(s[k] * m);
         }
         for(let k in this.equipment) {
             const it = this.equipment[k];
-            if(it) {
-                for(let st in it.stats) s[st] = (s[st]||0) + it.stats[st];
-            }
+            if(it) { for(let st in it.stats) s[st] = (s[st]||0) + it.stats[st]; }
         }
-        for(let k in s) {
-            s[k] += Math.floor((s[k]*0.1) * (this.level-1));
-        }
+        for(let k in s) s[k] += Math.floor((s[k]*0.1) * (this.level-1));
         return s;
     }
     
@@ -427,68 +328,29 @@ class Character {
     gainExp(v) {
         this.exp += v;
         if(this.exp >= this.maxExp) {
-            this.level++;
-            this.exp = 0;
-            this.maxExp *= 1.2;
+            this.level++; this.exp = 0; this.maxExp *= 1.2;
             this.hp = this.totalStats.hp;
             UI.log(`${this.name} Level Up! (Lv.${this.level})`);
         }
     }
     
-    gainJobExp(amount) {
-        if (this.masteredJobs.includes(this.jobKey)) return; // Already mastered
-
-        this.jobExp += amount;
-        // Max Job Exp = Tier * 500
-        const maxJobExp = this.job.maxJobExp || 1000;
-        
-        if (this.jobExp >= maxJobExp) {
-            this.jobExp = maxJobExp;
-            this.masterJob();
-        }
-    }
-
-    masterJob() {
-        if (this.masteredJobs.includes(this.jobKey)) return;
-        
-        this.masteredJobs.push(this.jobKey);
-        const mSkill = this.job.masterSkill;
-        
-        if (mSkill) {
-            if (!this.learnedSkills.includes(mSkill)) {
-                this.learnedSkills.push(mSkill);
-                UI.log(`${this.name}は${this.job.name}を極めた！ スキル「${mSkill}」を習得！`, "log-lvlup");
-            } else {
-                UI.log(`${this.name}は${this.job.name}を極めた！`, "log-lvlup");
-            }
-        } else {
-            UI.log(`${this.name}は${this.job.name}を極めた！`, "log-lvlup");
-        }
-    }
-
     canEquip(item) {
         if (!item || !item.kind) return { ok: false, reason: "無効アイテム" };
-
         const job = this.job;
         if (job && job.equip && !job.equip.includes(item.kind) && item.kind !== 'ac') {
             return { ok: false, reason: "職業不可" };
         }
-        
         if (item.req) {
             const stats = this.totalStats;
             for (let key in item.req) {
-                if ((stats[key] || 0) < item.req[key]) {
-                    return { ok: false, reason: `${key.toUpperCase()}不足` };
-                }
+                if ((stats[key] || 0) < item.req[key]) return { ok: false, reason: `${key.toUpperCase()}不足` };
             }
         }
-        
         return { ok: true, reason: "" };
     }
 
     autoEquip(item) {
         if(!item.slot) return false;
-        
         const check = this.canEquip(item);
         if(!check.ok) return false;
 
@@ -514,21 +376,14 @@ class Character {
     
     equip(item) {
         const check = this.canEquip(item);
-        if(!check.ok) {
-            UI.log(`装備不可: ${check.reason}`, "log-err");
-            return false;
-        }
-
+        if(!check.ok) { UI.log(`装備不可: ${check.reason}`, "log-err"); return false; }
         let targetSlot = item.slot;
         if (item.slot === 'accessory') {
             if (!this.equipment.accessory1) targetSlot = 'accessory1';
             else if (!this.equipment.accessory2) targetSlot = 'accessory2';
             else targetSlot = 'accessory1';
         }
-
-        if (this.equipment[targetSlot]) {
-            Game.inventory.push(this.equipment[targetSlot]);
-        }
+        if (this.equipment[targetSlot]) Game.inventory.push(this.equipment[targetSlot]);
         this.equipment[targetSlot] = item;
         return true;
     }
@@ -541,13 +396,7 @@ class Character {
     }
     
     classChange(newJobKey) {
-        // Reset Job Exp on change
         this.jobKey = newJobKey;
-        this.jobExp = 0;
-        
-        let s = this.totalStats;
-        for(let k in MASTER_DATA.config.BASE_STATS) this.bonusStats[k] = (this.bonusStats[k] || 0) + Math.floor(s[k] * 0.1);
-        
         this.level = 1; this.maxExp = 100; this.hp = this.totalStats.hp;
     }
 }
@@ -560,11 +409,7 @@ const UI = {
     invFilter: 'all', 
 
     init() {
-        const bind = (id, fn) => {
-            const el = document.getElementById(id);
-            if(el) el.onclick = fn;
-        };
-
+        const bind = (id, fn) => { const el = document.getElementById(id); if(el) el.onclick = fn; };
         bind('btn-explore', () => Game.explore(1));
         bind('btn-return', () => Game.stop());
         bind('btn-lab', () => this.openModal('modal-lab', () => this.renderLab()));
@@ -572,15 +417,7 @@ const UI = {
         bind('btn-settings', () => this.openModal('modal-settings'));
         bind('btn-help', () => this.openModal('modal-rules'));
         bind('btn-sell-trash', () => Game.sellTrash());
-        
-        document.querySelectorAll('.close-modal').forEach(b => {
-            b.onclick = () => this.closeModal();
-        });
-        
-        document.addEventListener('keydown', (e) => {
-            if(e.key === 'Escape') this.closeModal();
-        });
-        
+        document.querySelectorAll('.close-modal').forEach(b => { b.onclick = () => this.closeModal(); });
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.onclick = (e) => {
                 const tabId = e.target.getAttribute('data-tab');
@@ -594,7 +431,6 @@ const UI = {
         modal.className = 'modal-overlay';
         modal.id = 'modal-title';
         modal.style.display = 'flex';
-        
         const hasData = Game.hasSaveData();
         const loadDisabled = hasData ? '' : 'disabled';
         const loadStyle = hasData ? 'background:var(--accent-color); color:#000;' : 'opacity:0.5; cursor:not-allowed;';
@@ -602,7 +438,7 @@ const UI = {
         modal.innerHTML = `
             <div class="modal-box" style="text-align:center; padding:40px;">
                 <h1 style="color:var(--accent-color); font-size:32px; margin-bottom:10px;">🧬 Genetic Rogue</h1>
-                <p style="color:#888; margin-bottom:40px;">Ver.13.0 - Job Mastery</p>
+                <p style="color:#888; margin-bottom:40px;">Ver.12.5</p>
                 <div style="display:flex; flex-direction:column; gap:20px; width:200px; margin:0 auto;">
                     <button id="title-load" style="padding:15px; font-weight:bold; font-size:16px; ${loadStyle}" ${loadDisabled}>続きから</button>
                     <button id="title-new" style="padding:15px; font-size:16px;">はじめから</button>
@@ -612,16 +448,11 @@ const UI = {
         document.body.appendChild(modal);
 
         document.getElementById('title-load').onclick = () => {
-            if(Game.load()) {
-                modal.remove();
-            } else {
-                alert("セーブデータの読み込みに失敗しました");
-            }
+            if(Game.load()) modal.remove();
+            else alert("セーブデータの読み込みに失敗しました");
         };
         document.getElementById('title-new').onclick = () => {
-            if(hasData) {
-                if(!confirm("セーブデータが存在します。上書きして新規開始しますか？")) return;
-            }
+            if(hasData) { if(!confirm("セーブデータが存在します。上書きして新規開始しますか？")) return; }
             modal.remove();
             this.showCharMake();
         };
@@ -632,8 +463,9 @@ const UI = {
         modal.className = 'modal-overlay';
         modal.style.display = 'flex';
 
+        // ★修正: シンプルなTier1フィルタリング
         const jobOptions = Object.values(DB.jobs)
-            .filter(j => j.tier === 1 && !j.reqJob && MASTER_DATA.jobs.find(def => def.id === j.baseId).tier === 1)
+            .filter(j => j.tier === 1)
             .map(j => `<option value="${j.id}">${j.name}</option>`)
             .join('');
 
@@ -647,15 +479,11 @@ const UI = {
                 <div class="modal-body">
                     <div style="margin-bottom:15px;">
                         <label>種族:</label>
-                        <select id="cm-race" style="padding:5px; background:#222; color:#fff; border:1px solid #444;">
-                            ${raceOptions}
-                        </select>
+                        <select id="cm-race" style="padding:5px; background:#222; color:#fff; border:1px solid #444;">${raceOptions}</select>
                     </div>
                     <div style="margin-bottom:15px;">
                         <label>職業:</label>
-                        <select id="cm-job" style="padding:5px; background:#222; color:#fff; border:1px solid #444;">
-                            ${jobOptions}
-                        </select>
+                        <select id="cm-job" style="padding:5px; background:#222; color:#fff; border:1px solid #444;">${jobOptions}</select>
                     </div>
                     <div id="cm-preview" style="background:#1a1a1a; border:1px solid #333; padding:10px; border-radius:4px; margin-bottom:20px;"></div>
                     <button id="cm-start" class="primary" style="width:100%; padding:15px;">冒険を始める</button>
@@ -705,7 +533,6 @@ const UI = {
             const jobName = jobData ? jobData.name : char.jobKey;
             const raceName = MASTER_DATA.races[char.race] ? MASTER_DATA.races[char.race].name : "不明";
             const stats = char.totalStats;
-            
             const hpPct = Math.max(0, Math.min(100, (char.hp / stats.hp) * 100));
             const expPct = Math.min(100, (char.exp / char.maxExp) * 100);
             
@@ -721,11 +548,9 @@ const UI = {
             div.innerHTML = `
                 <div class="char-header"><span>${char.name}</span> <span class="job-label">${jobName}</span></div>
                 <div style="font-size:10px; color:#888;">${raceName} Lv.${char.level}</div>
-                
                 <div class="bar-wrap"><div class="bar-val hp-bar" style="width:${hpPct}%"></div></div>
                 <div style="text-align:right; font-size:9px;">HP: ${Math.floor(char.hp)}/${stats.hp}</div>
                 <div class="bar-wrap" style="height:2px;"><div class="bar-val exp-bar" style="width:${expPct}%"></div></div>
-                
                 <div class="stat-grid">
                     <div class="stat-val">STR:<span>${stats.str}</span></div>
                     <div class="stat-val">MAG:<span>${stats.mag}</span></div>
@@ -783,12 +608,7 @@ const UI = {
     renderHire() {
         const el = document.getElementById('guild-list');
         el.innerHTML = "";
-        Object.values(DB.jobs).filter(j => {
-            if (j.tier !== 1) return false;
-            if (j.reqJob) return false;
-            const baseJobDef = MASTER_DATA.jobs.find(def => def.id === j.baseId);
-            return baseJobDef && baseJobDef.tier === 1;
-        }).forEach(j => {
+        Object.values(DB.jobs).filter(j => j.tier === 1).forEach(j => {
             const div = document.createElement('div');
             div.className = "list-item";
             div.innerHTML = `${j.name}`;
@@ -950,7 +770,6 @@ const UI = {
         const s = c.totalStats;
         const jobName = c.job ? c.job.name : "Unknown";
         const raceName = MASTER_DATA.races[c.race] ? MASTER_DATA.races[c.race].name : "Unknown";
-        const mastered = c.masteredJobs.includes(c.jobKey) ? "★マスター済" : `熟練度: ${c.jobExp}/${c.job.maxJobExp}`;
         
         let eqHtml = "";
         for(let slot in c.equipment) {
@@ -960,15 +779,6 @@ const UI = {
                 <span style="color:${item?'#fff':'#666'}">${item?item.name:'Empty'}</span>
             </div>`;
         }
-        
-        let learnedHtml = "";
-        c.learnedSkills.forEach(sk => {
-            const desc = MASTER_DATA.skills.data[sk] ? MASTER_DATA.skills.data[sk].desc : "";
-            learnedHtml += `<div style="font-size:11px; margin-bottom:2px;"><span style="color:var(--info-color)">${sk}</span>: ${desc}</div>`;
-        });
-        
-        const pedigree = c.pedigree || { f: null, m: null };
-        const renderParent = (p) => p ? `${p.name} (${p.race}/${p.job})` : "不明";
 
         const html = `
             <div class="detail-header">
@@ -985,13 +795,6 @@ const UI = {
                     <div class="detail-row"><span class="detail-label">INT</span> <span>${s.int}</span></div>
                     <div class="detail-row"><span class="detail-label">AGI</span> <span>${s.agi}</span></div>
                     <div class="detail-row"><span class="detail-label">LUC</span> <span>${s.luc}</span></div>
-                    <div style="font-size:11px; color:#aaa; margin-top:5px;">${mastered}</div>
-                    
-                    <h4 style="color:#888; border-bottom:1px solid #333; margin-bottom:5px; margin-top:15px;">家系図</h4>
-                    <div style="font-size:11px; color:#aaa;">
-                        <div>父: ${renderParent(pedigree.f)}</div>
-                        <div>母: ${renderParent(pedigree.m)}</div>
-                    </div>
                 </div>
                 <div>
                     <h4 style="color:#888; border-bottom:1px solid #333; margin-bottom:5px;">装備</h4>
@@ -999,9 +802,6 @@ const UI = {
                     <div style="margin-top:10px; text-align:right;">
                         <button onclick="UI.openEquipFor('${c.id}')" style="font-size:10px; padding:4px 8px;">装備変更</button>
                     </div>
-                    
-                    <h4 style="color:#888; border-bottom:1px solid #333; margin-bottom:5px; margin-top:15px;">習得スキル</h4>
-                    <div style="max-height:100px; overflow-y:auto;">${learnedHtml}</div>
                 </div>
             </div>
         `;

@@ -710,7 +710,7 @@ const CSV_SKILLS = `name,type,desc,mod_hp,mod_str,mod_vit,mod_mag,mod_int,mod_ag
 // 2. CSVパーサーとデータ変換ロジック
 // ==========================================
 const DataParser = {
-    // 修正: 空のフィールドも正しく読み取れるパーサー
+    // 修正: 空文字でも列を飛ばさない確実なパーサー
     parse(csvText) {
         if(!csvText) return [];
         const lines = csvText.trim().split('\n');
@@ -719,7 +719,6 @@ const DataParser = {
 
         for (let i = 1; i < lines.length; i++) {
             const line = lines[i];
-            // ダブルクォート内のカンマを無視し、空フィールドも維持するスプリット処理
             const row = [];
             let current = '';
             let inQuote = false;
@@ -735,15 +734,16 @@ const DataParser = {
                     current += char;
                 }
             }
-            row.push(current); // 最後の列を追加
+            row.push(current);
 
+            // 空行チェック
             if (row.length === 0 || (row.length === 1 && row[0] === '')) continue;
 
             const obj = {};
             headers.forEach((header, index) => {
-                let value = row[index] ? row[index].replace(/^"|"$/g, '') : ''; // クォート削除
+                let value = row[index] ? row[index].replace(/^"|"$/g, '') : '';
                 if (value !== '' && !isNaN(value)) {
-                    value = Number(value); // 数値変換
+                    value = Number(value);
                 }
                 obj[header] = value;
             });
@@ -793,7 +793,9 @@ const DataParser = {
                 lineage: job.lineage,
                 mod: mod,
                 reqJob: job.req_job || null,
-                reqStats: reqStats
+                reqStats: reqStats,
+                // もしreq_elがあればここで処理するが、CSVには含まれていないため省略
+                reqEl: null 
             };
         });
     },
@@ -821,7 +823,8 @@ const DataParser = {
                 type: item.type,
                 base: base,
                 tier: item.tier || 1,
-                req: req
+                req: req,
+                elem: item.element || null
             };
         });
         return items;
@@ -944,15 +947,12 @@ const MASTER_DATA = {
     elements: parsedElements.list,
     element_chart: parsedElements.chart,
     jobs: DataParser.convertJobs(RAW_JOBS),
+    
     job_ranks: [
-        { tier: 1, prefix: "見習い", mod: 0.8 },
         { tier: 1, prefix: "", mod: 1.0 },
         { tier: 2, prefix: "熟練", mod: 1.2 },
-        { tier: 2, prefix: "上級", mod: 1.3 },
         { tier: 3, prefix: "達人", mod: 1.5 },
-        { tier: 3, prefix: "王宮", mod: 1.6 },
         { tier: 4, prefix: "伝説の", mod: 2.0 },
-        { tier: 4, prefix: "覚醒", mod: 2.2 },
         { tier: 5, prefix: "神話の", mod: 3.0 }
     ],
     items: {
