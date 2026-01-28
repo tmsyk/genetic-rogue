@@ -57,16 +57,26 @@ const DB = {
     },
     
     createRandomItem(floor) {
+        // アイテムのTier制限
         const maxTier = Math.min(5, Math.ceil(floor / 5));
+        
+        // アイテム種別、素材をランダム選択
+        // ※実際にはここでTierに基づいた素材フィルタリングなどを入れるとさらに良い
         const types = Object.keys(MASTER_DATA.items.types);
         const typeKey = types[Math.floor(Math.random() * types.length)];
         const typeData = MASTER_DATA.items.types[typeKey];
-        const materials = MASTER_DATA.items.materials;
         
-        let totalW = materials.reduce((a,b)=>a+b.w, 0);
+        // 素材の選択（Tierフィルタリング）
+        // 階層以下のTierの素材のみ抽選対象にする
+        const materials = MASTER_DATA.items.materials.filter(m => m.tier <= maxTier);
+        
+        // フィルタ結果が空ならTier1素材を使う（フォールバック）
+        const pool = materials.length > 0 ? materials : MASTER_DATA.items.materials.filter(m => m.tier === 1);
+
+        let totalW = pool.reduce((a,b)=>a+b.w, 0);
         let r = Math.random() * totalW;
-        let mat = materials[0];
-        for(let m of materials) {
+        let mat = pool[0];
+        for(let m of pool) {
             r -= m.w;
             if(r <= 0) { mat = m; break; }
         }
@@ -108,16 +118,27 @@ const DB = {
             }
         }
         
+        // 階層補正
         for(let k in item.stats) item.stats[k] = Math.ceil(item.stats[k] * (1 + floor * 0.1));
 
         return item;
     },
 
     createEnemy(floor, isElite=false) {
-        const species = MASTER_DATA.enemies.species;
-        const prefixes = MASTER_DATA.enemies.prefixes;
+        // 敵のTier制限ロジック
+        const maxTier = Math.max(1, Math.ceil(floor / 5)); // 5階層ごとにTierキャップ解放
         
-        let base = species[Math.floor(Math.random() * species.length)];
+        // 現在のTier以下の敵のみ抽出
+        let candidates = MASTER_DATA.enemies.species.filter(e => e.tier <= maxTier);
+        
+        // 候補がない場合はTier 1を出す（安全策）
+        if (candidates.length === 0) {
+            candidates = MASTER_DATA.enemies.species.filter(e => e.tier === 1);
+        }
+
+        const base = candidates[Math.floor(Math.random() * candidates.length)];
+        
+        const prefixes = MASTER_DATA.enemies.prefixes;
         let prefix = isElite ? prefixes[Math.floor(Math.random() * prefixes.length)] : prefixes[0];
         let scale = 1 + (floor - 1) * 0.4;
         if(isElite) scale *= 1.5;

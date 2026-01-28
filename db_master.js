@@ -1,6 +1,5 @@
 /**
- * Genetic Rogue - Master Database (Full Version)
- * スプレッドシート等で管理しているCSVデータをここに貼り付けるだけで反映されます。
+ * Genetic Rogue - Master Database (Tier Updated Version)
  */
 
 // ==========================================
@@ -102,7 +101,7 @@ const CSV_SKILLS = `name,type,desc
 女神の瞳,sup,隠し通路発見率UP
 奇跡,sup,稀にダメージ無効化`;
 
-// 職業マスタ (前提ジョブ:req_job, ステータス要件:req_strなどを含む)
+// 職業マスタ
 const CSV_JOBS = `id,name,tier,type,equip_types,lineage,mod_hp,mod_str,mod_vit,mod_mag,mod_int,mod_agi,mod_luc,req_job,req_hp,req_str,req_vit,req_mag,req_int,req_agi,req_luc
 warrior,戦士,1,phy,"sw,ax,ha,sh",warrior,1.2,1.2,1.1,0.5,0.8,0.9,1.0,,,,,,,,
 mage,魔法使い,1,mag,"st,dg,ro,ac",magic,0.8,0.6,0.8,1.5,1.4,1.0,1.0,,,,,,,,
@@ -177,20 +176,20 @@ const CSV_MATERIALS = `name,tier,mod_str,mod_vit,mod_mag,mod_int,mod_agi,mod_luc
 竜の,4,20,20,0,0,0,0,fire,2
 神の,5,20,20,20,20,20,20,light,1`;
 
-// 敵マスタ
-const CSV_ENEMIES = `name,hp,str,def,mag,agi,exp,gold,element
-スライム,20,5,2,0,5,10,5,water
-ネズミ,15,7,1,0,10,12,7,earth
-ゴブリン,30,8,3,0,8,15,10,earth
-オーク,60,15,5,0,6,25,20,fire
-スケルトン,50,12,10,0,5,30,15,dark
-ウィザード,40,5,2,20,8,40,30,fire
-ゴーレム,150,30,20,0,2,80,50,earth
-リザードマン,80,18,8,0,12,60,40,water
-ハーピー,60,12,5,5,20,50,35,wind
-ドラゴン,500,80,30,50,15,300,200,fire
-ヴァンパイア,200,40,15,30,20,150,100,dark
-エンジェル,300,50,40,60,25,250,150,light`;
+// 敵マスタ (tier列を追加)
+const CSV_ENEMIES = `name,hp,str,def,mag,agi,exp,gold,element,tier
+スライム,20,5,2,0,5,10,5,water,1
+ネズミ,15,7,1,0,10,12,7,earth,1
+ゴブリン,30,8,3,0,8,15,10,earth,1
+オーク,60,15,5,0,6,25,20,fire,2
+スケルトン,50,12,10,0,5,30,15,dark,2
+ウィザード,40,5,2,20,8,40,30,fire,2
+ゴーレム,150,30,20,0,2,80,50,earth,3
+リザードマン,80,18,8,0,12,60,40,water,3
+ハーピー,60,12,5,5,20,50,35,wind,3
+ヴァンパイア,200,40,15,30,20,150,100,dark,4
+エンジェル,300,50,40,60,25,250,150,light,4
+ドラゴン,500,80,30,50,15,300,200,fire,5`;
 
 // ==========================================
 // 2. CSVパーサーとデータ変換ロジック
@@ -240,7 +239,6 @@ const DataParser = {
                 hp: job.mod_hp || 1.0
             };
             
-            // ステータス要件の抽出
             const reqStats = {};
             ['hp', 'str', 'vit', 'mag', 'int', 'agi', 'luc'].forEach(stat => {
                 const key = `req_${stat}`;
@@ -320,7 +318,8 @@ const DataParser = {
             agi: e.agi || 10,
             exp: e.exp,
             gold: e.gold,
-            elem: e.element || null
+            elem: e.element || null,
+            tier: e.tier || 1 // デフォルトTier1
         }));
     },
 
@@ -350,7 +349,6 @@ const DataParser = {
     convertSkills(rawSkills) {
         const data = {};
         const pool = { phy:[], mag:[], spd:[], tnk:[], sup:[] };
-        
         rawSkills.forEach(s => {
             data[s.name] = { desc: s.desc };
             if(pool[s.type]) pool[s.type].push(s.name);
