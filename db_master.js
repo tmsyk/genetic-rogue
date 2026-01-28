@@ -7,7 +7,6 @@
 // 1. CSVデータ定義
 // ==========================================
 
-
 const CSV_RACES = `id,name,mod_hp,mod_str,mod_vit,mod_mag,mod_int,mod_agi,mod_luc
 human,人間,1,1,1,1,1,1,1
 elf,エルフ,0.8,0.8,0.8,1.3,1.2,1.1,1

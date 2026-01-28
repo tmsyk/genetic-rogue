@@ -1,5 +1,5 @@
 /**
- * Genetic Rogue Ver.12.4
+ * Genetic Rogue Ver.12.5 - Fix CharMake & Job Selection
  * Main Logic & UI Controller
  */
 
@@ -15,7 +15,7 @@ const Game = {
     helix: 100, floor: 1, maxFloor: 1, floorProgress: 0,
     party: [], roster: [], inventory: [],
     exploring: false, timer: null, currentEnemy: null,
-    SAVE_KEY: 'genetic_rogue_v12_4', // Ver Up
+    SAVE_KEY: 'genetic_rogue_v12_5', // Update Key
 
     init() {
         UI.init();
@@ -36,8 +36,12 @@ const Game = {
         this.roster.push(c);
         this.party.push(c);
 
+        // 初期装備
         let starter = DB.createRandomItem(1);
-        if(!starter) starter = { uid: "starter", name:"粗末な剣", kind:"sw", type:"weapon", slot:"main_hand", stats:{atk:2}, rarity:1 };
+        // 武器が出なかった時の保険
+        if(!starter || starter.type !== 'weapon') {
+             starter = { uid: "starter", name:"冒険者の短剣", kind:"dg", type:"weapon", slot:"main_hand", stats:{str:2}, rarity:1 };
+        }
         this.inventory.push(starter);
         c.autoEquip(starter);
 
@@ -149,7 +153,6 @@ const Game = {
             
             // 属性補正計算
             let elemMod = 1.0;
-            // 攻撃属性（武器 or キャラ）
             let atkElem = c.attackElement;
             if(atkElem && enemy.elem) {
                 if(MASTER_DATA.element_chart[atkElem].strong === enemy.elem) elemMod = 1.5;
@@ -159,7 +162,7 @@ const Game = {
             let dmg = Math.max(1, Math.floor(c.totalStats.str - (enemy.vit/2)));
             // 魔法職ならMAG依存
             if (c.job.type === 'mag' || c.job.type === 'sup') {
-                dmg = Math.max(1, Math.floor(c.totalStats.mag - (enemy.mag/2))); // Enemy MAG as MDEF
+                dmg = Math.max(1, Math.floor(c.totalStats.mag - (enemy.mag/2)));
             }
 
             dmg = Math.floor(dmg * elemMod * (0.9 + Math.random()*0.2));
@@ -178,15 +181,13 @@ const Game = {
         } else {
             const target = activeParty[Math.floor(Math.random()*activeParty.length)];
             if(target) {
-                // 敵の属性攻撃 vs プレイヤー耐性
+                // 敵の属性攻撃
                 let elemMod = 1.0;
                 if(enemy.elem) {
-                    // 防具属性チェック
                     const defElems = target.defenseElements;
-                    // 簡易: 防具属性が敵属性に強ければ軽減
                     for(let de of defElems) {
-                        if(MASTER_DATA.element_chart[de].strong === enemy.elem) elemMod *= 0.7; // 軽減
-                        if(MASTER_DATA.element_chart[de].weak === enemy.elem) elemMod *= 1.3; // 弱点
+                        if(MASTER_DATA.element_chart[de].strong === enemy.elem) elemMod *= 0.7;
+                        if(MASTER_DATA.element_chart[de].weak === enemy.elem) elemMod *= 1.3;
                     }
                 }
 
@@ -307,11 +308,10 @@ const Game = {
 class Character {
     constructor(jobKey, parents, data) {
         if(data && data.id) { 
-            // マイグレーション：新スロットがない場合に補完
             if (!data.equipment.head) data.equipment.head = null;
-            if (!data.equipment.accessory1) data.equipment.accessory1 = data.equipment.accessory; // 旧データ移行
+            if (!data.equipment.accessory1) data.equipment.accessory1 = data.equipment.accessory;
             if (!data.equipment.accessory2) data.equipment.accessory2 = null;
-            delete data.equipment.accessory; // 旧スロット削除
+            delete data.equipment.accessory;
 
             Object.assign(this, data); 
             return; 
@@ -326,7 +326,6 @@ class Character {
         this.baseStats = {...MASTER_DATA.config.BASE_STATS};
         for(let k in this.baseStats) this.baseStats[k] = Math.floor(this.baseStats[k] * (0.9 + Math.random()*0.2));
         
-        // ★修正: 新スロット定義
         this.equipment = {
             main_hand: null, 
             off_hand: null, 
@@ -344,6 +343,16 @@ class Character {
             this.race = data.race;
         } else {
             this.race = races[Math.floor(Math.random()*races.length)];
+        }
+
+        // Pedigree
+        if (parents) {
+            this.pedigree = {
+                f: { name: parents[0].name, race: MASTER_DATA.races[parents[0].race].name, job: parents[0].job.name },
+                m: { name: parents[1].name, race: MASTER_DATA.races[parents[1].race].name, job: parents[1].job.name }
+            };
+        } else {
+            this.pedigree = { f: null, m: null };
         }
     }
 
@@ -371,15 +380,12 @@ class Character {
         return s;
     }
     
-    // ★追加: 攻撃属性取得
     get attackElement() {
         if(this.equipment.main_hand && this.equipment.main_hand.elem) return this.equipment.main_hand.elem;
-        // キャラ自身の属性があればそれを使う（魔法職など）
         if(this.elements.length > 0) return this.elements[0];
         return null;
     }
 
-    // ★追加: 防御属性取得
     get defenseElements() {
         let elems = [];
         for(let k in this.equipment) {
@@ -401,12 +407,10 @@ class Character {
     
     canEquip(item) {
         if (!item || !item.kind) return { ok: false, reason: "無効アイテム" };
-
         const job = this.job;
         if (job && job.equip && !job.equip.includes(item.kind) && item.kind !== 'ac') {
             return { ok: false, reason: "職業不可" };
         }
-        
         if (item.req) {
             const stats = this.totalStats;
             for (let key in item.req) {
@@ -415,7 +419,6 @@ class Character {
                 }
             }
         }
-        
         return { ok: true, reason: "" };
     }
 
@@ -425,13 +428,11 @@ class Character {
         const check = this.canEquip(item);
         if(!check.ok) return false;
 
-        // ★修正: アクセサリ用スロット選択ロジック
         let targetSlot = item.slot;
         if (item.slot === 'accessory') {
-            // 空いているスロット優先、なければアクセ1
             if (!this.equipment.accessory1) targetSlot = 'accessory1';
             else if (!this.equipment.accessory2) targetSlot = 'accessory2';
-            else targetSlot = 'accessory1'; // 簡易的に1と比較
+            else targetSlot = 'accessory1';
         }
 
         const cur = this.equipment[targetSlot];
@@ -455,12 +456,10 @@ class Character {
         }
 
         let targetSlot = item.slot;
-        // ★修正: 手動装備時のアクセサリスロット選択
         if (item.slot === 'accessory') {
-            // UI側で指定できればベストだが、簡易的に空きスロットへ
             if (!this.equipment.accessory1) targetSlot = 'accessory1';
             else if (!this.equipment.accessory2) targetSlot = 'accessory2';
-            else targetSlot = 'accessory1'; // デフォルトは1
+            else targetSlot = 'accessory1';
         }
 
         if (this.equipment[targetSlot]) {
@@ -528,7 +527,7 @@ const UI = {
         modal.innerHTML = `
             <div class="modal-box" style="text-align:center; padding:40px;">
                 <h1 style="color:var(--accent-color); font-size:32px; margin-bottom:10px;">🧬 Genetic Rogue</h1>
-                <p style="color:#888; margin-bottom:40px;">Ver.12.4</p>
+                <p style="color:#888; margin-bottom:40px;">Ver.12.5</p>
                 <div style="display:flex; flex-direction:column; gap:20px; width:200px; margin:0 auto;">
                     <button id="title-load" style="padding:15px; font-weight:bold; font-size:16px; ${loadStyle}" ${loadDisabled}>続きから</button>
                     <button id="title-new" style="padding:15px; font-size:16px;">はじめから</button>
@@ -558,8 +557,17 @@ const UI = {
         modal.className = 'modal-overlay';
         modal.style.display = 'flex';
 
+        // ★修正: 職業選択肢の生成（Tier 1 かつ 基本職のみ）
         const jobOptions = Object.values(DB.jobs)
-            .filter(j => j.tier === 1 && !j.reqJob && MASTER_DATA.jobs.find(def => def.id === j.baseId).tier === 1)
+            .filter(j => {
+                // Tier 1 チェック
+                if (j.tier !== 1) return false;
+                // 前提条件なし
+                if (j.reqJob) return false;
+                // 基本定義の確認 (baseIdがマスタデータにあり、かつTier1であること)
+                const baseDef = MASTER_DATA.jobs.find(def => def.id === j.baseId);
+                return baseDef && baseDef.tier === 1;
+            })
             .map(j => `<option value="${j.id}">${j.name}</option>`)
             .join('');
 
@@ -589,6 +597,8 @@ const UI = {
         const updatePreview = () => {
             const r = document.getElementById('cm-race').value;
             const raceData = MASTER_DATA.races[r];
+            if (!raceData) return;
+            
             let html = "<h4 style='color:var(--accent-color); margin:0 0 5px 0;'>ステータス補正</h4>";
             html += `<div style="font-size:12px; line-height:1.6;">HP: x${raceData.mod.hp} | STR: x${raceData.mod.str}<br>MAG: x${raceData.mod.mag} | AGI: x${raceData.mod.agi}</div>`;
             document.getElementById('cm-preview').innerHTML = html;
@@ -599,6 +609,7 @@ const UI = {
         document.getElementById('cm-start').onclick = () => {
             const r = document.getElementById('cm-race').value;
             const j = document.getElementById('cm-job').value;
+            if(!j) return alert("職業を選択してください");
             Game.startNewGame(r, j);
             modal.remove();
         };
@@ -628,7 +639,6 @@ const UI = {
             const hpPct = Math.max(0, Math.min(100, (char.hp / stats.hp) * 100));
             const expPct = Math.min(100, (char.exp / char.maxExp) * 100);
             
-            // ★修正: 新スロット表示
             let equipHtml = '<div class="equip-grid">';
             for(let slot in char.equipment) {
                 let item = char.equipment[slot];
@@ -701,6 +711,8 @@ const UI = {
     renderHire() {
         const el = document.getElementById('guild-list');
         el.innerHTML = "";
+        
+        // ★修正: 雇用リストも Tier 1 基本職のみに制限
         Object.values(DB.jobs).filter(j => {
             if (j.tier !== 1) return false;
             if (j.reqJob) return false;
@@ -877,6 +889,10 @@ const UI = {
                 <span style="color:${item?'#fff':'#666'}">${item?item.name:'Empty'}</span>
             </div>`;
         }
+        
+        // 家系図表示ロジック
+        const pedigree = c.pedigree || { f: null, m: null };
+        const renderParent = (p) => p ? `${p.name} (${p.race}/${p.job})` : "不明";
 
         const html = `
             <div class="detail-header">
@@ -893,6 +909,12 @@ const UI = {
                     <div class="detail-row"><span class="detail-label">INT</span> <span>${s.int}</span></div>
                     <div class="detail-row"><span class="detail-label">AGI</span> <span>${s.agi}</span></div>
                     <div class="detail-row"><span class="detail-label">LUC</span> <span>${s.luc}</span></div>
+                    
+                    <h4 style="color:#888; border-bottom:1px solid #333; margin-bottom:5px; margin-top:15px;">家系図</h4>
+                    <div style="font-size:11px; color:#aaa;">
+                        <div>父: ${renderParent(pedigree.f)}</div>
+                        <div>母: ${renderParent(pedigree.m)}</div>
+                    </div>
                 </div>
                 <div>
                     <h4 style="color:#888; border-bottom:1px solid #333; margin-bottom:5px;">装備</h4>
