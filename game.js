@@ -420,6 +420,12 @@ const UI = {
         bind('btn-help', () => this.openModal('modal-rules'));
         bind('btn-sell-trash', () => Game.sellTrash());
         
+        // ★修正: 雇用コスト表示を初期化時に更新
+        const hireCostEl = document.getElementById('hire-cost');
+        if(hireCostEl && MASTER_DATA.config) {
+            hireCostEl.innerText = MASTER_DATA.config.HIRE_COST;
+        }
+
         document.querySelectorAll('.close-modal').forEach(b => {
             b.onclick = () => this.closeModal();
         });
@@ -653,6 +659,7 @@ const UI = {
             });
             return;
         }
+
         const currentJob = DB.getJob(this.selChar.jobKey);
         if(!currentJob) return;
 
@@ -677,7 +684,6 @@ const UI = {
         el.appendChild(back);
     },
     
-    // Improved Render Inv
     renderInv(filter = 'all') {
         this.invFilter = filter;
         const cList = document.getElementById('equip-char-list'); 
@@ -699,7 +705,6 @@ const UI = {
             return;
         }
         
-        // Filter Buttons
         const filters = ['all', 'weapon', 'armor', 'accessory'];
         const filterLabels = {all:'すべて', weapon:'武器', armor:'防具', accessory:'装飾'};
         let filterHtml = '<div style="display:flex; gap:5px; margin-bottom:10px;">';
@@ -709,7 +714,6 @@ const UI = {
         });
         filterHtml += '</div>';
 
-        // Current Equipment Area (Visual separation)
         let equipArea = `<div style="background:#222; padding:10px; border-radius:4px; margin-bottom:15px;">`;
         equipArea += `<div style="font-size:12px; color:#888; margin-bottom:5px;">装備中</div>`;
         for(let slot in this.equipChar.equipment) {
@@ -722,7 +726,6 @@ const UI = {
 
         iList.innerHTML = equipArea + filterHtml + `<div style="font-size:12px; color:#888; margin-bottom:5px;">所持品リスト</div>`;
 
-        // Item List with Filter
         let displayItems = Game.inventory.filter(item => {
             if(this.invFilter === 'all') return true;
             return item.type === this.invFilter;
@@ -734,15 +737,13 @@ const UI = {
         }
 
         displayItems.forEach((item) => {
-            const realIdx = Game.inventory.indexOf(item); // Original index
+            const realIdx = Game.inventory.indexOf(item); 
             const div = document.createElement('div');
             
             const check = this.equipChar.canEquip(item);
-            // Highlight logic
             let style = "";
             let statusBadge = "";
             if (check.ok) {
-                // Highlighting equippable items
                 style = "border-left: 3px solid var(--accent-color); background: #1a2a22;";
                 statusBadge = `<span style="color:var(--accent-color); font-size:9px;">[装備可]</span>`;
             } else {

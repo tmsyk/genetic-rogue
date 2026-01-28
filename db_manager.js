@@ -23,15 +23,13 @@ const DB = {
                     if(rank.tier === 5 && el.key === null) return; 
 
                     const uniqueId = `${el.key||'n'}_${rank.tier}_${base.id}`;
-                    
                     const name = `${el.name}${rank.prefix}${base.name}`;
-                    
                     let mod = { all: rank.mod };
                     if(el.key) mod.mag = (mod.mag||0) + 0.2; 
 
                     let reqJob = base.reqJob; 
                     if (!reqJob && rank.tier > 1) {
-                        reqJob = base.id; // Fallback to base requirement
+                        reqJob = base.id; 
                     }
 
                     this.jobs[uniqueId] = {
@@ -44,7 +42,7 @@ const DB = {
                         mod: mod,
                         reqEl: el.key ? [el.key] : null,
                         reqJob: reqJob,
-                        reqStats: base.reqStats, // Pass requirements
+                        reqStats: base.reqStats, 
                         baseId: base.id
                     };
                 });
@@ -57,30 +55,37 @@ const DB = {
     },
     
     createRandomItem(floor) {
-        // アイテムのTier制限
-        const maxTier = Math.min(5, Math.ceil(floor / 5));
+        // ★修正: 階層に基づく最大Tier制限
+        const maxTier = Math.max(1, Math.min(5, Math.ceil(floor / 5)));
         
-        // アイテム種別、素材をランダム選択
-        // ※実際にはここでTierに基づいた素材フィルタリングなどを入れるとさらに良い
-        const types = Object.keys(MASTER_DATA.items.types);
-        const typeKey = types[Math.floor(Math.random() * types.length)];
-        const typeData = MASTER_DATA.items.types[typeKey];
+        // 1. タイプ抽選 (Tier制限)
+        const availableTypes = Object.values(MASTER_DATA.items.types).filter(t => t.tier <= maxTier);
+        // 万が一候補がない場合はTier 1を強制使用
+        const typePool = availableTypes.length > 0 ? availableTypes : Object.values(MASTER_DATA.items.types).filter(t => t.tier === 1);
         
-        // 素材の選択（Tierフィルタリング）
-        // 階層以下のTierの素材のみ抽選対象にする
-        const materials = MASTER_DATA.items.materials.filter(m => m.tier <= maxTier);
-        
-        // フィルタ結果が空ならTier1素材を使う（フォールバック）
-        const pool = materials.length > 0 ? materials : MASTER_DATA.items.materials.filter(m => m.tier === 1);
+        // 辞書オブジェクトのキーではなく値のリストを使っているので、キーを探す必要がある
+        // しかし、後続の処理では `kind` があれば良いので、typeDataを直接使う
+        const typeData = typePool[Math.floor(Math.random() * typePool.length)];
+        // typeDataに対応するキー（sw, axなど）は typeData.kind には入っていないため、MASTER_DATAから逆引きするか、
+        // そもそも id プロパティを持たせる設計にすべきだが、ここでは簡易的に処理する。
+        // アイテム生成時は kind (sw, ax...) が重要。
+        // CSV読み込み時に kind は保存されているはず。 (convertItems参照: kind: item.kind)
+        // typeData は convertItems で生成されたオブジェクトそのもの。
+        const typeKey = typeData.kind;
 
-        let totalW = pool.reduce((a,b)=>a+b.w, 0);
+        // 2. 素材抽選 (Tier制限)
+        const availableMats = MASTER_DATA.items.materials.filter(m => m.tier <= maxTier);
+        const matPool = availableMats.length > 0 ? availableMats : MASTER_DATA.items.materials.filter(m => m.tier === 1);
+        
+        let totalW = matPool.reduce((a,b)=>a+b.w, 0);
         let r = Math.random() * totalW;
-        let mat = pool[0];
-        for(let m of pool) {
+        let mat = matPool[0];
+        for(let m of matPool) {
             r -= m.w;
             if(r <= 0) { mat = m; break; }
         }
         
+        // 3. レアリティ抽選 (Tier制限)
         let rarity = 1;
         const rRoll = Math.random() + (floor * 0.01);
         if(rRoll > 0.98) rarity = 5;
@@ -88,8 +93,10 @@ const DB = {
         else if(rRoll > 0.70) rarity = 3;
         else if(rRoll > 0.40) rarity = 2;
         
-        rarity = Math.min(rarity, maxTier + 2); 
+        // レアリティも現在の階層Tier + 1 程度までに抑える
+        rarity = Math.min(rarity, maxTier + 1); 
 
+        // 4. データ構築
         let item = {
             uid: Math.random().toString(36).substr(2),
             name: `${mat.name}${typeData.name}`,
@@ -97,7 +104,7 @@ const DB = {
             slot: typeData.slot,
             stats: { ...typeData.base },
             rarity: rarity,
-            tier: Math.max(1, mat.tier), 
+            tier: Math.max(typeData.tier, mat.tier), 
             elem: mat.elem || null
         };
 
@@ -118,20 +125,18 @@ const DB = {
             }
         }
         
-        // 階層補正
+        // 階層補正（微調整）
         for(let k in item.stats) item.stats[k] = Math.ceil(item.stats[k] * (1 + floor * 0.1));
 
         return item;
     },
 
     createEnemy(floor, isElite=false) {
-        // 敵のTier制限ロジック
-        const maxTier = Math.max(1, Math.ceil(floor / 5)); // 5階層ごとにTierキャップ解放
+        // 敵のTier制限
+        const maxTier = Math.max(1, Math.min(5, Math.ceil(floor / 5))); 
         
-        // 現在のTier以下の敵のみ抽出
         let candidates = MASTER_DATA.enemies.species.filter(e => e.tier <= maxTier);
         
-        // 候補がない場合はTier 1を出す（安全策）
         if (candidates.length === 0) {
             candidates = MASTER_DATA.enemies.species.filter(e => e.tier === 1);
         }

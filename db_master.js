@@ -1,5 +1,6 @@
 /**
- * Genetic Rogue - Master Database (Tier Updated Version)
+ * Genetic Rogue - Master Database (Full Version)
+ * スプレッドシート等で管理しているCSVデータをここに貼り付けるだけで反映されます。
  */
 
 // ==========================================
@@ -128,7 +129,7 @@ marine,宇宙海兵,4,phy,"gun,sw,ha",tech,1.5,1.8,1.5,0.5,1.2,1.2,1.0,sniper,40
 psycho,超能力者,4,mag,"dv,ro,ac",magic,0.8,0.5,0.8,2.5,2.5,1.2,1.0,sage,,,,90,90,,
 jester,遊び人,2,spe,"dg,ins,la",special,1.0,0.8,0.8,1.0,1.0,1.0,3.0,merchant,,,,,,,50`;
 
-// アイテムマスタ
+// アイテムマスタ (tierを追加)
 const CSV_ITEMS = `id,name,kind,type,slot,base_str,base_vit,base_mag,base_int,base_agi,base_luc,base_dex,tier,req_stat,req_val
 w1,ショートソード,sw,weapon,main_hand,5,0,0,0,0,0,0,1,,
 w2,ロングソード,sw,weapon,main_hand,10,0,0,0,0,0,0,2,,
@@ -176,7 +177,7 @@ const CSV_MATERIALS = `name,tier,mod_str,mod_vit,mod_mag,mod_int,mod_agi,mod_luc
 竜の,4,20,20,0,0,0,0,fire,2
 神の,5,20,20,20,20,20,20,light,1`;
 
-// 敵マスタ (tier列を追加)
+// 敵マスタ
 const CSV_ENEMIES = `name,hp,str,def,mag,agi,exp,gold,element,tier
 スライム,20,5,2,0,5,10,5,water,1
 ネズミ,15,7,1,0,10,12,7,earth,1
@@ -239,6 +240,7 @@ const DataParser = {
                 hp: job.mod_hp || 1.0
             };
             
+            // ステータス要件の抽出
             const reqStats = {};
             ['hp', 'str', 'vit', 'mag', 'int', 'agi', 'luc'].forEach(stat => {
                 const key = `req_${stat}`;
@@ -283,7 +285,7 @@ const DataParser = {
                 slot: item.slot,
                 type: item.type,
                 base: base,
-                tier: item.tier,
+                tier: item.tier || 1, // Tierがない場合は1
                 req: req
             };
         });
@@ -319,7 +321,7 @@ const DataParser = {
             exp: e.exp,
             gold: e.gold,
             elem: e.element || null,
-            tier: e.tier || 1 // デフォルトTier1
+            tier: e.tier || 1
         }));
     },
 
@@ -349,6 +351,7 @@ const DataParser = {
     convertSkills(rawSkills) {
         const data = {};
         const pool = { phy:[], mag:[], spd:[], tnk:[], sup:[] };
+        
         rawSkills.forEach(s => {
             data[s.name] = { desc: s.desc };
             if(pool[s.type]) pool[s.type].push(s.name);
@@ -398,7 +401,8 @@ const MASTER_DATA = {
     config: {
         MAX_PARTY: 6,
         BREED_MIN_LV: 30,
-        HIRE_COST: 30, CC_COST: 100,
+        HIRE_COST: 100, // ★コストを100に変更
+        CC_COST: 100,
         MAX_LEVEL: 99,
         BASE_STATS: { hp:50, str:5, vit:5, mag:5, int:5, agi:5, luc:5 },
         FLOOR_STEP_MAX: 30
