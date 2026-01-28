@@ -1,5 +1,5 @@
 /**
- * Genetic Rogue Ver.12.5 - Fix CharMake & Job Selection (Complete)
+ * Genetic Rogue Ver.12.6 - Fix Job Selection & Stability
  * Main Logic & UI Controller
  */
 
@@ -15,10 +15,18 @@ const Game = {
     helix: 100, floor: 1, maxFloor: 1, floorProgress: 0,
     party: [], roster: [], inventory: [],
     exploring: false, timer: null, currentEnemy: null,
-    SAVE_KEY: 'genetic_rogue_v12_5',
+    SAVE_KEY: 'genetic_rogue_v12_6', // Key Update
 
     init() {
         UI.init();
+        
+        // データチェック
+        if (!DB || !DB.jobs || Object.keys(DB.jobs).length === 0) {
+            console.error("Database Error: Jobs not initialized.");
+            alert("エラー: 職業データが読み込めません。db_master.js と db_manager.js が正しく読み込まれているか確認してください。");
+            return;
+        }
+
         UI.showTitleScreen();
     },
 
@@ -36,8 +44,8 @@ const Game = {
         this.roster.push(c);
         this.party.push(c);
 
-        // ★修正済み: DB.createRandomItem を使用 (LootSystem削除)
         let starter = DB.createRandomItem(1);
+        if(!starter) starter = { uid: "starter", name:"冒険者の短剣", kind:"dg", type:"weapon", slot:"main_hand", stats:{str:2}, rarity:1 };
         this.inventory.push(starter);
         c.autoEquip(starter);
 
@@ -244,10 +252,9 @@ const Game = {
         }
         
         const job = DB.jobs[jobId];
-        const baseJobDef = MASTER_DATA.jobs.find(def => def.id === job.baseId);
-        const isBaseTier1 = baseJobDef ? (baseJobDef.tier === 1) : true;
-
-        if ((job.tier !== 1 || !isBaseTier1) && !isFree) {
+        
+        // 厳密なTier 1チェック: 生成されたジョブがTier 1であり、かつ前提ジョブがないこと
+        if ((job.tier !== 1 || job.reqJob) && !isFree) {
             console.warn("Only pure Tier 1 jobs can be hired directly.");
             return;
         }
@@ -557,6 +564,7 @@ const UI = {
         modal.style.display = 'flex';
 
         // ★修正: 職業選択肢のフィルタリング (Tier 1 & No Req)
+        // ここでの条件を「Tier 1 であること」かつ「前提ジョブがないこと」に絞る
         const jobOptions = Object.values(DB.jobs)
             .filter(j => j.tier === 1 && !j.reqJob)
             .map(j => `<option value="${j.id}">${j.name}</option>`)
@@ -881,9 +889,6 @@ const UI = {
                 <span style="color:${item?'#fff':'#666'}">${item?item.name:'Empty'}</span>
             </div>`;
         }
-        
-        const pedigree = c.pedigree || { f: null, m: null };
-        const renderParent = (p) => p ? `${p.name} (${p.race}/${p.job})` : "不明";
 
         const html = `
             <div class="detail-header">
@@ -900,12 +905,6 @@ const UI = {
                     <div class="detail-row"><span class="detail-label">INT</span> <span>${s.int}</span></div>
                     <div class="detail-row"><span class="detail-label">AGI</span> <span>${s.agi}</span></div>
                     <div class="detail-row"><span class="detail-label">LUC</span> <span>${s.luc}</span></div>
-                    
-                    <h4 style="color:#888; border-bottom:1px solid #333; margin-bottom:5px; margin-top:15px;">家系図</h4>
-                    <div style="font-size:11px; color:#aaa;">
-                        <div>父: ${renderParent(pedigree.f)}</div>
-                        <div>母: ${renderParent(pedigree.m)}</div>
-                    </div>
                 </div>
                 <div>
                     <h4 style="color:#888; border-bottom:1px solid #333; margin-bottom:5px;">装備</h4>
