@@ -709,8 +709,9 @@ const CSV_SKILLS = `name,type,desc,mod_hp,mod_str,mod_vit,mod_mag,mod_int,mod_ag
 // ==========================================
 // 2. CSVパーサーとデータ変換ロジック
 // ==========================================
+
 const DataParser = {
-    // 修正: 空文字でも列を飛ばさない確実なパーサー
+    // 修正: 空のフィールドも正しく読み取れるパーサー
     parse(csvText) {
         if(!csvText) return [];
         const lines = csvText.trim().split('\n');
@@ -719,6 +720,7 @@ const DataParser = {
 
         for (let i = 1; i < lines.length; i++) {
             const line = lines[i];
+            // ダブルクォート内のカンマを無視し、空フィールドも維持するスプリット処理
             const row = [];
             let current = '';
             let inQuote = false;
@@ -734,16 +736,15 @@ const DataParser = {
                     current += char;
                 }
             }
-            row.push(current);
+            row.push(current); // 最後の列を追加
 
-            // 空行チェック
             if (row.length === 0 || (row.length === 1 && row[0] === '')) continue;
 
             const obj = {};
             headers.forEach((header, index) => {
-                let value = row[index] ? row[index].replace(/^"|"$/g, '') : '';
+                let value = row[index] ? row[index].replace(/^"|"$/g, '') : ''; // クォート削除
                 if (value !== '' && !isNaN(value)) {
-                    value = Number(value);
+                    value = Number(value); // 数値変換
                 }
                 obj[header] = value;
             });
@@ -794,8 +795,7 @@ const DataParser = {
                 mod: mod,
                 reqJob: job.req_job || null,
                 reqStats: reqStats,
-                // もしreq_elがあればここで処理するが、CSVには含まれていないため省略
-                reqEl: null 
+                reqEl: job.req_el ? job.req_el.split(';') : null // ★追加: 属性要件のパース
             };
         });
     },
@@ -824,7 +824,7 @@ const DataParser = {
                 base: base,
                 tier: item.tier || 1,
                 req: req,
-                elem: item.element || null
+                elem: item.element || null // ★属性追加
             };
         });
         return items;
@@ -890,7 +890,18 @@ const DataParser = {
         const data = {};
         const pool = { phy:[], mag:[], spd:[], tnk:[], sup:[] };
         rawSkills.forEach(s => {
-            data[s.name] = { desc: s.desc };
+            // パッシブ補正値の読み込み
+            const mod = {};
+            ['hp','str','vit','mag','int','agi','luc'].forEach(stat => {
+                const key = `mod_${stat}`;
+                if(s[key] && s[key] > 0) mod[stat] = s[key];
+            });
+
+            data[s.name] = { 
+                desc: s.desc, 
+                type: s.type,
+                mod: mod // ★追加
+            };
             if(pool[s.type]) pool[s.type].push(s.name);
         });
         return { data: data, pool: pool };
@@ -947,7 +958,6 @@ const MASTER_DATA = {
     elements: parsedElements.list,
     element_chart: parsedElements.chart,
     jobs: DataParser.convertJobs(RAW_JOBS),
-    
     job_ranks: [
         { tier: 1, prefix: "", mod: 1.0 },
         { tier: 2, prefix: "熟練", mod: 1.2 },
