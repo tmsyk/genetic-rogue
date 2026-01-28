@@ -104,59 +104,62 @@ const CSV_SKILLS = `name,type,desc
 
 // 職業マスタ
 const CSV_JOBS = `id,name,tier,type,equip_types,lineage,mod_hp,mod_str,mod_vit,mod_mag,mod_int,mod_agi,mod_luc,req_job,req_hp,req_str,req_vit,req_mag,req_int,req_agi,req_luc
-warrior,戦士,1,phy,"sw,ax,ha,sh",warrior,1.2,1.2,1.1,0.5,0.8,0.9,1.0,,,,,,,,
-mage,魔法使い,1,mag,"st,dg,ro,ac",magic,0.8,0.6,0.8,1.5,1.4,1.0,1.0,,,,,,,,
-thief,盗賊,1,spd,"dg,bow,la,ac",shadow,0.9,1.2,0.8,0.8,1.2,1.5,1.5,,,,,,,,
-priest,僧侶,1,sup,"st,ro,sh,ac",holy,1.0,0.8,1.2,1.2,1.3,0.9,1.2,,,,,,,,
-merchant,商人,1,spe,"dg,la,ac",special,1.0,0.8,0.8,1.0,1.2,1.0,1.8,,,,,,,,
+warrior,戦士,1,phy,"sw,ax,ha,sh,hd,ac",warrior,1.2,1.2,1.1,0.5,0.8,0.9,1.0,,,,,,,,
+mage,魔法使い,1,mag,"st,dg,ro,hd,ac",magic,0.8,0.6,0.8,1.5,1.4,1.0,1.0,,,,,,,,
+thief,盗賊,1,spd,"dg,bow,la,hd,ac",shadow,0.9,1.2,0.8,0.8,1.2,1.5,1.5,,,,,,,,
+priest,僧侶,1,sup,"st,ro,sh,hd,ac",holy,1.0,0.8,1.2,1.2,1.3,0.9,1.2,,,,,,,,
+merchant,商人,1,spe,"dg,la,hd,ac",special,1.0,0.8,0.8,1.0,1.2,1.0,1.8,,,,,,,,
 monk,武闘家,1,phy,"kn,la,ac",martial,1.3,1.1,0.9,0.8,1.0,1.3,1.0,,,,,,,,
-hunter,狩人,1,tec,"bow,dg,la,ac",shadow,1.0,1.1,1.0,0.5,1.2,1.3,1.1,,,,,,,,
-knight,騎士,2,tnk,"sw,sp,ha,sh",warrior,1.4,1.2,1.4,0.6,1.0,0.8,1.0,warrior,100,20,20,,,,
-samurai,侍,2,phy,"sw,bow,la",martial,1.2,1.5,1.0,0.6,1.1,1.2,1.0,monk,,30,,,,,
-sorcerer,魔術師,2,mag,"st,dg,ro",magic,0.7,0.5,0.7,1.7,1.5,1.0,1.0,mage,,,20,30,,,
-bard,吟遊詩人,2,sup,"ins,dg,la",special,1.0,0.9,0.9,1.2,1.2,1.1,1.5,merchant,,,,,,20,20
-ninja,忍者,2,spd,"sw,dg,to,la",shadow,0.9,1.3,0.8,1.0,1.2,1.6,1.2,thief,,,,,20,30,
-gunner,ガンマン,2,tec,"gun,la,ac",tech,1.1,1.2,1.0,0.5,1.4,1.2,1.1,hunter,,,,,,25,
-paladin,聖騎士,3,tnk,"sw,ha,sh",warrior,1.5,1.3,1.8,1.0,1.2,0.8,1.0,knight,200,40,40,20,,,
-sage,賢者,3,mag,"st,ro,ac",magic,0.8,0.5,0.8,2.0,2.0,1.0,1.0,sorcerer,,,,50,40,,
-assassin,暗殺者,3,spd,"dg,bow,la",shadow,0.9,1.5,0.7,0.8,1.3,1.8,1.3,ninja,,40,,,20,50,
-dragoon,竜騎士,3,phy,"sp,ha,la",warrior,1.4,1.6,1.2,0.8,1.0,1.2,1.0,knight,250,50,30,,,,
-sniper,狙撃手,3,tec,"gun,la,to",tech,1.0,1.6,0.9,0.5,1.5,1.3,1.2,gunner,,40,,,20,,
-hero,英雄,4,phy,"sw,ax,sp,ha",warrior,1.5,1.8,1.5,1.0,1.2,1.2,1.5,paladin,400,80,60,40,40,40,40
-cyborg,サイボーグ,4,tnk,"dv,ax,gun,ha",tech,1.8,1.6,2.0,0.5,1.5,1.0,0.8,sniper,500,70,70,,,,
-demon,魔神,4,mag,"st,dv,ro",magic,1.2,1.0,1.0,3.0,1.5,1.2,0.5,sage,,20,20,100,60,,
-marine,宇宙海兵,4,phy,"gun,sw,ha",tech,1.5,1.8,1.5,0.5,1.2,1.2,1.0,sniper,400,80,50,,,,
+hunter,狩人,1,tec,"bow,dg,la,hd,ac",shadow,1.0,1.1,1.0,0.5,1.2,1.3,1.1,,,,,,,,
+knight,騎士,2,tnk,"sw,sp,ha,sh,hd,ac",warrior,1.4,1.2,1.4,0.6,1.0,0.8,1.0,warrior,100,20,20,,,,
+samurai,侍,2,phy,"sw,bow,la,ac",martial,1.2,1.5,1.0,0.6,1.1,1.2,1.0,monk,,30,,,,,
+sorcerer,魔術師,2,mag,"st,dg,ro,hd,ac",magic,0.7,0.5,0.7,1.7,1.5,1.0,1.0,mage,,,20,30,,,
+bard,吟遊詩人,2,sup,"ins,dg,la,hd,ac",special,1.0,0.9,0.9,1.2,1.2,1.1,1.5,merchant,,,,,,20,20
+ninja,忍者,2,spd,"sw,dg,to,la,hd,ac",shadow,0.9,1.3,0.8,1.0,1.2,1.6,1.2,thief,,,,,20,30,
+gunner,ガンマン,2,tec,"gun,la,hd,ac",tech,1.1,1.2,1.0,0.5,1.4,1.2,1.1,hunter,,,,,,25,
+paladin,聖騎士,3,tnk,"sw,ha,sh,hd,ac",warrior,1.5,1.3,1.8,1.0,1.2,0.8,1.0,knight,200,40,40,20,,,
+sage,賢者,3,mag,"st,ro,hd,ac",magic,0.8,0.5,0.8,2.0,2.0,1.0,1.0,sorcerer,,,,50,40,,
+assassin,暗殺者,3,spd,"dg,bow,la,hd,ac",shadow,0.9,1.5,0.7,0.8,1.3,1.8,1.3,ninja,,40,,,20,50,
+dragoon,竜騎士,3,phy,"sp,ha,la,hd,ac",warrior,1.4,1.6,1.2,0.8,1.0,1.2,1.0,knight,250,50,30,,,,
+sniper,狙撃手,3,tec,"gun,la,to,hd,ac",tech,1.0,1.6,0.9,0.5,1.5,1.3,1.2,gunner,,40,,,20,,
+hero,英雄,4,phy,"sw,ax,sp,ha,sh,hd,ac",warrior,1.5,1.8,1.5,1.0,1.2,1.2,1.5,paladin,400,80,60,40,40,40,40
+cyborg,サイボーグ,4,tnk,"dv,ax,gun,ha,hd,ac",tech,1.8,1.6,2.0,0.5,1.5,1.0,0.8,sniper,500,70,70,,,,
+demon,魔神,4,mag,"st,dv,ro,hd,ac",magic,1.2,1.0,1.0,3.0,1.5,1.2,0.5,sage,,20,20,100,60,,
+marine,宇宙海兵,4,phy,"gun,sw,ha,dv,hd,ac",tech,1.5,1.8,1.5,0.5,1.2,1.2,1.0,sniper,400,80,50,,,,
 psycho,超能力者,4,mag,"dv,ro,ac",magic,0.8,0.5,0.8,2.5,2.5,1.2,1.0,sage,,,,90,90,,
-jester,遊び人,2,spe,"dg,ins,la",special,1.0,0.8,0.8,1.0,1.0,1.0,3.0,merchant,,,,,,,50`;
+jester,遊び人,2,spe,"dg,ins,la,hd,ac",special,1.0,0.8,0.8,1.0,1.0,1.0,3.0,merchant,,,,,,,50`;
 
-// アイテムマスタ (tierを追加)
-const CSV_ITEMS = `id,name,kind,type,slot,base_str,base_vit,base_mag,base_int,base_agi,base_luc,base_dex,tier,req_stat,req_val
-w1,ショートソード,sw,weapon,main_hand,5,0,0,0,0,0,0,1,,
-w2,ロングソード,sw,weapon,main_hand,10,0,0,0,0,0,0,2,,
-w3,バスタードソード,sw,weapon,main_hand,20,0,0,0,-2,0,0,2,str,15
-w4,ビームサーベル,sw,weapon,main_hand,45,0,0,5,0,0,0,4,,
-ax1,ハンドアクス,ax,weapon,main_hand,8,0,0,0,-1,0,0,1,,
-ax2,バトルアクス,ax,weapon,main_hand,25,0,0,0,-5,0,0,3,str,40
-sp1,スピア,sp,weapon,main_hand,6,0,0,0,2,0,0,1,,
-sp2,ハルバード,sp,weapon,main_hand,18,0,0,0,0,0,0,2,,
-dg1,ナイフ,dg,weapon,main_hand,3,0,0,0,3,0,0,1,,
-dg2,アサシンダガー,dg,weapon,main_hand,12,0,0,0,0,5,0,2,,
-bw1,ショートボウ,bow,weapon,main_hand,5,0,0,0,0,0,3,1,,
-gn1,ハンドガン,gun,weapon,main_hand,15,0,0,0,0,0,5,2,,
-st1,ロッド,st,weapon,main_hand,0,0,5,0,0,0,0,1,,
-st2,マジックスタッフ,st,weapon,main_hand,0,0,15,5,0,0,0,2,,
-kn1,バンテージ,kn,weapon,main_hand,2,0,0,0,5,0,0,1,,
-kn2,アイアンナックル,kn,weapon,main_hand,10,0,0,0,3,0,0,2,,
-a1,ボロの服,la,armor,body,0,1,0,0,0,0,0,1,,
-a2,レザーアーマー,la,armor,body,0,5,0,0,0,0,0,1,,
-a3,プレートメイル,ha,armor,body,0,15,0,0,-3,0,0,2,vit,20
-a4,ナノスーツ,la,armor,body,0,30,0,0,0,0,0,4,,
-ro1,ローブ,ro,armor,body,0,2,2,0,0,0,0,1,,
-sh1,バックラー,sh,armor,off_hand,0,2,0,0,1,0,0,1,,
-sh2,タワーシールド,sh,armor,off_hand,0,10,0,0,-5,0,0,2,,
-ac1,リング,ac,accessory,accessory,0,0,0,0,0,2,0,1,,
-ac2,アミュレット,ac,accessory,accessory,0,0,0,3,0,0,0,1,,
-ac3,パワーベルト,ac,accessory,accessory,5,0,0,0,0,0,0,2,,`;
+// アイテムマスタ (head装備追加, element列追加)
+const CSV_ITEMS = `id,name,kind,type,slot,base_str,base_vit,base_mag,base_int,base_agi,base_luc,base_dex,tier,req_stat,req_val,element
+w1,ショートソード,sw,weapon,main_hand,5,0,0,0,0,0,0,1,,,
+w2,ロングソード,sw,weapon,main_hand,10,0,0,0,0,0,0,2,,,
+w3,バスタードソード,sw,weapon,main_hand,20,0,0,0,-2,0,0,2,str,15,
+w4,ビームサーベル,sw,weapon,main_hand,45,0,0,5,0,0,0,4,,,light
+ax1,ハンドアクス,ax,weapon,main_hand,8,0,0,0,-1,0,0,1,,,
+ax2,バトルアクス,ax,weapon,main_hand,25,0,0,0,-5,0,0,3,str,40,
+sp1,スピア,sp,weapon,main_hand,6,0,0,0,2,0,0,1,,,
+sp2,ハルバード,sp,weapon,main_hand,18,0,0,0,0,0,0,2,,,
+dg1,ナイフ,dg,weapon,main_hand,3,0,0,0,3,0,0,1,,,
+dg2,アサシンダガー,dg,weapon,main_hand,12,0,0,0,0,5,0,2,,,dark
+bw1,ショートボウ,bow,weapon,main_hand,5,0,0,0,0,0,3,1,,,
+gn1,ハンドガン,gun,weapon,main_hand,15,0,0,0,0,0,5,2,,,
+st1,ロッド,st,weapon,main_hand,0,0,5,0,0,0,0,1,,,
+st2,マジックスタッフ,st,weapon,main_hand,0,0,15,5,0,0,0,2,,,
+kn1,バンテージ,kn,weapon,main_hand,2,0,0,0,5,0,0,1,,,
+kn2,アイアンナックル,kn,weapon,main_hand,10,0,0,0,3,0,0,2,,,
+a1,ボロの服,la,armor,body,0,1,0,0,0,0,0,1,,,
+a2,レザーアーマー,la,armor,body,0,5,0,0,0,0,0,1,,,
+a3,プレートメイル,ha,armor,body,0,15,0,0,-3,0,0,2,vit,20,
+a4,ナノスーツ,la,armor,body,0,30,0,0,0,0,0,4,,,
+ro1,ローブ,ro,armor,body,0,2,2,0,0,0,0,1,,,
+sh1,バックラー,sh,armor,off_hand,0,2,0,0,1,0,0,1,,,
+sh2,タワーシールド,sh,armor,off_hand,0,10,0,0,-5,0,0,2,,,
+hd1,革の帽子,hd,armor,head,0,2,0,0,0,0,0,1,,,
+hd2,鉄の兜,hd,armor,head,0,5,0,0,-1,0,0,2,vit,10,
+hd3,ウィザードハット,hd,armor,head,0,1,2,5,0,0,0,2,,,
+ac1,リング,ac,accessory,accessory,0,0,0,0,0,2,0,1,,,
+ac2,アミュレット,ac,accessory,accessory,0,0,0,3,0,0,0,1,,,
+ac3,パワーベルト,ac,accessory,accessory,5,0,0,0,0,0,0,2,,,`;
 
 // 素材マスタ
 const CSV_MATERIALS = `name,tier,mod_str,mod_vit,mod_mag,mod_int,mod_agi,mod_luc,element,spawn_weight
@@ -240,7 +243,6 @@ const DataParser = {
                 hp: job.mod_hp || 1.0
             };
             
-            // ステータス要件の抽出
             const reqStats = {};
             ['hp', 'str', 'vit', 'mag', 'int', 'agi', 'luc'].forEach(stat => {
                 const key = `req_${stat}`;
@@ -285,8 +287,9 @@ const DataParser = {
                 slot: item.slot,
                 type: item.type,
                 base: base,
-                tier: item.tier || 1, // Tierがない場合は1
-                req: req
+                tier: item.tier || 1,
+                req: req,
+                elem: item.element || null // ★属性追加
             };
         });
         return items;
@@ -351,7 +354,6 @@ const DataParser = {
     convertSkills(rawSkills) {
         const data = {};
         const pool = { phy:[], mag:[], spd:[], tnk:[], sup:[] };
-        
         rawSkills.forEach(s => {
             data[s.name] = { desc: s.desc };
             if(pool[s.type]) pool[s.type].push(s.name);
@@ -401,7 +403,7 @@ const MASTER_DATA = {
     config: {
         MAX_PARTY: 6,
         BREED_MIN_LV: 30,
-        HIRE_COST: 100, // ★コストを100に変更
+        HIRE_COST: 100,
         CC_COST: 100,
         MAX_LEVEL: 99,
         BASE_STATS: { hp:50, str:5, vit:5, mag:5, int:5, agi:5, luc:5 },

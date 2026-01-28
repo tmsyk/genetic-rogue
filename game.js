@@ -1,5 +1,5 @@
 /**
- * Genetic Rogue Ver.12.3 - Inventory UI Improvement
+ * Genetic Rogue Ver.12.4
  * Main Logic & UI Controller
  */
 
@@ -15,7 +15,7 @@ const Game = {
     helix: 100, floor: 1, maxFloor: 1, floorProgress: 0,
     party: [], roster: [], inventory: [],
     exploring: false, timer: null, currentEnemy: null,
-    SAVE_KEY: 'genetic_rogue_v12_3',
+    SAVE_KEY: 'genetic_rogue_v12_4', // Ver Up
 
     init() {
         UI.init();
@@ -135,7 +135,9 @@ const Game = {
 
     encounter() {
         this.currentEnemy = DB.createEnemy(this.floor, this.floor % 5 === 0);
-        UI.log(`遭遇: ${this.currentEnemy.name} (HP:${this.currentEnemy.hp})`, "log-combat");
+        const ename = this.currentEnemy.name;
+        const eElem = this.currentEnemy.elem ? `[${MASTER_DATA.elements.find(e=>e.key===this.currentEnemy.elem).name}]` : "";
+        UI.log(`遭遇: ${ename} ${eElem} (HP:${this.currentEnemy.hp})`, "log-combat");
     },
 
     combatRound() {
@@ -144,10 +146,27 @@ const Game = {
         
         activeParty.forEach(c => {
             if(enemy.hp <= 0) return;
+            
+            // 属性補正計算
+            let elemMod = 1.0;
+            // 攻撃属性（武器 or キャラ）
+            let atkElem = c.attackElement;
+            if(atkElem && enemy.elem) {
+                if(MASTER_DATA.element_chart[atkElem].strong === enemy.elem) elemMod = 1.5;
+                else if(MASTER_DATA.element_chart[atkElem].weak === enemy.elem) elemMod = 0.5;
+            }
+
             let dmg = Math.max(1, Math.floor(c.totalStats.str - (enemy.vit/2)));
-            dmg = Math.floor(dmg * (0.9 + Math.random()*0.2));
+            // 魔法職ならMAG依存
+            if (c.job.type === 'mag' || c.job.type === 'sup') {
+                dmg = Math.max(1, Math.floor(c.totalStats.mag - (enemy.mag/2))); // Enemy MAG as MDEF
+            }
+
+            dmg = Math.floor(dmg * elemMod * (0.9 + Math.random()*0.2));
             enemy.hp -= dmg;
-            UI.log(`${c.name}の攻撃 -> ${dmg}`);
+            
+            let modText = elemMod > 1 ? "(弱点!)" : (elemMod < 1 ? "(半減)" : "");
+            UI.log(`${c.name}の攻撃${modText} -> ${dmg}`);
         });
 
         if(enemy.hp <= 0) {
@@ -159,7 +178,20 @@ const Game = {
         } else {
             const target = activeParty[Math.floor(Math.random()*activeParty.length)];
             if(target) {
+                // 敵の属性攻撃 vs プレイヤー耐性
+                let elemMod = 1.0;
+                if(enemy.elem) {
+                    // 防具属性チェック
+                    const defElems = target.defenseElements;
+                    // 簡易: 防具属性が敵属性に強ければ軽減
+                    for(let de of defElems) {
+                        if(MASTER_DATA.element_chart[de].strong === enemy.elem) elemMod *= 0.7; // 軽減
+                        if(MASTER_DATA.element_chart[de].weak === enemy.elem) elemMod *= 1.3; // 弱点
+                    }
+                }
+
                 let dmg = Math.max(1, Math.floor(enemy.str - (target.totalStats.vit/2)));
+                dmg = Math.floor(dmg * elemMod);
                 target.hp -= dmg;
                 UI.log(`${target.name} に ${dmg} のダメージ`, "log-dmg");
                 if(target.hp <= 0) UI.log(`${target.name} は倒れた...`, "log-defeat");
@@ -265,7 +297,7 @@ const Game = {
             UI.log(`売却: ${sold}個 (+${gain} Helix)`, "log-item");
             this.save();
             UI.updateAll();
-            UI.renderInv(); // インベントリ再描画
+            UI.renderInv();
         } else {
             alert("売却できるアイテム（コモン以下）がありません。");
         }
@@ -275,6 +307,12 @@ const Game = {
 class Character {
     constructor(jobKey, parents, data) {
         if(data && data.id) { 
+            // マイグレーション：新スロットがない場合に補完
+            if (!data.equipment.head) data.equipment.head = null;
+            if (!data.equipment.accessory1) data.equipment.accessory1 = data.equipment.accessory; // 旧データ移行
+            if (!data.equipment.accessory2) data.equipment.accessory2 = null;
+            delete data.equipment.accessory; // 旧スロット削除
+
             Object.assign(this, data); 
             return; 
         }
@@ -288,7 +326,15 @@ class Character {
         this.baseStats = {...MASTER_DATA.config.BASE_STATS};
         for(let k in this.baseStats) this.baseStats[k] = Math.floor(this.baseStats[k] * (0.9 + Math.random()*0.2));
         
-        this.equipment = {main_hand:null, body:null, accessory:null};
+        // ★修正: 新スロット定義
+        this.equipment = {
+            main_hand: null, 
+            off_hand: null, 
+            head: null, 
+            body: null, 
+            accessory1: null, 
+            accessory2: null
+        };
         
         this.personality = "凡人";
         this.elements = [];
@@ -324,6 +370,23 @@ class Character {
         }
         return s;
     }
+    
+    // ★追加: 攻撃属性取得
+    get attackElement() {
+        if(this.equipment.main_hand && this.equipment.main_hand.elem) return this.equipment.main_hand.elem;
+        // キャラ自身の属性があればそれを使う（魔法職など）
+        if(this.elements.length > 0) return this.elements[0];
+        return null;
+    }
+
+    // ★追加: 防御属性取得
+    get defenseElements() {
+        let elems = [];
+        for(let k in this.equipment) {
+            if(this.equipment[k] && this.equipment[k].elem) elems.push(this.equipment[k].elem);
+        }
+        return elems;
+    }
 
     gainExp(v) {
         this.exp += v;
@@ -340,12 +403,10 @@ class Character {
         if (!item || !item.kind) return { ok: false, reason: "無効アイテム" };
 
         const job = this.job;
-        // 職業の装備可能種別チェック
         if (job && job.equip && !job.equip.includes(item.kind) && item.kind !== 'ac') {
             return { ok: false, reason: "職業不可" };
         }
         
-        // ステータス要件チェック
         if (item.req) {
             const stats = this.totalStats;
             for (let key in item.req) {
@@ -364,13 +425,22 @@ class Character {
         const check = this.canEquip(item);
         if(!check.ok) return false;
 
-        const cur = this.equipment[item.slot];
+        // ★修正: アクセサリ用スロット選択ロジック
+        let targetSlot = item.slot;
+        if (item.slot === 'accessory') {
+            // 空いているスロット優先、なければアクセ1
+            if (!this.equipment.accessory1) targetSlot = 'accessory1';
+            else if (!this.equipment.accessory2) targetSlot = 'accessory2';
+            else targetSlot = 'accessory1'; // 簡易的に1と比較
+        }
+
+        const cur = this.equipment[targetSlot];
         const curScore = cur ? Object.values(cur.stats).reduce((a,b)=>a+b,0) : 0;
         const newScore = Object.values(item.stats).reduce((a,b)=>a+b,0);
         
         if(newScore > curScore) {
             if(cur) Game.inventory.push(cur);
-            this.equipment[item.slot] = item;
+            this.equipment[targetSlot] = item;
             UI.log(`${this.name}が${item.name}を装備`, "log-equip");
             return true;
         }
@@ -384,10 +454,19 @@ class Character {
             return false;
         }
 
-        if (this.equipment[item.slot]) {
-            Game.inventory.push(this.equipment[item.slot]);
+        let targetSlot = item.slot;
+        // ★修正: 手動装備時のアクセサリスロット選択
+        if (item.slot === 'accessory') {
+            // UI側で指定できればベストだが、簡易的に空きスロットへ
+            if (!this.equipment.accessory1) targetSlot = 'accessory1';
+            else if (!this.equipment.accessory2) targetSlot = 'accessory2';
+            else targetSlot = 'accessory1'; // デフォルトは1
         }
-        this.equipment[item.slot] = item;
+
+        if (this.equipment[targetSlot]) {
+            Game.inventory.push(this.equipment[targetSlot]);
+        }
+        this.equipment[targetSlot] = item;
         return true;
     }
 
@@ -404,7 +483,7 @@ const UI = {
     currentTab: 'roster',
     selChar: null,
     equipChar: null,
-    invFilter: 'all', // all, weapon, armor, accessory
+    invFilter: 'all', 
 
     init() {
         const bind = (id, fn) => {
@@ -420,12 +499,6 @@ const UI = {
         bind('btn-help', () => this.openModal('modal-rules'));
         bind('btn-sell-trash', () => Game.sellTrash());
         
-        // ★修正: 雇用コスト表示を初期化時に更新
-        const hireCostEl = document.getElementById('hire-cost');
-        if(hireCostEl && MASTER_DATA.config) {
-            hireCostEl.innerText = MASTER_DATA.config.HIRE_COST;
-        }
-
         document.querySelectorAll('.close-modal').forEach(b => {
             b.onclick = () => this.closeModal();
         });
@@ -455,7 +528,7 @@ const UI = {
         modal.innerHTML = `
             <div class="modal-box" style="text-align:center; padding:40px;">
                 <h1 style="color:var(--accent-color); font-size:32px; margin-bottom:10px;">🧬 Genetic Rogue</h1>
-                <p style="color:#888; margin-bottom:40px;">Ver.12.3</p>
+                <p style="color:#888; margin-bottom:40px;">Ver.12.4</p>
                 <div style="display:flex; flex-direction:column; gap:20px; width:200px; margin:0 auto;">
                     <button id="title-load" style="padding:15px; font-weight:bold; font-size:16px; ${loadStyle}" ${loadDisabled}>続きから</button>
                     <button id="title-new" style="padding:15px; font-size:16px;">はじめから</button>
@@ -555,6 +628,7 @@ const UI = {
             const hpPct = Math.max(0, Math.min(100, (char.hp / stats.hp) * 100));
             const expPct = Math.min(100, (char.exp / char.maxExp) * 100);
             
+            // ★修正: 新スロット表示
             let equipHtml = '<div class="equip-grid">';
             for(let slot in char.equipment) {
                 let item = char.equipment[slot];
