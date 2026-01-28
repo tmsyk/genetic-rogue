@@ -3,17 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Genetic Rogue ver0.12.1 - Fixed</title>
-    <!-- Faviconエラー回避 -->
+    <title>Genetic Rogue Ver.13.1 - Elements Map</title>
+    <!-- Favicon -->
     <link rel="icon" href="data:,">
-    <!-- CSS読み込み -->
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
 <div id="app">
     <header>
-        <div>🧬 Genetic Rogue <span style="color:#666;">ver0.12.1</span></div>
+        <div>🧬 Genetic Rogue <span style="color:#666;">Ver.13.1</span></div>
         <div style="font-size:14px; display:flex; align-items:center; gap:10px;">
             <div>
                 <span style="color:#aaa;">階層:</span> <span id="floor-display" style="font-weight:bold; font-size:16px;">1</span>
@@ -162,6 +161,35 @@
         </div>
         <div class="modal-body">
             <div class="rule-section">
+                <h4>属性相関図</h4>
+                <div class="element-chart-container">
+                    <div class="elem-node el-fire" style="top:10px; left:135px;">火</div>
+                    <div class="elem-node el-ice" style="top:70px; left:230px;">氷</div>
+                    <div class="elem-node el-wind" style="top:180px; left:230px;">風</div>
+                    <div class="elem-node el-earth" style="top:240px; left:135px;">土</div>
+                    <div class="elem-node el-thunder" style="top:180px; left:40px;">雷</div>
+                    <div class="elem-node el-water" style="top:70px; left:40px;">水</div>
+                    
+                    <div class="elem-center-group" style="position:absolute; top:120px; left:110px; text-align:center;">
+                        <div style="display:flex; gap:10px;">
+                            <div class="elem-node el-light" style="position:relative; width:35px; height:35px; font-size:10px;">光</div>
+                            <div class="elem-node el-dark" style="position:relative; width:35px; height:35px; font-size:10px;">闇</div>
+                        </div>
+                        <div style="font-size:10px; color:#aaa; margin-top:5px;">対立</div>
+                    </div>
+                    
+                    <!-- Arrows (Visual only, CSS for rotation) -->
+                    <div class="elem-arrow" style="top:35px; left:190px; transform:rotate(30deg);">→</div>
+                    <div class="elem-arrow" style="top:125px; left:240px; transform:rotate(90deg);">→</div>
+                    <div class="elem-arrow" style="top:220px; left:190px; transform:rotate(150deg);">→</div>
+                    <div class="elem-arrow" style="top:220px; left:80px; transform:rotate(210deg);">→</div>
+                    <div class="elem-arrow" style="top:125px; left:30px; transform:rotate(270deg);">→</div>
+                    <div class="elem-arrow" style="top:35px; left:80px; transform:rotate(330deg);">→</div>
+                </div>
+                <p style="text-align:center; font-size:10px; color:#888;">時計回りに有利（ダメージ1.5倍）</p>
+            </div>
+
+            <div class="rule-section">
                 <h4>基本ステータス</h4>
                 <table class="rule-table">
                     <tr><td>STR (腕力)</td><td>物理攻撃の威力に影響します。戦士系にとって重要。</td></tr>
@@ -172,24 +200,11 @@
                     <tr><td>LUC (運)</td><td>クリティカル率、アイテムドロップ率に影響します。</td></tr>
                 </table>
             </div>
-            <div class="rule-section">
-                <h4>戦闘ルール</h4>
-                <p>攻撃タイプは職業によって「物理」か「魔法」に分かれます。</p>
-                <ul>
-                    <li><strong>物理ダメージ:</strong> (STR + 武器攻撃力) - (敵VIT / 2)</li>
-                    <li><strong>魔法ダメージ:</strong> (MAG + 武器魔力) - (敵INT / 2)</li>
-                </ul>
-            </div>
-            <div class="rule-section">
-                <h4>属性と素材 (Materials)</h4>
-                <p>装備品には素材（Material）が付与され、ステータスや属性が強化されます。</p>
-                <p>属性は有利な相手に1.5倍、不利な相手に0.5倍のダメージを与えます。</p>
-            </div>
         </div>
     </div>
 </div>
 
-<!-- JS読み込み (順序重要) -->
+<!-- JS読み込み -->
 <script src="db_master.js"></script>
 <script src="db_manager.js"></script>
 <script src="game.js"></script>

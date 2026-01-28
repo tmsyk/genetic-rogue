@@ -3,11 +3,63 @@
     --accent-color: #00ff9d; --danger-color: #ff4d4d; --warn-color: #ff9900; --info-color: #3498db;
     --tier1: #bdc3c7; --tier2: #3498db; --tier3: #9b59b6; --tier4: #e74c3c; --tier5: #f1c40f;
     --rar-bad: #7f8c8d; --rar-common: #ccc; --rar-good: #2ecc71; --rar-rare: #3498db; --rar-legend: #f1c40f; --rar-god: #e056fd;
-    --elem-fire: #e74c3c; --elem-water: #3498db; --elem-wind: #2ecc71; --elem-earth: #d35400; --elem-light: #f1c40f; --elem-dark: #9b59b6;
+    /* New Element Colors */
+    --elem-fire: #e74c3c; 
+    --elem-ice: #a29bfe; 
+    --elem-wind: #2ecc71; 
+    --elem-earth: #d35400; 
+    --elem-thunder: #f1c40f; 
+    --elem-water: #3498db; 
+    --elem-light: #ecf0f1; 
+    --elem-dark: #2c3e50;
+
     --log-font: 'Helvetica Neue', Arial, sans-serif;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { background: var(--bg-color); color: var(--text-color); font-family: var(--log-font); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+/* ... (Existing Styles) ... */
+
+/* Element Chart Styles */
+.element-chart-container {
+    position: relative;
+    width: 300px;
+    height: 300px;
+    margin: 0 auto 10px;
+    background: #111;
+    border-radius: 50%;
+    border: 1px dashed #333;
+}
+.elem-node {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    color: #fff;
+    text-shadow: 0 0 3px #000;
+    position: absolute;
+    font-size: 12px;
+    border: 2px solid #333;
+}
+.elem-arrow {
+    position: absolute;
+    color: #666;
+    font-size: 20px;
+    font-weight: bold;
+}
+.el-fire { background: var(--elem-fire); box-shadow: 0 0 8px var(--elem-fire); }
+.el-ice { background: var(--elem-ice); box-shadow: 0 0 8px var(--elem-ice); color: #333; text-shadow:none; }
+.el-wind { background: var(--elem-wind); box-shadow: 0 0 8px var(--elem-wind); color: #333; text-shadow:none; }
+.el-earth { background: var(--elem-earth); box-shadow: 0 0 8px var(--elem-earth); }
+.el-thunder { background: var(--elem-thunder); box-shadow: 0 0 8px var(--elem-thunder); color: #333; text-shadow:none; }
+.el-water { background: var(--elem-water); box-shadow: 0 0 8px var(--elem-water); }
+.el-light { background: var(--elem-light); box-shadow: 0 0 8px var(--elem-light); color: #333; text-shadow:none; }
+.el-dark { background: var(--elem-dark); box-shadow: 0 0 8px var(--elem-dark); border: 1px solid #fff; }
+
+/* ... (Rest of existing styles) ... */
 
 /* Layout */
 #app { display: grid; grid-template-rows: 50px 1fr 60px; height: 100%; width: 100%; max-width: 1400px; margin: 0 auto; }
@@ -56,14 +108,8 @@ main { display: grid; grid-template-columns: 350px 1fr; gap: 1px; background: #2
 .hp-bar { background: var(--accent-color); }
 .exp-bar { background: #3498db; }
 
-/* Elements */
-.elem-icon { display:inline-block; width:12px; height:12px; border-radius:50%; margin-right:2px; vertical-align:middle; position: relative; top: -1px; }
-.el-fire { background: var(--elem-fire); box-shadow: 0 0 4px var(--elem-fire); }
-.el-water { background: var(--elem-water); box-shadow: 0 0 4px var(--elem-water); }
-.el-wind { background: var(--elem-wind); box-shadow: 0 0 4px var(--elem-wind); }
-.el-earth { background: var(--elem-earth); box-shadow: 0 0 4px var(--elem-earth); }
-.el-light { background: var(--elem-light); box-shadow: 0 0 4px var(--elem-light); }
-.el-dark { background: var(--elem-dark); box-shadow: 0 0 4px var(--elem-dark); }
+/* Elements (Small Icons) */
+.elem-icon { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:3px; }
 
 /* Stats & Equip */
 .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; color: #aaa; margin-top: 6px; }
