@@ -1,5 +1,5 @@
 /**
- * Genetic Rogue Ver.12.5 - Fix CharMake & Job Selection
+ * Genetic Rogue Ver.12.5 - Fix CharMake & Job Selection (Complete)
  * Main Logic & UI Controller
  */
 
@@ -36,7 +36,7 @@ const Game = {
         this.roster.push(c);
         this.party.push(c);
 
-        // ★修正: DB.createRandomItem を使用
+        // ★修正済み: DB.createRandomItem を使用 (LootSystem削除)
         let starter = DB.createRandomItem(1);
         this.inventory.push(starter);
         c.autoEquip(starter);
@@ -135,7 +135,9 @@ const Game = {
 
     encounter() {
         this.currentEnemy = DB.createEnemy(this.floor, this.floor % 5 === 0);
-        UI.log(`遭遇: ${this.currentEnemy.name} (HP:${this.currentEnemy.hp})`, "log-combat");
+        const ename = this.currentEnemy.name;
+        const eElem = this.currentEnemy.elem ? `[${MASTER_DATA.elements.find(e=>e.key===this.currentEnemy.elem).name}]` : "";
+        UI.log(`遭遇: ${ename} ${eElem} (HP:${this.currentEnemy.hp})`, "log-combat");
     },
 
     combatRound() {
@@ -144,10 +146,26 @@ const Game = {
         
         activeParty.forEach(c => {
             if(enemy.hp <= 0) return;
+            
+            // 属性補正計算
+            let elemMod = 1.0;
+            let atkElem = c.attackElement;
+            if(atkElem && enemy.elem) {
+                if(MASTER_DATA.element_chart[atkElem].strong === enemy.elem) elemMod = 1.5;
+                else if(MASTER_DATA.element_chart[atkElem].weak === enemy.elem) elemMod = 0.5;
+            }
+
             let dmg = Math.max(1, Math.floor(c.totalStats.str - (enemy.vit/2)));
-            dmg = Math.floor(dmg * (0.9 + Math.random()*0.2));
+            // 魔法職ならMAG依存
+            if (c.job.type === 'mag' || c.job.type === 'sup') {
+                dmg = Math.max(1, Math.floor(c.totalStats.mag - (enemy.mag/2)));
+            }
+
+            dmg = Math.floor(dmg * elemMod * (0.9 + Math.random()*0.2));
             enemy.hp -= dmg;
-            UI.log(`${c.name}の攻撃 -> ${dmg}`);
+            
+            let modText = elemMod > 1 ? "(弱点!)" : (elemMod < 1 ? "(半減)" : "");
+            UI.log(`${c.name}の攻撃${modText} -> ${dmg}`);
         });
 
         if(enemy.hp <= 0) {
@@ -159,7 +177,18 @@ const Game = {
         } else {
             const target = activeParty[Math.floor(Math.random()*activeParty.length)];
             if(target) {
+                // 敵の属性攻撃
+                let elemMod = 1.0;
+                if(enemy.elem) {
+                    const defElems = target.defenseElements;
+                    for(let de of defElems) {
+                        if(MASTER_DATA.element_chart[de].strong === enemy.elem) elemMod *= 0.7;
+                        if(MASTER_DATA.element_chart[de].weak === enemy.elem) elemMod *= 1.3;
+                    }
+                }
+
                 let dmg = Math.max(1, Math.floor(enemy.str - (target.totalStats.vit/2)));
+                dmg = Math.floor(dmg * elemMod);
                 target.hp -= dmg;
                 UI.log(`${target.name} に ${dmg} のダメージ`, "log-dmg");
                 if(target.hp <= 0) UI.log(`${target.name} は倒れた...`, "log-defeat");
@@ -183,8 +212,7 @@ const Game = {
             if(trap.type === 'dmg') {
                 this.party.forEach(c => { if(c.hp>0) c.hp -= dmg; });
                 UI.log(`全員に ${dmg} ダメージ！`, "log-dmg");
-            }
-            else {
+            } else {
                 UI.log("毒を受けた！（未実装効果）", "log-trap");
             }
         }
@@ -498,9 +526,10 @@ const UI = {
             <div class="modal-box" style="text-align:center; padding:40px;">
                 <h1 style="color:var(--accent-color); font-size:32px; margin-bottom:10px;">🧬 Genetic Rogue</h1>
                 <p style="color:#888; margin-bottom:40px;">Ver.12.5</p>
+                
                 <div style="display:flex; flex-direction:column; gap:20px; width:200px; margin:0 auto;">
-                    <button id="title-load" style="padding:15px; font-weight:bold; font-size:16px; ${loadStyle}" ${loadDisabled}>続きから</button>
-                    <button id="title-new" style="padding:15px; font-size:16px;">はじめから</button>
+                    <button id="title-load" style="padding:15px; font-weight:bold; font-size:16px; ${loadStyle}" ${loadDisabled}>続きから (Load)</button>
+                    <button id="title-new" style="padding:15px; font-size:16px;">はじめから (New Game)</button>
                 </div>
             </div>
         `;
@@ -527,8 +556,7 @@ const UI = {
         modal.className = 'modal-overlay';
         modal.style.display = 'flex';
 
-        // ★修正: 職業選択肢のフィルタリング条件
-        // 確実にTier 1かつ前提条件なしのジョブのみを表示
+        // ★修正: 職業選択肢のフィルタリング (Tier 1 & No Req)
         const jobOptions = Object.values(DB.jobs)
             .filter(j => j.tier === 1 && !j.reqJob)
             .map(j => `<option value="${j.id}">${j.name}</option>`)
@@ -544,11 +572,15 @@ const UI = {
                 <div class="modal-body">
                     <div style="margin-bottom:15px;">
                         <label>種族:</label>
-                        <select id="cm-race" style="padding:5px; background:#222; color:#fff; border:1px solid #444;">${raceOptions}</select>
+                        <select id="cm-race" style="padding:5px; background:#222; color:#fff; border:1px solid #444;">
+                            ${raceOptions}
+                        </select>
                     </div>
                     <div style="margin-bottom:15px;">
                         <label>職業:</label>
-                        <select id="cm-job" style="padding:5px; background:#222; color:#fff; border:1px solid #444;">${jobOptions}</select>
+                        <select id="cm-job" style="padding:5px; background:#222; color:#fff; border:1px solid #444;">
+                            ${jobOptions}
+                        </select>
                     </div>
                     <div id="cm-preview" style="background:#1a1a1a; border:1px solid #333; padding:10px; border-radius:4px; margin-bottom:20px;"></div>
                     <button id="cm-start" class="primary" style="width:100%; padding:15px;">冒険を始める</button>
@@ -560,8 +592,7 @@ const UI = {
         const updatePreview = () => {
             const r = document.getElementById('cm-race').value;
             const raceData = MASTER_DATA.races[r];
-            if (!raceData) return;
-            
+            if(!raceData) return;
             let html = "<h4 style='color:var(--accent-color); margin:0 0 5px 0;'>ステータス補正</h4>";
             html += `<div style="font-size:12px; line-height:1.6;">HP: x${raceData.mod.hp} | STR: x${raceData.mod.str}<br>MAG: x${raceData.mod.mag} | AGI: x${raceData.mod.agi}</div>`;
             document.getElementById('cm-preview').innerHTML = html;
@@ -850,6 +881,9 @@ const UI = {
                 <span style="color:${item?'#fff':'#666'}">${item?item.name:'Empty'}</span>
             </div>`;
         }
+        
+        const pedigree = c.pedigree || { f: null, m: null };
+        const renderParent = (p) => p ? `${p.name} (${p.race}/${p.job})` : "不明";
 
         const html = `
             <div class="detail-header">
@@ -866,6 +900,12 @@ const UI = {
                     <div class="detail-row"><span class="detail-label">INT</span> <span>${s.int}</span></div>
                     <div class="detail-row"><span class="detail-label">AGI</span> <span>${s.agi}</span></div>
                     <div class="detail-row"><span class="detail-label">LUC</span> <span>${s.luc}</span></div>
+                    
+                    <h4 style="color:#888; border-bottom:1px solid #333; margin-bottom:5px; margin-top:15px;">家系図</h4>
+                    <div style="font-size:11px; color:#aaa;">
+                        <div>父: ${renderParent(pedigree.f)}</div>
+                        <div>母: ${renderParent(pedigree.m)}</div>
+                    </div>
                 </div>
                 <div>
                     <h4 style="color:#888; border-bottom:1px solid #333; margin-bottom:5px;">装備</h4>
