@@ -1,5 +1,5 @@
 /**
- * Genetic Rogue Ver.12.2 - Title & CharMake
+ * Genetic Rogue Ver.12.2 - Title & CharMake (Fixed)
  * Main Logic & UI Controller
  */
 
@@ -39,8 +39,8 @@ const Game = {
         this.roster.push(c);
         this.party.push(c);
 
-        // おまけアイテム
-        let starter = LootSystem.generate(1);
+        // おまけアイテム (修正: LootSystem -> DB.createRandomItem)
+        let starter = DB.createRandomItem(1);
         if(!starter) starter = { uid: "starter", name:"粗末な剣", kind:"sw", type:"weapon", slot:"main_hand", stats:{atk:2}, rarity:1 };
         this.inventory.push(starter);
         c.autoEquip(starter);
