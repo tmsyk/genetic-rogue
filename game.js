@@ -136,7 +136,9 @@ const Game = {
 
     encounter() {
         this.currentEnemy = DB.createEnemy(this.floor, this.floor % 5 === 0);
-        UI.log(`遭遇: ${this.currentEnemy.name} (HP:${this.currentEnemy.hp})`, "log-combat");
+        const ename = this.currentEnemy.name;
+        const eElem = this.currentEnemy.elem ? `[${MASTER_DATA.elements.find(e=>e.key===this.currentEnemy.elem).name}]` : "";
+        UI.log(`遭遇: ${ename} ${eElem} (HP:${this.currentEnemy.hp})`, "log-combat");
     },
 
     combatRound() {
@@ -213,7 +215,8 @@ const Game = {
         if (!jobId || !DB.jobs[jobId]) return console.error("Invalid JobID");
         
         const job = DB.jobs[jobId];
-        if (job.tier !== 1 && !isFree) return console.warn("Only Tier 1 allowed");
+        // 厳密なTier 1チェック
+        if ((job.tier !== 1 || job.reqJob) && !isFree) return console.warn("Only Tier 1 allowed");
 
         if(!isFree) this.helix -= MASTER_DATA.config.HIRE_COST;
         const c = new Character(jobId);
@@ -273,13 +276,24 @@ class Character {
         this.baseStats = {...MASTER_DATA.config.BASE_STATS};
         for(let k in this.baseStats) this.baseStats[k] = Math.floor(this.baseStats[k] * (0.9 + Math.random()*0.2));
         
-        this.equipment = {main_hand:null, off_hand:null, head:null, body:null, accessory1:null, accessory2:null};
+        this.equipment = {
+            main_hand: null, 
+            off_hand: null, 
+            head: null, 
+            body: null, 
+            accessory1: null, 
+            accessory2: null
+        };
+        
         this.personality = "凡人";
         this.elements = [];
         
         const races = Object.keys(MASTER_DATA.races);
-        if (data && data.race) { this.race = data.race; } 
-        else { this.race = races[Math.floor(Math.random()*races.length)]; }
+        if (data && data.race) {
+            this.race = data.race;
+        } else {
+            this.race = races[Math.floor(Math.random()*races.length)];
+        }
 
         if (parents) {
             this.pedigree = {
@@ -305,7 +319,9 @@ class Character {
         }
         for(let k in this.equipment) {
             const it = this.equipment[k];
-            if(it) { for(let st in it.stats) s[st] = (s[st]||0) + it.stats[st]; }
+            if(it) {
+                for(let st in it.stats) s[st] = (s[st]||0) + it.stats[st];
+            }
         }
         for(let k in s) s[k] += Math.floor((s[k]*0.1) * (this.level-1));
         return s;
@@ -328,7 +344,9 @@ class Character {
     gainExp(v) {
         this.exp += v;
         if(this.exp >= this.maxExp) {
-            this.level++; this.exp = 0; this.maxExp *= 1.2;
+            this.level++;
+            this.exp = 0;
+            this.maxExp *= 1.2;
             this.hp = this.totalStats.hp;
             UI.log(`${this.name} Level Up! (Lv.${this.level})`);
         }
@@ -394,11 +412,6 @@ class Character {
             this.equipment[slot] = null;
         }
     }
-    
-    classChange(newJobKey) {
-        this.jobKey = newJobKey;
-        this.level = 1; this.maxExp = 100; this.hp = this.totalStats.hp;
-    }
 }
 
 // --- UI Controller ---
@@ -409,7 +422,11 @@ const UI = {
     invFilter: 'all', 
 
     init() {
-        const bind = (id, fn) => { const el = document.getElementById(id); if(el) el.onclick = fn; };
+        const bind = (id, fn) => {
+            const el = document.getElementById(id);
+            if(el) el.onclick = fn;
+        };
+
         bind('btn-explore', () => Game.explore(1));
         bind('btn-return', () => Game.stop());
         bind('btn-lab', () => this.openModal('modal-lab', () => this.renderLab()));
@@ -417,7 +434,15 @@ const UI = {
         bind('btn-settings', () => this.openModal('modal-settings'));
         bind('btn-help', () => this.openModal('modal-rules'));
         bind('btn-sell-trash', () => Game.sellTrash());
-        document.querySelectorAll('.close-modal').forEach(b => { b.onclick = () => this.closeModal(); });
+        
+        document.querySelectorAll('.close-modal').forEach(b => {
+            b.onclick = () => this.closeModal();
+        });
+        
+        document.addEventListener('keydown', (e) => {
+            if(e.key === 'Escape') this.closeModal();
+        });
+        
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.onclick = (e) => {
                 const tabId = e.target.getAttribute('data-tab');
@@ -431,6 +456,7 @@ const UI = {
         modal.className = 'modal-overlay';
         modal.id = 'modal-title';
         modal.style.display = 'flex';
+        
         const hasData = Game.hasSaveData();
         const loadDisabled = hasData ? '' : 'disabled';
         const loadStyle = hasData ? 'background:var(--accent-color); color:#000;' : 'opacity:0.5; cursor:not-allowed;';
@@ -440,19 +466,24 @@ const UI = {
                 <h1 style="color:var(--accent-color); font-size:32px; margin-bottom:10px;">🧬 Genetic Rogue</h1>
                 <p style="color:#888; margin-bottom:40px;">Ver.12.5</p>
                 <div style="display:flex; flex-direction:column; gap:20px; width:200px; margin:0 auto;">
-                    <button id="title-load" style="padding:15px; font-weight:bold; font-size:16px; ${loadStyle}" ${loadDisabled}>続きから</button>
-                    <button id="title-new" style="padding:15px; font-size:16px;">はじめから</button>
+                    <button id="title-load" style="padding:15px; font-weight:bold; font-size:16px; ${loadStyle}" ${loadDisabled}>続きから (Load)</button>
+                    <button id="title-new" style="padding:15px; font-size:16px;">はじめから (New Game)</button>
                 </div>
             </div>
         `;
         document.body.appendChild(modal);
 
         document.getElementById('title-load').onclick = () => {
-            if(Game.load()) modal.remove();
-            else alert("セーブデータの読み込みに失敗しました");
+            if(Game.load()) {
+                modal.remove();
+            } else {
+                alert("セーブデータの読み込みに失敗しました");
+            }
         };
         document.getElementById('title-new').onclick = () => {
-            if(hasData) { if(!confirm("セーブデータが存在します。上書きして新規開始しますか？")) return; }
+            if(hasData) {
+                if(!confirm("セーブデータが存在します。上書きして新規開始しますか？")) return;
+            }
             modal.remove();
             this.showCharMake();
         };
@@ -463,9 +494,16 @@ const UI = {
         modal.className = 'modal-overlay';
         modal.style.display = 'flex';
 
-        // ★修正: シンプルなTier1フィルタリング
+        // ★修正: 職業選択肢のフィルタリング (Tier 1 & No Req & BaseJob is Tier 1)
         const jobOptions = Object.values(DB.jobs)
-            .filter(j => j.tier === 1)
+            .filter(j => {
+                if (j.tier !== 1) return false;
+                if (j.reqJob) return false;
+                
+                // マスタデータ定義で基本職がTier 1であることを確認
+                const baseDef = MASTER_DATA.jobs.find(def => def.id === j.baseId);
+                return baseDef && baseDef.tier === 1;
+            })
             .map(j => `<option value="${j.id}">${j.name}</option>`)
             .join('');
 
@@ -479,11 +517,15 @@ const UI = {
                 <div class="modal-body">
                     <div style="margin-bottom:15px;">
                         <label>種族:</label>
-                        <select id="cm-race" style="padding:5px; background:#222; color:#fff; border:1px solid #444;">${raceOptions}</select>
+                        <select id="cm-race" style="padding:5px; background:#222; color:#fff; border:1px solid #444;">
+                            ${raceOptions}
+                        </select>
                     </div>
                     <div style="margin-bottom:15px;">
                         <label>職業:</label>
-                        <select id="cm-job" style="padding:5px; background:#222; color:#fff; border:1px solid #444;">${jobOptions}</select>
+                        <select id="cm-job" style="padding:5px; background:#222; color:#fff; border:1px solid #444;">
+                            ${jobOptions}
+                        </select>
                     </div>
                     <div id="cm-preview" style="background:#1a1a1a; border:1px solid #333; padding:10px; border-radius:4px; margin-bottom:20px;"></div>
                     <button id="cm-start" class="primary" style="width:100%; padding:15px;">冒険を始める</button>
@@ -495,7 +537,8 @@ const UI = {
         const updatePreview = () => {
             const r = document.getElementById('cm-race').value;
             const raceData = MASTER_DATA.races[r];
-            if(!raceData) return;
+            if (!raceData) return;
+            
             let html = "<h4 style='color:var(--accent-color); margin:0 0 5px 0;'>ステータス補正</h4>";
             html += `<div style="font-size:12px; line-height:1.6;">HP: x${raceData.mod.hp} | STR: x${raceData.mod.str}<br>MAG: x${raceData.mod.mag} | AGI: x${raceData.mod.agi}</div>`;
             document.getElementById('cm-preview').innerHTML = html;
@@ -608,7 +651,13 @@ const UI = {
     renderHire() {
         const el = document.getElementById('guild-list');
         el.innerHTML = "";
-        Object.values(DB.jobs).filter(j => j.tier === 1).forEach(j => {
+        // ★修正: 雇用リストも同様にフィルタリング
+        Object.values(DB.jobs).filter(j => {
+            if (j.tier !== 1) return false;
+            if (j.reqJob) return false;
+            const baseJobDef = MASTER_DATA.jobs.find(def => def.id === j.baseId);
+            return baseJobDef && baseJobDef.tier === 1;
+        }).forEach(j => {
             const div = document.createElement('div');
             div.className = "list-item";
             div.innerHTML = `${j.name}`;
