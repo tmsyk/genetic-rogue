@@ -252,9 +252,10 @@ const Game = {
         }
         
         const job = DB.jobs[jobId];
-        
-        // 厳密なTier 1チェック: 生成されたジョブがTier 1であり、かつ前提ジョブがないこと
-        if ((job.tier !== 1 || job.reqJob) && !isFree) {
+        const baseJobDef = MASTER_DATA.jobs.find(def => def.id === job.baseId);
+        const isBaseTier1 = baseJobDef ? (baseJobDef.tier === 1) : true;
+
+        if ((job.tier !== 1 || !isBaseTier1) && !isFree) {
             console.warn("Only pure Tier 1 jobs can be hired directly.");
             return;
         }
@@ -563,10 +564,10 @@ const UI = {
         modal.className = 'modal-overlay';
         modal.style.display = 'flex';
 
-        // ★修正: 職業選択肢のフィルタリング (Tier 1 & No Req)
-        // ここでの条件を「Tier 1 であること」かつ「前提ジョブがないこと」に絞る
+        // ★修正: 職業選択肢のフィルタリング (Tier 1のみ)
+        // データ不整合があってもTier 1なら表示するように条件を緩和
         const jobOptions = Object.values(DB.jobs)
-            .filter(j => j.tier === 1 && !j.reqJob)
+            .filter(j => j.tier === 1)
             .map(j => `<option value="${j.id}">${j.name}</option>`)
             .join('');
 
@@ -600,7 +601,8 @@ const UI = {
         const updatePreview = () => {
             const r = document.getElementById('cm-race').value;
             const raceData = MASTER_DATA.races[r];
-            if(!raceData) return;
+            if (!raceData) return;
+            
             let html = "<h4 style='color:var(--accent-color); margin:0 0 5px 0;'>ステータス補正</h4>";
             html += `<div style="font-size:12px; line-height:1.6;">HP: x${raceData.mod.hp} | STR: x${raceData.mod.str}<br>MAG: x${raceData.mod.mag} | AGI: x${raceData.mod.agi}</div>`;
             document.getElementById('cm-preview').innerHTML = html;
