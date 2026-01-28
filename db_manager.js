@@ -1,6 +1,5 @@
 /**
- * Genetic Rogue - Database Manager
- * Updated: Prevent generating lower tier versions of high tier jobs.
+ * Genetic Rogue - Database Manager (Simplified for Direct CSV Use)
  */
 
 const DB = {
@@ -13,54 +12,14 @@ const DB = {
     },
 
     generateJobs() {
-        const ranks = MASTER_DATA.job_ranks;
-        const elements = MASTER_DATA.elements;
-        const allElements = [{key:null, name:"", mod:{}}].concat(elements);
-
-        MASTER_DATA.jobs.forEach(base => {
-            ranks.forEach(rank => {
-                // ★追加: 元の職業ランクより低いTierは生成しない
-                // 例: 騎士(Tier 2) は Tier 1 のランクを生成しない
-                if (rank.tier < base.tier) return;
-
-                allElements.forEach(el => {
-                    if(rank.tier === 1 && el.key !== null) return; 
-                    if(rank.tier === 5 && el.key === null) return; 
-
-                    let suffix = rank.prefix ? `_${rank.prefix}` : "";
-                    const uniqueId = `${el.key||'n'}_${rank.tier}_${base.id}${suffix}`;
-                    
-                    const name = `${el.name}${rank.prefix}${base.name}`;
-                    
-                    let mod = { all: rank.mod };
-                    if(el.key) mod.mag = (mod.mag||0) + 0.2; 
-
-                    let reqJob = base.reqJob; 
-                    if (!reqJob && rank.tier > 1) {
-                        reqJob = base.id; 
-                    }
-
-                    // 属性要件の継承
-                    let reqEl = base.reqEl ? [...base.reqEl] : [];
-                    if (el.key) reqEl.push(el.key);
-
-                    this.jobs[uniqueId] = {
-                        id: uniqueId,
-                        name: name,
-                        tier: rank.tier,
-                        type: base.type,
-                        equip: base.equip,
-                        lineage: base.lineage,
-                        mod: mod,
-                        reqEl: reqEl.length > 0 ? reqEl : null,
-                        reqJob: reqJob,
-                        reqStats: base.reqStats, 
-                        baseId: base.id,
-                        maxJobExp: rank.tier * 500,
-                        masterSkill: base.masterSkill
-                    };
-                });
-            });
+        // CSVで定義された職業をそのまま登録
+        MASTER_DATA.jobs.forEach(job => {
+            // IDをキーとして登録
+            this.jobs[job.id] = {
+                ...job, // 全プロパティをコピー
+                baseId: job.id, // 自身をベースとする
+                maxJobExp: job.tier * 500 // 熟練度上限
+            };
         });
     },
 
@@ -68,6 +27,7 @@ const DB = {
         return this.jobs[id] || this.jobs[Object.keys(this.jobs)[0]]; 
     },
     
+    // ... (アイテム生成などのロジックは変更なし)
     createRandomItem(floor) {
         const maxTier = Math.max(1, Math.min(5, Math.ceil(floor / 5)));
         const types = Object.keys(MASTER_DATA.items.types);
@@ -100,7 +60,7 @@ const DB = {
             stats: { ...typeData.base },
             rarity: rarity,
             tier: Math.max(1, mat.tier), 
-            elem: mat.elem || typeData.elem || null
+            elem: mat.elem || null
         };
         for(let k in mat.mod) {
             if(k==='all') ['str','vit','mag','int','agi','luc'].forEach(s => item.stats[s] = (item.stats[s]||0) + mat.mod.all);

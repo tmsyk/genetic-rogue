@@ -709,6 +709,7 @@ const CSV_SKILLS = `name,type,desc,mod_hp,mod_str,mod_vit,mod_mag,mod_int,mod_ag
 // ==========================================
 // 2. CSVパーサーとデータ変換ロジック
 // ==========================================
+
 const DataParser = {
     // 修正: 空のフィールドも正しく読み取れるパーサー
     parse(csvText) {
@@ -719,6 +720,7 @@ const DataParser = {
 
         for (let i = 1; i < lines.length; i++) {
             const line = lines[i];
+            // ダブルクォート内のカンマを無視し、空フィールドも維持するスプリット処理
             const row = [];
             let current = '';
             let inQuote = false;
@@ -795,7 +797,7 @@ const DataParser = {
                 reqJob: job.req_job || null,
                 masterSkill: job.master_skill || null,
                 reqStats: reqStats,
-                reqEl: job.req_el ? String(job.req_el).split(';') : null // ★修正: String()でキャスト
+                reqEl: job.req_el ? String(job.req_el).split(';') : null
             };
         });
     },
@@ -890,7 +892,6 @@ const DataParser = {
         const data = {};
         const pool = { phy:[], mag:[], spd:[], tnk:[], sup:[] };
         rawSkills.forEach(s => {
-            // パッシブ補正値の読み込み
             const mod = {};
             ['hp','str','vit','mag','int','agi','luc'].forEach(stat => {
                 const key = `mod_${stat}`;
@@ -900,7 +901,7 @@ const DataParser = {
             data[s.name] = { 
                 desc: s.desc, 
                 type: s.type,
-                mod: mod // ★追加
+                mod: mod
             };
             if(pool[s.type]) pool[s.type].push(s.name);
         });
@@ -958,6 +959,8 @@ const MASTER_DATA = {
     elements: parsedElements.list,
     element_chart: parsedElements.chart,
     jobs: DataParser.convertJobs(RAW_JOBS),
+    
+    // TierはCSV側で管理するため、ここでは簡易定義のみ残す（使用しない場合も多い）
     job_ranks: [
         { tier: 1, prefix: "", mod: 1.0 },
         { tier: 2, prefix: "熟練", mod: 1.2 },
