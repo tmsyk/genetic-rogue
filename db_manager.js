@@ -1,5 +1,6 @@
 /**
  * Genetic Rogue - Database Manager
+ * ID生成ルールの修正版
  */
 
 const DB = {
@@ -19,11 +20,17 @@ const DB = {
         MASTER_DATA.jobs.forEach(base => {
             ranks.forEach(rank => {
                 allElements.forEach(el => {
+                    // フィルタリング
                     if(rank.tier === 1 && el.key !== null) return; 
                     if(rank.tier === 5 && el.key === null) return; 
 
-                    const uniqueId = `${el.key||'n'}_${rank.tier}_${base.id}`;
+                    // ★修正: IDが一意になるようにprefix（見習い等）を含める
+                    // 例: n_1_warrior (通常), n_1_warrior_apprentice (見習い)
+                    let suffix = rank.prefix ? `_${rank.prefix}` : "";
+                    const uniqueId = `${el.key||'n'}_${rank.tier}_${base.id}${suffix}`;
+                    
                     const name = `${el.name}${rank.prefix}${base.name}`;
+                    
                     let mod = { all: rank.mod };
                     if(el.key) mod.mag = (mod.mag||0) + 0.2; 
 
@@ -61,7 +68,6 @@ const DB = {
         const typeKey = types[Math.floor(Math.random() * types.length)];
         const typeData = MASTER_DATA.items.types[typeKey];
         
-        // フィルタリング: Tier制限
         const materials = MASTER_DATA.items.materials.filter(m => m.tier <= maxTier);
         const matPool = materials.length > 0 ? materials : MASTER_DATA.items.materials.filter(m => m.tier === 1);
 
@@ -90,7 +96,7 @@ const DB = {
             stats: { ...typeData.base },
             rarity: rarity,
             tier: Math.max(1, mat.tier), 
-            elem: mat.elem || typeData.elem || null // ★修正: 素材またはベースの属性を採用
+            elem: mat.elem || null
         };
 
         for(let k in mat.mod) {

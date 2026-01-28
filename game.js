@@ -15,7 +15,7 @@ const Game = {
     helix: 100, floor: 1, maxFloor: 1, floorProgress: 0,
     party: [], roster: [], inventory: [],
     exploring: false, timer: null, currentEnemy: null,
-    SAVE_KEY: 'genetic_rogue_v12_5', // Update Key
+    SAVE_KEY: 'genetic_rogue_v12_5',
 
     init() {
         UI.init();
@@ -36,12 +36,8 @@ const Game = {
         this.roster.push(c);
         this.party.push(c);
 
-        // 初期装備
+        // ★修正: DB.createRandomItem を使用
         let starter = DB.createRandomItem(1);
-        // 武器が出なかった時の保険
-        if(!starter || starter.type !== 'weapon') {
-             starter = { uid: "starter", name:"冒険者の短剣", kind:"dg", type:"weapon", slot:"main_hand", stats:{str:2}, rarity:1 };
-        }
         this.inventory.push(starter);
         c.autoEquip(starter);
 
@@ -139,9 +135,7 @@ const Game = {
 
     encounter() {
         this.currentEnemy = DB.createEnemy(this.floor, this.floor % 5 === 0);
-        const ename = this.currentEnemy.name;
-        const eElem = this.currentEnemy.elem ? `[${MASTER_DATA.elements.find(e=>e.key===this.currentEnemy.elem).name}]` : "";
-        UI.log(`遭遇: ${ename} ${eElem} (HP:${this.currentEnemy.hp})`, "log-combat");
+        UI.log(`遭遇: ${this.currentEnemy.name} (HP:${this.currentEnemy.hp})`, "log-combat");
     },
 
     combatRound() {
@@ -150,26 +144,10 @@ const Game = {
         
         activeParty.forEach(c => {
             if(enemy.hp <= 0) return;
-            
-            // 属性補正計算
-            let elemMod = 1.0;
-            let atkElem = c.attackElement;
-            if(atkElem && enemy.elem) {
-                if(MASTER_DATA.element_chart[atkElem].strong === enemy.elem) elemMod = 1.5;
-                else if(MASTER_DATA.element_chart[atkElem].weak === enemy.elem) elemMod = 0.5;
-            }
-
             let dmg = Math.max(1, Math.floor(c.totalStats.str - (enemy.vit/2)));
-            // 魔法職ならMAG依存
-            if (c.job.type === 'mag' || c.job.type === 'sup') {
-                dmg = Math.max(1, Math.floor(c.totalStats.mag - (enemy.mag/2)));
-            }
-
-            dmg = Math.floor(dmg * elemMod * (0.9 + Math.random()*0.2));
+            dmg = Math.floor(dmg * (0.9 + Math.random()*0.2));
             enemy.hp -= dmg;
-            
-            let modText = elemMod > 1 ? "(弱点!)" : (elemMod < 1 ? "(半減)" : "");
-            UI.log(`${c.name}の攻撃${modText} -> ${dmg}`);
+            UI.log(`${c.name}の攻撃 -> ${dmg}`);
         });
 
         if(enemy.hp <= 0) {
@@ -181,18 +159,7 @@ const Game = {
         } else {
             const target = activeParty[Math.floor(Math.random()*activeParty.length)];
             if(target) {
-                // 敵の属性攻撃
-                let elemMod = 1.0;
-                if(enemy.elem) {
-                    const defElems = target.defenseElements;
-                    for(let de of defElems) {
-                        if(MASTER_DATA.element_chart[de].strong === enemy.elem) elemMod *= 0.7;
-                        if(MASTER_DATA.element_chart[de].weak === enemy.elem) elemMod *= 1.3;
-                    }
-                }
-
                 let dmg = Math.max(1, Math.floor(enemy.str - (target.totalStats.vit/2)));
-                dmg = Math.floor(dmg * elemMod);
                 target.hp -= dmg;
                 UI.log(`${target.name} に ${dmg} のダメージ`, "log-dmg");
                 if(target.hp <= 0) UI.log(`${target.name} は倒れた...`, "log-defeat");
@@ -216,7 +183,8 @@ const Game = {
             if(trap.type === 'dmg') {
                 this.party.forEach(c => { if(c.hp>0) c.hp -= dmg; });
                 UI.log(`全員に ${dmg} ダメージ！`, "log-dmg");
-            } else {
+            }
+            else {
                 UI.log("毒を受けた！（未実装効果）", "log-trap");
             }
         }
@@ -345,7 +313,6 @@ class Character {
             this.race = races[Math.floor(Math.random()*races.length)];
         }
 
-        // Pedigree
         if (parents) {
             this.pedigree = {
                 f: { name: parents[0].name, race: MASTER_DATA.races[parents[0].race].name, job: parents[0].job.name },
@@ -407,10 +374,12 @@ class Character {
     
     canEquip(item) {
         if (!item || !item.kind) return { ok: false, reason: "無効アイテム" };
+
         const job = this.job;
         if (job && job.equip && !job.equip.includes(item.kind) && item.kind !== 'ac') {
             return { ok: false, reason: "職業不可" };
         }
+        
         if (item.req) {
             const stats = this.totalStats;
             for (let key in item.req) {
@@ -419,6 +388,7 @@ class Character {
                 }
             }
         }
+        
         return { ok: true, reason: "" };
     }
 
@@ -557,17 +527,10 @@ const UI = {
         modal.className = 'modal-overlay';
         modal.style.display = 'flex';
 
-        // ★修正: 職業選択肢の生成（Tier 1 かつ 基本職のみ）
+        // ★修正: 職業選択肢のフィルタリング条件
+        // 確実にTier 1かつ前提条件なしのジョブのみを表示
         const jobOptions = Object.values(DB.jobs)
-            .filter(j => {
-                // Tier 1 チェック
-                if (j.tier !== 1) return false;
-                // 前提条件なし
-                if (j.reqJob) return false;
-                // 基本定義の確認 (baseIdがマスタデータにあり、かつTier1であること)
-                const baseDef = MASTER_DATA.jobs.find(def => def.id === j.baseId);
-                return baseDef && baseDef.tier === 1;
-            })
+            .filter(j => j.tier === 1 && !j.reqJob)
             .map(j => `<option value="${j.id}">${j.name}</option>`)
             .join('');
 
@@ -711,8 +674,6 @@ const UI = {
     renderHire() {
         const el = document.getElementById('guild-list');
         el.innerHTML = "";
-        
-        // ★修正: 雇用リストも Tier 1 基本職のみに制限
         Object.values(DB.jobs).filter(j => {
             if (j.tier !== 1) return false;
             if (j.reqJob) return false;
@@ -889,10 +850,6 @@ const UI = {
                 <span style="color:${item?'#fff':'#666'}">${item?item.name:'Empty'}</span>
             </div>`;
         }
-        
-        // 家系図表示ロジック
-        const pedigree = c.pedigree || { f: null, m: null };
-        const renderParent = (p) => p ? `${p.name} (${p.race}/${p.job})` : "不明";
 
         const html = `
             <div class="detail-header">
@@ -909,12 +866,6 @@ const UI = {
                     <div class="detail-row"><span class="detail-label">INT</span> <span>${s.int}</span></div>
                     <div class="detail-row"><span class="detail-label">AGI</span> <span>${s.agi}</span></div>
                     <div class="detail-row"><span class="detail-label">LUC</span> <span>${s.luc}</span></div>
-                    
-                    <h4 style="color:#888; border-bottom:1px solid #333; margin-bottom:5px; margin-top:15px;">家系図</h4>
-                    <div style="font-size:11px; color:#aaa;">
-                        <div>父: ${renderParent(pedigree.f)}</div>
-                        <div>母: ${renderParent(pedigree.m)}</div>
-                    </div>
                 </div>
                 <div>
                     <h4 style="color:#888; border-bottom:1px solid #333; margin-bottom:5px;">装備</h4>
