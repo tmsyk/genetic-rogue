@@ -542,20 +542,42 @@ const CSV_SKILLS = `name,type,desc
 // ==========================================
 // 2. CSVパーサーとデータ変換ロジック
 // ==========================================
-
 const DataParser = {
+    // 修正: 空のフィールドも正しく読み取れるパーサー
     parse(csvText) {
         if(!csvText) return [];
         const lines = csvText.trim().split('\n');
         const headers = lines[0].split(',').map(h => h.trim());
         const result = [];
+
         for (let i = 1; i < lines.length; i++) {
-            const row = lines[i].match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g);
-            if (!row) continue;
+            const line = lines[i];
+            // ダブルクォート内のカンマを無視し、空フィールドも維持するスプリット処理
+            const row = [];
+            let current = '';
+            let inQuote = false;
+            
+            for(let j=0; j<line.length; j++) {
+                const char = line[j];
+                if(char === '"') {
+                    inQuote = !inQuote;
+                } else if(char === ',' && !inQuote) {
+                    row.push(current);
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+            row.push(current); // 最後の列を追加
+
+            if (row.length === 0 || (row.length === 1 && row[0] === '')) continue;
+
             const obj = {};
             headers.forEach((header, index) => {
-                let value = row[index] ? row[index].replace(/^"|"$/g, '') : '';
-                if (!isNaN(value) && value !== '') value = Number(value);
+                let value = row[index] ? row[index].replace(/^"|"$/g, '') : ''; // クォート削除
+                if (value !== '' && !isNaN(value)) {
+                    value = Number(value); // 数値変換
+                }
                 obj[header] = value;
             });
             result.push(obj);
@@ -632,8 +654,7 @@ const DataParser = {
                 type: item.type,
                 base: base,
                 tier: item.tier || 1,
-                req: req,
-                elem: item.element || null // ★属性追加
+                req: req
             };
         });
         return items;
