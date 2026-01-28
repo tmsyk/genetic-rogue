@@ -1,6 +1,5 @@
 /**
  * Genetic Rogue - Database Manager
- * ID生成ルールの修正版
  */
 
 const DB = {
@@ -20,12 +19,9 @@ const DB = {
         MASTER_DATA.jobs.forEach(base => {
             ranks.forEach(rank => {
                 allElements.forEach(el => {
-                    // フィルタリング
                     if(rank.tier === 1 && el.key !== null) return; 
                     if(rank.tier === 5 && el.key === null) return; 
 
-                    // ★修正: IDが一意になるようにprefix（見習い等）を含める
-                    // 例: n_1_warrior (通常), n_1_warrior_apprentice (見習い)
                     let suffix = rank.prefix ? `_${rank.prefix}` : "";
                     const uniqueId = `${el.key||'n'}_${rank.tier}_${base.id}${suffix}`;
                     
@@ -39,6 +35,10 @@ const DB = {
                         reqJob = base.id; 
                     }
 
+                    // ★修正: 属性要件の継承（属性付きジョブの場合、その属性も必須条件に加える）
+                    let reqEl = base.reqEl ? [...base.reqEl] : [];
+                    if (el.key) reqEl.push(el.key);
+
                     this.jobs[uniqueId] = {
                         id: uniqueId,
                         name: name,
@@ -47,10 +47,12 @@ const DB = {
                         equip: base.equip,
                         lineage: base.lineage,
                         mod: mod,
-                        reqEl: el.key ? [el.key] : null,
+                        reqEl: reqEl.length > 0 ? reqEl : null, // ★更新
                         reqJob: reqJob,
                         reqStats: base.reqStats, 
-                        baseId: base.id
+                        baseId: base.id,
+                        maxJobExp: rank.tier * 500,
+                        masterSkill: base.masterSkill
                     };
                 });
             });
@@ -61,16 +63,15 @@ const DB = {
         return this.jobs[id] || this.jobs[Object.keys(this.jobs)[0]]; 
     },
     
+    // ... (アイテム・敵生成ロジックはVer.12.6と同じ)
     createRandomItem(floor) {
         const maxTier = Math.max(1, Math.min(5, Math.ceil(floor / 5)));
-        
         const types = Object.keys(MASTER_DATA.items.types);
         const typeKey = types[Math.floor(Math.random() * types.length)];
         const typeData = MASTER_DATA.items.types[typeKey];
-        
         const materials = MASTER_DATA.items.materials.filter(m => m.tier <= maxTier);
         const matPool = materials.length > 0 ? materials : MASTER_DATA.items.materials.filter(m => m.tier === 1);
-
+        
         let totalW = matPool.reduce((a,b)=>a+b.w, 0);
         let r = Math.random() * totalW;
         let mat = matPool[0];
@@ -85,7 +86,6 @@ const DB = {
         else if(rRoll > 0.90) rarity = 4;
         else if(rRoll > 0.70) rarity = 3;
         else if(rRoll > 0.40) rarity = 2;
-        
         rarity = Math.min(rarity, maxTier + 2); 
 
         let item = {
@@ -98,12 +98,10 @@ const DB = {
             tier: Math.max(1, mat.tier), 
             elem: mat.elem || null
         };
-
         for(let k in mat.mod) {
             if(k==='all') ['str','vit','mag','int','agi','luc'].forEach(s => item.stats[s] = (item.stats[s]||0) + mat.mod.all);
             else item.stats[k] = (item.stats[k]||0) + mat.mod[k];
         }
-
         if(rarity > 2) {
             const affixes = MASTER_DATA.items.affixes.filter(a => a.tier <= rarity);
             if(affixes.length > 0) {
@@ -115,25 +113,19 @@ const DB = {
                 }
             }
         }
-        
         for(let k in item.stats) item.stats[k] = Math.ceil(item.stats[k] * (1 + floor * 0.1));
-
         return item;
     },
 
     createEnemy(floor, isElite=false) {
         const maxTier = Math.max(1, Math.min(5, Math.ceil(floor / 5)));
-        
         let candidates = MASTER_DATA.enemies.species.filter(e => e.tier <= maxTier);
         if (candidates.length === 0) candidates = MASTER_DATA.enemies.species.filter(e => e.tier === 1);
-
         const base = candidates[Math.floor(Math.random() * candidates.length)];
-        
         const prefixes = MASTER_DATA.enemies.prefixes;
         let prefix = isElite ? prefixes[Math.floor(Math.random() * prefixes.length)] : prefixes[0];
         let scale = 1 + (floor - 1) * 0.4;
         if(isElite) scale *= 1.5;
-
         return {
             name: prefix.name + base.name,
             hp: Math.floor(base.hp * scale * (prefix.mod || 1)),
