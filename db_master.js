@@ -29,19 +29,19 @@ cyborg,サイボーグ,1.1,1.3,1.2,0.4,1.2,1,0.8
 phantom,幽霊,0.6,0.5,0.1,1.4,1,1.3,1`;
 
 const CSV_JOBS = `id,name,tier,type,equip_types,lineage,mod_hp,mod_str,mod_vit,mod_mag,mod_int,mod_agi,mod_luc,req_job,master_skill,req_hp,req_str,req_vit,req_mag,req_int,req_agi,req_luc,req_el
-primitive,原始人,1,phy,hm,sp,la,warrior,1.3,1.3,1.2,0.4,0.4,1.1,1,none,野生の勘,0,0,0,0,0,0,0,
-villager,村人,1,sup,hm,dg,ro,special,1,0.9,0.9,0.9,0.9,0.9,1,none,生活の知恵,0,0,0,0,0,0,0,
-slave,奴隷,1,phy,hm,no,no,warrior,1.5,1.2,1.2,0.5,0.5,0.8,0.5,none,労働力,0,0,0,0,0,0,0,
-warrior,戦士,1,phy,sw,ax,ha,sh,warrior,1.2,1.2,1.1,0.5,0.8,0.9,1,none,戦士の魂,0,10,0,0,0,0,0,
-mage,魔法使い,1,mag,st,dg,ro,ac,magic,0.8,0.6,0.8,1.5,1.4,1,1,none,魔道知識,0,0,0,10,0,0,0,
-thief,盗賊,1,spd,dg,bow,la,ac,shadow,0.9,1.2,0.8,0.8,1.2,1.5,1.5,none,盗賊の目,0,0,0,0,0,10,0,
-priest,僧侶,1,sup,st,ro,sh,ac,holy,1,0.8,1.2,1.2,1.3,0.9,1.2,none,祈りの心,0,0,0,0,10,0,0,
-merchant,商人,1,spe,dg,la,ac,special,1,0.8,0.8,1,1.2,1,1.8,none,商売勘,0,0,0,0,0,0,10,
-monk,武闘家,1,phy,kn,la,ac,martial,1.3,1.1,0.9,0.8,1,1.3,1,none,武術の心得,15,0,0,0,0,0,0,
-hunter,狩人,1,tec,bow,dg,la,ac,shadow,1,1.1,1,0.5,1.2,1.3,1.1,none,狩人の勘,0,0,0,0,0,10,0,
-noble,貴族,2,sup,sw,ac,ro,special,1,0.9,0.9,1,1.2,1,1.5,villager,ノブレスオブリージュ,15,0,0,0,30,0,40,
-mercenary,傭兵,2,phy,sw,ax,la,warrior,1.3,1.3,1.1,0.5,0.8,1,0.9,warrior,傭兵の意地,15,25,0,0,0,0,0,
-knight,騎士,2,tnk,sw,sp,ha,sh,warrior,1.4,1.2,1.4,0.6,1,0.8,1,warrior,騎士道,100,20,20,0,0,0,0,
+primitive,原始人,1,phy,hm,sp,la,warrior,1.3,1.3,1.2,0.4,0.4,1.1,1,none,野生の勘,0,0,0,0,0,0,0,none
+villager,村人,1,sup,hm,dg,ro,special,1,0.9,0.9,0.9,0.9,0.9,1,none,生活の知恵,0,0,0,0,0,0,0,none
+slave,奴隷,1,phy,hm,no,no,warrior,1.5,1.2,1.2,0.5,0.5,0.8,0.5,none,労働力,0,0,0,0,0,0,0,none
+warrior,戦士,1,phy,sw,ax,ha,sh,warrior,1.2,1.2,1.1,0.5,0.8,0.9,1,none,戦士の魂,0,10,0,0,0,0,0,none
+mage,魔法使い,1,mag,st,dg,ro,ac,magic,0.8,0.6,0.8,1.5,1.4,1,1,none,魔道知識,0,0,0,10,0,0,0,none
+thief,盗賊,1,spd,dg,bow,la,ac,shadow,0.9,1.2,0.8,0.8,1.2,1.5,1.5,none,盗賊の目,0,0,0,0,0,10,0,none
+priest,僧侶,1,sup,st,ro,sh,ac,holy,1,0.8,1.2,1.2,1.3,0.9,1.2,none,祈りの心,0,0,0,0,10,0,0,none
+merchant,商人,1,spe,dg,la,ac,special,1,0.8,0.8,1,1.2,1,1.8,none,商売勘,0,0,0,0,0,0,10,none
+monk,武闘家,1,phy,kn,la,ac,martial,1.3,1.1,0.9,0.8,1,1.3,1,none,武術の心得,15,0,0,0,0,0,0,none
+hunter,狩人,1,tec,bow,dg,la,ac,shadow,1,1.1,1,0.5,1.2,1.3,1.1,none,狩人の勘,0,0,0,0,0,10,0,none
+noble,貴族,2,sup,sw,ac,ro,special,1,0.9,0.9,1,1.2,1,1.5,villager,ノブレスオブリージュ,15,0,0,0,30,0,40,none
+mercenary,傭兵,2,phy,sw,ax,la,warrior,1.3,1.3,1.1,0.5,0.8,1,0.9,warrior,傭兵の意地,15,25,0,0,0,0,0,none
+knight,騎士,2,tnk,sw,sp,ha,sh,warrior,1.4,1.2,1.4,0.6,1,0.8,1,warrior,騎士道,100,20,20,0,0,0,0,none
 fencer,剣士,2,phy,sw,dg,la,warrior,1.1,1.2,0.9,0.8,1,1.4,1,warrior,剣の舞,15,0,0,0,0,30,0,wind
 gladiator,重戦士,2,phy,ax,hm,ha,warrior,1.5,1.4,1.2,0.4,0.6,0.8,0.8,warrior,闘技場の覇者,20,40,30,0,0,0,0,earth
 cleric,神官,2,sup,st,hm,ro,holy,1,0.7,1.1,1.3,1.4,0.8,1.1,priest,聖なる祈り,20,0,0,30,30,0,0,light
@@ -55,8 +55,8 @@ bard,吟遊詩人,2,sup,ins,dg,la,special,1,0.9,0.9,1.2,1.2,1.1,1.5,merchant,歌
 dancer,踊り子,2,sup,dg,wh,la,special,0.9,0.8,0.8,1.1,1,1.5,1.4,merchant,魅惑の舞,15,0,0,0,0,30,30,water
 blacksmith,鍛冶屋,2,spe,hm,ax,la,tech,1.3,1.3,1.3,0.6,1.2,0.7,1,merchant,職人魂,20,30,30,0,0,0,0,fire
 cook,料理人,2,sup,dg,hm,la,special,1.1,1,1.1,0.8,1,0.9,1.1,merchant,調理技術,10,0,0,0,0,0,0,fire;water
-student,学生,2,tec,kn,dg,la,tech,0.9,0.8,0.8,1,1.5,1,1.1,human,学習能力,10,0,0,0,20,0,0,
-soldier,兵士,2,tec,gun,kn,la,tech,1.2,1.1,1.1,0.5,1,1.1,1,hunter,軍隊格闘,10,20,0,0,0,0,0,
+student,学生,2,tec,kn,dg,la,tech,0.9,0.8,0.8,1,1.5,1,1.1,human,学習能力,10,0,0,0,20,0,0,none
+soldier,兵士,2,tec,gun,kn,la,tech,1.2,1.1,1.1,0.5,1,1.1,1,hunter,軍隊格闘,10,20,0,0,0,0,0,none
 gunner,ガンマン,2,tec,gun,la,ac,tech,1.1,1.2,1,0.5,1.4,1.2,1.1,hunter,射撃技術,25,0,0,0,0,0,0,fire
 medic,衛生兵,2,sup,gun,dv,la,tech,1.1,0.9,1,1,1.3,1,1,soldier,応急処置,15,0,0,0,30,0,30,light
 mechanic,整備士,2,tec,hm,dv,la,tech,1,0.9,1,0.6,1.6,0.9,1,merchant,メンテナンス,15,0,0,0,30,0,0,thunder
@@ -64,8 +64,8 @@ builder,建築家,2,spe,hm,ax,la,tech,1.2,1.1,1.2,0.6,1.2,0.8,0.9,student,建築
 scout,スカウト,2,spd,dg,bow,la,shadow,0.9,1,0.9,0.7,1.2,1.4,1.3,thief,偵察眼,15,0,0,0,0,30,0,wind
 witch,魔女,2,mag,st,dg,ro,magic,0.8,0.5,0.7,1.6,1.4,1.1,1.2,mage,魔女の秘薬,20,0,0,40,20,0,0,dark
 shaman,呪術師,2,mag,st,wh,ro,magic,1,0.6,0.9,1.5,1.1,0.8,0.7,mage,呪いの言葉,20,0,0,35,0,0,0,dark
-esper,エスパー,2,mag,dv,st,la,magic,0.8,0.6,0.7,1.5,1.3,1,1.1,student,超能力覚醒,15,0,0,30,30,0,0,
-guard,衛兵,2,tnk,sp,ha,sh,warrior,1.4,1.2,1.3,0.4,0.8,0.7,0.9,mercenary,門番の誇り,15,30,30,0,0,0,0,
+esper,エスパー,2,mag,dv,st,la,magic,0.8,0.6,0.7,1.5,1.3,1,1.1,student,超能力覚醒,15,0,0,30,30,0,0,none
+guard,衛兵,2,tnk,sp,ha,sh,warrior,1.4,1.2,1.3,0.4,0.8,0.7,0.9,mercenary,門番の誇り,15,30,30,0,0,0,0,none
 magic_knight,魔法剣士,3,phy,sw,st,la,warrior,1.3,1.4,1.1,1.4,1.2,1.1,1,knight,魔法剣,30,40,0,40,0,0,0,fire;ice
 paladin,聖騎士,3,tnk,sw,ha,sh,warrior,1.5,1.3,1.8,1,1.2,0.8,1,knight,聖なる加護,200,40,40,20,0,0,0,light
 berserker,狂戦士,3,phy,ax,sw,la,warrior,1.8,1.9,0.8,0.2,0.3,1.3,0.6,gladiator,バーサーク,30,70,0,0,0,0,0,fire
@@ -76,9 +76,9 @@ sage,賢者,3,mag,st,ro,ac,magic,0.8,0.5,0.8,2,2,1,1,sorcerer,賢者の知恵,50
 necromancer,死霊術師,3,mag,st,sc,ro,shadow,0.9,0.7,0.8,1.8,1.5,0.8,0.6,sorcerer,死の支配,30,0,0,60,30,0,0,dark
 geomancer,風水師,3,mag,hm,st,ro,magic,1.1,1,1,1.5,1.4,1,1.4,druid,大地の力,30,0,0,40,40,0,0,earth
 cryomancer,氷術師,3,mag,st,dg,ro,magic,0.9,0.6,0.9,1.8,1.4,1,1,sorcerer,絶対零度,30,0,0,50,30,0,0,ice
-master_monk,拳聖,3,phy,kn,la,ac,martial,1.5,1.6,1.3,0.8,1.2,1.4,1,monk,無の境地,40,50,0,0,0,50,0,
+master_monk,拳聖,3,phy,kn,la,ac,martial,1.5,1.6,1.3,0.8,1.2,1.4,1,monk,無の境地,40,50,0,0,0,50,0,none
 karate_master,空手家,3,phy,kn,no,la,martial,1.6,1.7,1.3,0.5,0.8,1.3,0.9,boxer,空手,30,60,0,0,0,40,0,earth
-grappler,グラップラー,3,phy,kn,la,ac,martial,1.6,1.5,1.4,0.4,0.7,1.2,1,brawler,締め技,30,50,40,0,0,0,0,
+grappler,グラップラー,3,phy,kn,la,ac,martial,1.6,1.5,1.4,0.4,0.7,1.2,1,brawler,締め技,30,50,40,0,0,0,0,none
 sumo,力士,3,tnk,no,no,no,martial,2.5,1.8,1.5,0.5,0.5,0.6,1,grappler,綱取,30,80,80,0,0,0,0,earth
 assassin,暗殺者,3,spd,dg,bow,la,shadow,0.9,1.5,0.7,0.8,1.3,1.8,1.3,ninja,暗殺術,40,0,0,0,20,50,0,dark
 assassin_master,暗殺頭領,3,spd,dg,kat,la,shadow,1,1.5,0.9,0.8,1.5,1.7,1.1,ninja,影の支配者,30,0,0,0,30,60,0,dark
@@ -89,12 +89,12 @@ alchemist,錬金術師,3,spe,st,dv,ro,tech,0.9,0.8,0.9,1.4,1.8,1,1.2,magician,�
 beast_tamer,魔物使い,3,spe,wh,bow,la,special,1.2,1.1,1.1,1,1,1.2,1.4,hunter,野性の心,25,0,0,0,0,0,40,earth
 yakuza,極道,3,phy,kat,dg,su,warrior,1.4,1.5,1.3,0.5,1.1,1.1,1.3,mercenary,仁義,30,50,40,0,0,0,0,fire
 spy,工作員,3,spd,gun,dg,su,tech,1,1.2,0.9,0.8,1.6,1.5,1.3,scout,潜入工作,30,0,0,0,50,50,0,wind
-professor,教授,3,tec,bk,dv,la,tech,0.8,0.5,0.7,1.2,2.2,0.8,1,student,論理的思考,30,0,0,0,80,0,0,
+professor,教授,3,tec,bk,dv,la,tech,0.8,0.5,0.7,1.2,2.2,0.8,1,student,論理的思考,30,0,0,0,80,0,0,none
 genetics_eng,遺伝子工学士,3,spe,dv,dv,la,tech,1,0.7,0.8,1,1.8,1,1,medic,遺伝子操作,30,0,0,0,70,0,0,water
 commando,特殊部隊,3,tec,gun,kn,su,tech,1.4,1.5,1.3,0.5,1.2,1.3,1,soldier,サバイバル,30,50,0,0,0,40,0,earth
-general,将軍,3,sup,sw,sp,ha,warrior,1.6,1.5,1.5,0.6,1.5,0.9,1.2,knight,指揮官の威厳,40,60,50,0,40,0,0,
+general,将軍,3,sup,sw,sp,ha,warrior,1.6,1.5,1.5,0.6,1.5,0.9,1.2,knight,指揮官の威厳,40,60,50,0,40,0,0,none
 exorcist,祓魔師,3,mag,gun,bk,ro,holy,1,1,1,1.5,1.5,1.1,1,priest,浄化の炎,30,0,0,40,40,0,0,fire;light
-gambler,賭博師,3,spe,dg,ac,la,special,1,0.8,0.8,0.5,1,1.1,2,merchant,イカサマ,30,0,0,0,0,0,80,
+gambler,賭博師,3,spe,dg,ac,la,special,1,0.8,0.8,0.5,1,1.1,2,merchant,イカサマ,30,0,0,0,0,0,80,none
 idol,アイドル,3,sup,mic,ac,la,special,0.9,0.7,0.8,1.3,1,1.4,1.8,dancer,輝く笑顔,30,0,0,30,0,50,50,light
 maid,メイド,3,sup,dg,hm,ro,special,1.2,1.1,1,1,1.1,1.3,1.3,cook,奉仕の心,30,0,0,0,0,40,40,water
 vampire,吸血鬼,3,mag,sc,dg,ro,shadow,1.5,1.4,1.5,1.6,1.2,1.4,0.8,necromancer,吸血,20,40,40,50,0,0,0,dark
@@ -105,13 +105,13 @@ sniper,狙撃手,3,tec,gun,la,to,tech,1,1.6,0.9,0.5,1.5,1.3,1.2,gunner,狙撃の
 elementalist,精霊使い,3,mag,st,wh,ro,magic,1,0.8,0.9,1.7,1.3,1.1,1,shaman,精霊の加護,30,0,0,50,40,0,0,fire;ice;wind;earth
 curse_maker,呪い師,3,mag,st,dg,ro,shadow,0.8,0.6,0.7,1.6,1.4,0.9,2,shaman,呪詛,30,0,0,50,40,0,60,dark
 spaceman,宇宙飛行士,3,tec,gun,su,su,tech,1.2,1.1,1.2,0.5,1.4,1,1.1,pilot,無重力適応,30,0,40,0,40,0,0,ice
-merchant_baron,豪商,3,spe,dg,ac,la,special,1.2,1,1.1,0.5,1.5,0.8,2.2,merchant,財力,30,0,0,0,50,0,60,
+merchant_baron,豪商,3,spe,dg,ac,la,special,1.2,1,1.1,0.5,1.5,0.8,2.2,merchant,財力,30,0,0,0,50,0,60,none
 slime_lord,スライムロード,3,tnk,hm,sh,no,special,2.5,1.2,2,1,0.8,0.5,1,student,液状化,20,0,50,0,0,0,0,water
 golem_master,ゴーレム使い,3,tec,hm,dv,ha,tech,1.2,1.3,1.4,0.8,1.4,0.6,0.8,blacksmith,人形操作,30,40,40,0,40,0,0,earth
 dual_wielder,二刀流,3,spd,sw,kat,la,warrior,1.2,1.5,1,0.6,1,1.6,1.1,fencer,二刀流,30,40,0,0,0,50,40,wind
 heavy_gunner,重砲兵,3,tec,gn,ha,su,tech,1.4,1.4,1.5,0.5,1,0.6,1,gunner,重火器の心得,30,50,50,0,0,0,0,fire
 chariot,戦車兵,3,tnk,gn,ha,su,tech,1.8,1.5,1.8,0.4,1,0.6,0.8,soldier,キャタピラ,30,50,60,0,0,0,0,earth
-influencer,インフルエンサー,3,spe,dv,ac,la,special,0.8,0.6,0.7,0.8,1.2,1.2,2.2,idol,拡散力,30,0,0,0,40,0,70,
+influencer,インフルエンサー,3,spe,dv,ac,la,special,0.8,0.6,0.7,0.8,1.2,1.2,2.2,idol,拡散力,30,0,0,0,40,0,70,none
 streamer,配信者,3,spe,dv,mic,la,tech,0.9,0.6,0.8,0.8,1.4,1.1,1.8,student,ライブ配信,25,0,0,0,50,0,50,thunder
 samurai_archer,弓取り,3,tec,bow,kat,la,martial,1.2,1.3,1,0.6,1,1.3,1.1,samurai,騎射,30,40,0,0,0,40,50,wind
 grid_walker,電脳遊戯者,3,spd,dv,kn,su,tech,1,1.1,0.9,1,1.5,1.8,1.2,hacker,ゲーマー,30,0,0,0,50,60,50,thunder
@@ -132,8 +132,8 @@ hero,英雄,4,phy,sw,ax,sp,ha,warrior,1.5,1.8,1.5,1,1.2,1.2,1.5,paladin,英雄�
 cyborg,サイボーグ,4,tnk,dv,ax,gun,ha,tech,1.8,1.6,2,0.5,1.5,1,0.8,sniper,機械化ボディ,50,0,70,70,0,0,0,thunder
 demon,魔神,4,mag,st,dv,ro,magic,1.2,1,1,3,1.5,1.2,0.5,sage,魔神の契約,20,20,10,0,60,0,0,dark
 marine,宇宙海兵,4,phy,gun,sw,ha,tech,1.5,1.8,1.5,0.5,1.2,1.2,1,sniper,強化骨格,40,0,80,50,0,0,0,earth
-psycho,超能力者,4,mag,dv,ro,ac,magic,0.8,0.5,0.8,2.5,2.5,1.2,1,sage,超感覚,90,90,0,0,0,0,0,
-samurai_lord,剣豪,4,phy,kat,sw,ha,warrior,1.5,1.9,1.2,0.6,1.1,1.5,1.1,samurai,心眼,40,70,0,0,0,60,0,
+psycho,超能力者,4,mag,dv,ro,ac,magic,0.8,0.5,0.8,2.5,2.5,1.2,1,sage,超感覚,90,90,0,0,0,0,0,none
+samurai_lord,剣豪,4,phy,kat,sw,ha,warrior,1.5,1.9,1.2,0.6,1.1,1.5,1.1,samurai,心眼,40,70,0,0,0,60,0,none
 archmage,大魔導士,4,mag,st,bk,ro,magic,0.9,0.6,0.9,2.4,2,1,1,sorcerer,魔道の極み,50,0,0,90,70,0,0,fire;ice;thunder
 phantom_thief,怪盗,4,spd,dg,gun,su,shadow,1,1.2,1,1,1.8,1.8,1.8,thief,神出鬼没,50,0,0,0,60,80,60,wind;dark
 android,アンドロイド,4,tec,dv,gun,su,tech,1.6,1.6,1.8,0.5,2,1.2,0.8,mechanic,AI演算,40,0,60,0,80,0,0,thunder
@@ -141,16 +141,16 @@ bio_soldier,強化兵士,4,phy,gn,kn,su,tech,1.9,1.8,1.7,0.4,1,1.4,0.7,commando,
 nano_healer,ナノ医術師,4,sup,dv,gun,su,tech,1.1,0.8,1.2,1.2,2.2,1.1,1,high_priest,ナノ再生,40,0,0,0,80,0,0,light;thunder
 plasma_gunner,重火器兵,4,tec,gn,ax,ha,tech,1.5,1.6,1.6,0.8,1.1,0.9,1,sniper,火力支援,40,60,0,0,0,0,70,thunder;fire
 shadow_stalker,影の追跡者,4,spd,kat,dg,su,shadow,1.1,1.5,1,0.8,1.5,2,1.2,assassin,影渡り,40,0,0,0,50,80,0,dark
-ceo,ＣＥＯ,4,spe,dv,ac,su,special,1,0.8,0.9,0.5,2.5,1,2.5,merchant,買収,60,0,0,0,90,0,90,
+ceo,ＣＥＯ,4,spe,dv,ac,su,special,1,0.8,0.9,0.5,2.5,1,2.5,merchant,買収,60,0,0,0,90,0,90,none
 pilot,パイロット,4,tec,dv,gun,su,tech,1.2,1,1.1,0.5,1.6,1.4,1.4,inventor,操縦技術,40,0,0,0,60,60,70,thunder
 net_diver,電脳探偵,4,tec,dv,kat,su,tech,0.9,1.2,0.8,1.2,2.3,1.5,1.3,hacker,ダイブ,40,0,0,0,80,0,0,thunder
 chronomancer,時魔道士,4,mag,st,bk,ro,magic,1,0.6,0.9,2.2,2.1,1.4,1.1,sage,時の歯車,40,0,0,80,70,60,0,wind
 lich,リッチ,4,mag,sc,st,ro,shadow,1.2,0.8,0.5,2.5,2,0.8,0.5,necromancer,不死の王,50,0,0,90,80,0,0,dark
 beast_king,獣王,4,phy,kn,ax,la,martial,2,2,1.8,0.5,0.8,1.6,1,werewolf,百獣の王,40,80,70,0,0,50,0,earth
-weapon_master,武器王,4,phy,all,all,ha,warrior,1.6,1.8,1.5,0.5,1,1.3,1,gladiator,達人の技,50,80,0,0,0,0,80,
+weapon_master,武器王,4,phy,all,all,ha,warrior,1.6,1.8,1.5,0.5,1,1.3,1,gladiator,達人の技,50,80,0,0,0,0,80,none
 spaceman,宇宙飛行士,3,tec,gun,su,su,tech,1.2,1.1,1.2,0.5,1.4,1,1.1,pilot,無重力適応,30,0,40,0,40,0,0,ice
 space_pirate,宇宙海賊,4,spd,gn,sw,su,shadow,1.4,1.6,1.3,0.6,1.2,1.5,1.8,pirate,宇宙の狼,40,60,0,0,0,50,60,ice;dark
-king,王,4,sup,sw,ac,ha,special,1.5,1.5,1.5,1,1.5,1,2,general,王者の風格,50,60,60,0,60,0,80,
+king,王,4,sup,sw,ac,ha,special,1.5,1.5,1.5,1,1.5,1,2,general,王者の風格,50,60,60,0,60,0,80,none
 princess,姫,4,sup,dg,ac,ro,special,0.8,0.5,0.8,1.5,1.5,1.2,2.5,idol,王家の血筋,50,0,0,50,50,0,90,light
 mad_scientist,狂科学者,4,tec,dv,po,la,tech,0.9,0.7,0.8,1.2,2.3,1.2,0.6,professor,マッドサイエンス,50,0,0,0,90,0,0,thunder;dark
 biollante,植物兵器,4,phy,wh,ax,no,martial,2.2,1.8,2,0.8,0.5,0.6,0.5,druid,光合成,40,60,80,40,0,0,0,earth;light
@@ -159,7 +159,7 @@ time_traveler,時間旅行者,4,spe,gun,dv,su,special,1,1,1,1.5,1.5,2,2,chronoma
 terra_former,惑星開拓者,4,tec,hm,dv,su,tech,1.5,1.5,1.6,0.8,1.5,1,1,builder,テラフォーミング,40,60,60,0,60,0,0,earth
 super_star,スーパースター,4,sup,mic,ac,su,special,1,0.8,1,1.2,1.2,1.5,2.5,influencer,オーラ,50,0,0,40,40,0,90,light
 space_cowboy,宇宙カウボーイ,4,tec,gn,wh,su,tech,1.3,1.4,1.2,0.6,1.2,1.6,1.5,gunner,早撃ち,40,50,0,0,40,60,70,ice
-dictator,独裁者,4,sup,gun,sw,ha,special,1.4,1.4,1.3,0.8,1.8,1,1.5,general,独裁,50,60,0,0,70,0,70,
+dictator,独裁者,4,sup,gun,sw,ha,special,1.4,1.4,1.3,0.8,1.8,1,1.5,general,独裁,50,60,0,0,70,0,70,none
 cyber_samurai,電脳侍,4,phy,kat,dv,su,warrior,1.5,1.8,1.4,0.6,1.4,1.8,1,samurai_lord,サイバー刀法,50,80,0,0,50,70,0,thunder
 sniper_elite,精鋭狙撃手,4,tec,gn,dg,su,tech,1.1,1.5,1,0.5,1.3,1.4,1.3,sniper,ワンショット,50,0,0,0,50,60,90,wind
 deep_diver,深海探査員,4,tec,hm,dv,su,tech,1.3,1.2,1.4,0.6,1.5,1,1,aquanaut,深海適応,40,50,60,0,60,0,0,water
@@ -171,8 +171,8 @@ dragon_lord,竜王,5,phy,sw,ax,ha,warrior,2.5,2.2,2,1.5,1.2,1.2,1,dragoon,竜王
 messiah,救世主,5,sup,st,ro,ac,holy,1.5,1,1.5,2,2,1.2,2,high_priest,救済,60,0,60,80,80,0,80,light
 avatar,アバター,5,tec,dv,gn,su,tech,2,1.5,1.5,2.5,3,2,1.5,hacker,リンク接続,60,0,0,100,100,100,0,light;thunder
 destroyer,破壊神,5,phy,ax,hm,ha,warrior,3,3,2.5,0.5,0.5,1,0.5,berserker,破壊衝動,60,120,100,0,0,0,0,fire;dark
-god_hand,武神,5,phy,kn,la,ac,martial,2.2,2.5,2,1,1.5,2.2,1.2,master_monk,神の拳,60,100,80,0,50,80,0,
-trickster,トリックスター,5,spe,dg,ac,su,special,1.5,1.5,1.2,1.5,1.8,2.5,3,phantom_thief,運命操作,60,0,0,50,80,100,100,
+god_hand,武神,5,phy,kn,la,ac,martial,2.2,2.5,2,1,1.5,2.2,1.2,master_monk,神の拳,60,100,80,0,50,80,0,none
+trickster,トリックスター,5,spe,dg,ac,su,special,1.5,1.5,1.2,1.5,1.8,2.5,3,phantom_thief,運命操作,60,0,0,50,80,100,100,none
 deus_ex_machina,機械仕掛けの神,5,tec,all,all,su,tech,2.5,2,2.5,2,3,1.5,1,android,デウス・エクス,60,80,80,80,100,0,0,thunder;light
 grim_reaper,死神,5,spd,sc,dg,ro,shadow,1.2,2,1,2,1.5,2.5,0.5,assassin_master,魂の収穫,60,80,0,60,0,90,0,dark
 ancient_king,古代王,5,sup,sw,ac,ha,special,2,2,2,1.5,2,1.5,2,king,王の威光,60,80,80,50,80,0,80,light
@@ -709,7 +709,6 @@ const CSV_SKILLS = `name,type,desc,mod_hp,mod_str,mod_vit,mod_mag,mod_int,mod_ag
 // ==========================================
 // 2. CSVパーサーとデータ変換ロジック
 // ==========================================
-
 const DataParser = {
     // 修正: 空のフィールドも正しく読み取れるパーサー
     parse(csvText) {
@@ -720,7 +719,6 @@ const DataParser = {
 
         for (let i = 1; i < lines.length; i++) {
             const line = lines[i];
-            // ダブルクォート内のカンマを無視し、空フィールドも維持するスプリット処理
             const row = [];
             let current = '';
             let inQuote = false;
@@ -736,15 +734,16 @@ const DataParser = {
                     current += char;
                 }
             }
-            row.push(current); // 最後の列を追加
+            row.push(current);
 
+            // 空行チェック
             if (row.length === 0 || (row.length === 1 && row[0] === '')) continue;
 
             const obj = {};
             headers.forEach((header, index) => {
-                let value = row[index] ? row[index].replace(/^"|"$/g, '') : ''; // クォート削除
+                let value = row[index] ? row[index].replace(/^"|"$/g, '') : '';
                 if (value !== '' && !isNaN(value)) {
-                    value = Number(value); // 数値変換
+                    value = Number(value);
                 }
                 obj[header] = value;
             });
@@ -794,8 +793,9 @@ const DataParser = {
                 lineage: job.lineage,
                 mod: mod,
                 reqJob: job.req_job || null,
+                masterSkill: job.master_skill || null,
                 reqStats: reqStats,
-                reqEl: job.req_el ? job.req_el.split(';') : null // ★追加: 属性要件のパース
+                reqEl: job.req_el ? String(job.req_el).split(';') : null // ★修正: String()でキャスト
             };
         });
     },
@@ -824,7 +824,7 @@ const DataParser = {
                 base: base,
                 tier: item.tier || 1,
                 req: req,
-                elem: item.element || null // ★属性追加
+                elem: item.element || null
             };
         });
         return items;
@@ -958,7 +958,6 @@ const MASTER_DATA = {
     elements: parsedElements.list,
     element_chart: parsedElements.chart,
     jobs: DataParser.convertJobs(RAW_JOBS),
-    
     job_ranks: [
         { tier: 1, prefix: "", mod: 1.0 },
         { tier: 2, prefix: "熟練", mod: 1.2 },
