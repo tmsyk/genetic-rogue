@@ -1,5 +1,5 @@
 /**
- * Genetic Rogue Ver.12.1 - Fixed UI & AutoEquip
+ * Genetic Rogue Ver.12.2 - Title & CharMake
  * Main Logic & UI Controller
  */
 
@@ -15,24 +15,40 @@ const Game = {
     helix: 100, floor: 1, maxFloor: 1, floorProgress: 0,
     party: [], roster: [], inventory: [],
     exploring: false, timer: null, currentEnemy: null,
-    SAVE_KEY: 'genetic_rogue_v12_1',
+    SAVE_KEY: 'genetic_rogue_v12_2', // Version Key Update
 
     init() {
-        if(localStorage.getItem(this.SAVE_KEY)) {
-            this.load();
-        } else {
-            // 初期データ生成
-            const warriorKey = Object.keys(DB.jobs).find(k => k.includes("n_") && k.includes("warrior") && DB.jobs[k].tier === 1);
-            const priestKey = Object.keys(DB.jobs).find(k => k.includes("n_") && k.includes("priest") && DB.jobs[k].tier === 1);
-            
-            if(warriorKey) this.hire(warriorKey, true); 
-            if(priestKey) this.hire(priestKey, true);
-            
-            this.save();
-        }
         UI.init();
+        // いきなりロードせず、タイトル画面を表示
+        UI.showTitleScreen();
+    },
+
+    // 新規ゲーム開始
+    startNewGame(raceId, jobKey) {
+        this.helix = 100;
+        this.floor = 1;
+        this.maxFloor = 1;
+        this.floorProgress = 0;
+        this.party = [];
+        this.roster = [];
+        this.inventory = [];
+        this.currentEnemy = null;
+
+        // 最初のキャラクター生成 (指定された種族・職業)
+        const c = new Character(jobKey, null, { race: raceId });
+        this.roster.push(c);
+        this.party.push(c);
+
+        // おまけアイテム
+        let starter = LootSystem.generate(1);
+        if(!starter) starter = { uid: "starter", name:"粗末な剣", kind:"sw", type:"weapon", slot:"main_hand", stats:{atk:2}, rarity:1 };
+        this.inventory.push(starter);
+        c.autoEquip(starter);
+
+        this.save();
         UI.updateAll();
-        UI.log("Genetic Rogue 起動", "log-sys");
+        UI.log("Genetic Rogue 開始", "log-sys");
+        UI.log(`${c.name} が冒険の準備を整えました。`, "log-sys");
     },
 
     save() {
@@ -47,7 +63,7 @@ const Game = {
     load() {
         try {
             const d = JSON.parse(localStorage.getItem(this.SAVE_KEY));
-            if(!d) return;
+            if(!d) return false;
             this.helix = d.helix; this.maxFloor = d.maxFloor;
             this.inventory = d.inventory || [];
             this.roster = (d.roster||[]).map(x => new Character(null, null, x));
@@ -56,7 +72,17 @@ const Game = {
                 const c = this.roster.find(x=>x.id===id);
                 if(c) this.party.push(c);
             });
-        } catch(e) { console.error(e); }
+            UI.updateAll();
+            UI.log("データをロードしました。", "log-sys");
+            return true;
+        } catch(e) { 
+            console.error(e); 
+            return false;
+        }
+    },
+
+    hasSaveData() {
+        return !!localStorage.getItem(this.SAVE_KEY);
     },
 
     // --- Actions ---
@@ -172,16 +198,12 @@ const Game = {
     loot() {
         const item = DB.createRandomItem(this.floor);
         
-        // ★修正: 自動装備ロジックの変更
-        // 全員ではなく、パーティ内で「最も装備に適した1人」だけが装備する
-        // 装備されなかった場合のみインベントリに追加
+        // 自動装備ロジック
         let isEquipped = false;
-        
-        // 先頭から順にチェックし、装備更新があれば即終了
         for (const char of this.party) {
             if (char.autoEquip(item)) {
                 isEquipped = true;
-                break; // 1人が装備したらループを抜ける（全員装備を防ぐ）
+                break; 
             }
         }
 
@@ -233,10 +255,9 @@ const Game = {
         this.save();
         UI.updateAll();
         alert(`${c.name} は転職しました！`);
-    }
+    },
     
-    // アイテム売却機能（コモン以下一括）
-    ,sellTrash() {
+    sellTrash() {
         let sold = 0;
         let gain = 0;
         for(let i=this.inventory.length-1; i>=0; i--) {
@@ -251,7 +272,7 @@ const Game = {
             UI.log(`売却: ${sold}個 (+${gain} Helix)`, "log-item");
             this.save();
             UI.updateAll();
-            UI.renderInv(); // インベントリ画面も更新
+            UI.renderInv();
         } else {
             alert("売却できるアイテム（コモン以下）がありません。");
         }
@@ -260,7 +281,12 @@ const Game = {
 
 class Character {
     constructor(jobKey, parents, data) {
-        if(data) { Object.assign(this, data); return; }
+        // ロード時またはオプション指定時
+        if(data && data.id) { 
+            Object.assign(this, data); 
+            return; 
+        }
+
         this.id = Math.random().toString(36);
         this.jobKey = jobKey;
         this.name = UTILS.genName();
@@ -275,8 +301,14 @@ class Character {
         this.personality = "凡人";
         this.elements = [];
         
+        // Race initialization
         const races = Object.keys(MASTER_DATA.races);
-        this.race = races[Math.floor(Math.random()*races.length)];
+        if (data && data.race) {
+            this.race = data.race;
+        } else {
+            // Default random
+            this.race = races[Math.floor(Math.random()*races.length)];
+        }
     }
 
     get job() { return DB.getJob(this.jobKey); }
@@ -315,27 +347,23 @@ class Character {
     }
     
     canEquip(item) {
-        return true; // 詳細な条件が必要ならここに追加
+        return true; 
     }
 
-    // ★修正: 自動装備ロジック（booleanを返す）
     autoEquip(item) {
         if(!item.slot) return false;
         
         const cur = this.equipment[item.slot];
-        // 簡易評価: ステータス合計値
         const curScore = cur ? Object.values(cur.stats).reduce((a,b)=>a+b,0) : 0;
         const newScore = Object.values(item.stats).reduce((a,b)=>a+b,0);
         
         if(newScore > curScore) {
-            // 古い装備があればインベントリに戻す
             if(cur) Game.inventory.push(cur);
-            
             this.equipment[item.slot] = item;
             UI.log(`${this.name}が${item.name}を装備`, "log-equip");
-            return true; // 装備した
+            return true;
         }
-        return false; // 装備しなかった
+        return false;
     }
     
     unequip(slot) {
@@ -352,11 +380,9 @@ const UI = {
     selChar: null,
 
     init() {
-        // ★修正: 安全なイベントバインドとエラー回避
         const bind = (id, fn) => {
             const el = document.getElementById(id);
             if(el) el.onclick = fn;
-            else console.warn(`Button #${id} not found.`);
         };
 
         bind('btn-explore', () => Game.explore(1));
@@ -383,6 +409,115 @@ const UI = {
         });
     },
 
+    // タイトル画面表示（新規追加）
+    showTitleScreen() {
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.id = 'modal-title';
+        modal.style.display = 'flex';
+        
+        const hasData = Game.hasSaveData();
+        const loadDisabled = hasData ? '' : 'disabled';
+        const loadStyle = hasData ? 'background:var(--accent-color); color:#000;' : 'opacity:0.5; cursor:not-allowed;';
+
+        modal.innerHTML = `
+            <div class="modal-box" style="text-align:center; padding:40px;">
+                <h1 style="color:var(--accent-color); font-size:32px; margin-bottom:10px;">🧬 Genetic Rogue</h1>
+                <p style="color:#888; margin-bottom:40px;">Ver.12.2</p>
+                
+                <div style="display:flex; flex-direction:column; gap:20px; width:200px; margin:0 auto;">
+                    <button id="title-load" style="padding:15px; font-weight:bold; font-size:16px; ${loadStyle}" ${loadDisabled}>続きから (Load)</button>
+                    <button id="title-new" style="padding:15px; font-size:16px;">はじめから (New Game)</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        document.getElementById('title-load').onclick = () => {
+            if(Game.load()) {
+                modal.remove();
+            } else {
+                alert("セーブデータの読み込みに失敗しました");
+            }
+        };
+        document.getElementById('title-new').onclick = () => {
+            if(hasData) {
+                if(!confirm("セーブデータが存在します。上書きして新規開始しますか？")) return;
+            }
+            modal.remove();
+            this.showCharMake();
+        };
+    },
+
+    // キャラクター作成画面（新規追加）
+    showCharMake() {
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.style.display = 'flex';
+
+        // 選択可能な職業リスト (Tier 1 & No Req)
+        const jobOptions = Object.values(DB.jobs)
+            .filter(j => j.tier === 1 && !j.reqJob && MASTER_DATA.jobs.find(def => def.id === j.baseId).tier === 1)
+            .map(j => `<option value="${j.id}">${j.name}</option>`)
+            .join('');
+
+        const raceOptions = Object.keys(MASTER_DATA.races)
+            .map(k => `<option value="${k}">${MASTER_DATA.races[k].name}</option>`)
+            .join('');
+
+        modal.innerHTML = `
+            <div class="modal-box">
+                <div class="modal-header"><h3>キャラクター作成</h3></div>
+                <div class="modal-body">
+                    <div style="margin-bottom:15px;">
+                        <label>種族:</label>
+                        <select id="cm-race" style="padding:5px; background:#222; color:#fff; border:1px solid #444;">
+                            ${raceOptions}
+                        </select>
+                    </div>
+                    <div style="margin-bottom:15px;">
+                        <label>職業:</label>
+                        <select id="cm-job" style="padding:5px; background:#222; color:#fff; border:1px solid #444;">
+                            ${jobOptions}
+                        </select>
+                    </div>
+                    <div id="cm-preview" style="background:#1a1a1a; border:1px solid #333; padding:10px; border-radius:4px; margin-bottom:20px;">
+                        <!-- Preview -->
+                    </div>
+                    <button id="cm-start" class="primary" style="width:100%; padding:15px;">冒険を始める</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        const updatePreview = () => {
+            const r = document.getElementById('cm-race').value;
+            const j = document.getElementById('cm-job').value;
+            const raceData = MASTER_DATA.races[r];
+            const jobData = DB.jobs[j];
+            
+            let html = "<h4 style='color:var(--accent-color); margin:0 0 5px 0;'>ステータス補正プレビュー</h4>";
+            html += `<div style="font-size:12px; line-height:1.6;">`;
+            html += `HP: x${raceData.mod.hp}<br>`;
+            html += `STR: x${raceData.mod.str}<br>`;
+            html += `MAG: x${raceData.mod.mag}<br>`;
+            html += `AGI: x${raceData.mod.agi}<br>`;
+            html += `</div>`;
+            document.getElementById('cm-preview').innerHTML = html;
+        };
+        
+        document.getElementById('cm-race').onchange = updatePreview;
+        document.getElementById('cm-job').onchange = updatePreview;
+        document.getElementById('cm-start').onclick = () => {
+            const r = document.getElementById('cm-race').value;
+            const j = document.getElementById('cm-job').value;
+            Game.startNewGame(r, j);
+            modal.remove();
+        };
+        
+        updatePreview();
+    },
+
     updateAll() {
         document.getElementById('helix-display').innerText = Game.helix;
         const fd = document.getElementById('floor-display');
@@ -392,7 +527,6 @@ const UI = {
         if(document.getElementById('modal-lab').style.display === 'flex') this.renderLab();
     },
 
-    // ★修正: パーティ表示をリッチに戻す（HPバー、装備など）
     renderParty() {
         const c = document.getElementById('party-container');
         c.innerHTML = "";
@@ -406,11 +540,9 @@ const UI = {
             const raceName = MASTER_DATA.races[char.race] ? MASTER_DATA.races[char.race].name : "不明";
             const stats = char.totalStats;
             
-            // HP Bar
             const hpPct = Math.max(0, Math.min(100, (char.hp / stats.hp) * 100));
             const expPct = Math.min(100, (char.exp / char.maxExp) * 100);
             
-            // Equipment List
             let equipHtml = '<div class="equip-grid">';
             for(let slot in char.equipment) {
                 let item = char.equipment[slot];
@@ -501,7 +633,6 @@ const UI = {
         Object.values(DB.jobs).filter(j => {
             if (j.tier !== 1) return false;
             if (j.reqJob) return false;
-            // Check master definition
             const baseJobDef = MASTER_DATA.jobs.find(def => def.id === j.baseId);
             return baseJobDef && baseJobDef.tier === 1;
         }).forEach(j => {
@@ -537,8 +668,6 @@ const UI = {
 
         const nextJobs = Object.keys(DB.jobs).filter(k => {
             const j = DB.jobs[k];
-            // Simple logic: same lineage, next tier
-            // (Strict tree logic can be added here)
             return j.tier === currentJob.tier + 1 && j.lineage === currentJob.lineage;
         });
 
@@ -562,7 +691,6 @@ const UI = {
         const cList = document.getElementById('equip-char-list'); 
         cList.innerHTML = "";
         
-        // Show roster if not in party? No, only party for equip usually
         Game.party.forEach(c => {
             let el = document.createElement('div');
             el.className = `list-item ${this.equipChar===c?'selected':''}`;
@@ -579,7 +707,6 @@ const UI = {
             return;
         }
         
-        // Current Equip
         const head = document.createElement('div');
         head.style.marginBottom = "10px";
         head.style.borderBottom = "1px solid #333";
@@ -600,11 +727,9 @@ const UI = {
             const div = document.createElement('div');
             div.className = "list-item";
             
-            // Check equip
             const check = this.equipChar.canEquip(item);
             const style = check ? "" : "opacity:0.5; cursor:not-allowed;";
             
-            // Stats string
             let stats = "";
             for(let k in item.stats) if(item.stats[k]!==0) stats += `${k}:${item.stats[k]} `;
 
@@ -617,11 +742,9 @@ const UI = {
             if(check) {
                 div.onclick = () => {
                     this.equipChar.equip(item);
-                    // Remove from inventory logic is inside Character.equip? 
-                    // No, Character.equip pushes OLD item to inventory, we need to remove NEW item here
                     Game.inventory.splice(idx, 1);
                     this.renderInv();
-                    this.renderParty(); // Main UI update
+                    this.renderParty(); 
                 };
             }
             iList.appendChild(div);
@@ -634,13 +757,11 @@ const UI = {
         this.renderParty();
     },
     
-    // Character Detail Modal
     showCharDetail(c) {
         const s = c.totalStats;
         const jobName = c.job ? c.job.name : "Unknown";
         const raceName = MASTER_DATA.races[c.race] ? MASTER_DATA.races[c.race].name : "Unknown";
         
-        // Equip Rows
         let eqHtml = "";
         for(let slot in c.equipment) {
             let item = c.equipment[slot];
@@ -679,10 +800,9 @@ const UI = {
         this.openModal('modal-char-detail');
     },
     
-    // Helper to open equip from detail
     openEquipFor(charId) {
-        this.closeModal(); // Close detail
-        this.equipChar = Game.party.find(c=>c.id===charId); // Find char obj
+        this.closeModal(); 
+        this.equipChar = Game.party.find(c=>c.id===charId); 
         this.openModal('modal-inv', ()=>this.renderInv());
     },
 
