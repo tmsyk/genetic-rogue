@@ -1,5 +1,5 @@
 /**
- * Genetic Rogue Ver.12.7 - Fix CharMake List
+ * Genetic Rogue Ver.12.7 JP - Fix CharMake List & UI
  * Main Logic & UI Controller
  */
 
@@ -15,7 +15,7 @@ const Game = {
     helix: 100, floor: 1, maxFloor: 1, floorProgress: 0,
     party: [], roster: [], inventory: [],
     exploring: false, timer: null, currentEnemy: null,
-    SAVE_KEY: 'genetic_rogue_v12_7', // Key update to reset bad data
+    SAVE_KEY: 'genetic_rogue_v12_7', // Key update
 
     init() {
         UI.init();
@@ -159,7 +159,9 @@ const Game = {
             }
             dmg = Math.floor(dmg * elemMod * (0.9 + Math.random()*0.2));
             enemy.hp -= dmg;
-            UI.log(`${c.name}の攻撃 -> ${dmg}`);
+            
+            let modText = elemMod > 1 ? "(弱点!)" : (elemMod < 1 ? "(半減)" : "");
+            UI.log(`${c.name}の攻撃${modText} -> ${dmg}`);
         });
 
         if(enemy.hp <= 0) {
@@ -212,11 +214,11 @@ const Game = {
 
     hire(jobId, isFree=false) {
         if(!isFree && this.helix < MASTER_DATA.config.HIRE_COST) return;
-        if (!jobId || !DB.jobs[jobId]) return console.error("Invalid JobID");
+        if (!jobId || !DB.jobs[jobId]) return console.error("無効なJobIDです");
         
         const job = DB.jobs[jobId];
         // 厳密なTier 1チェック
-        if ((job.tier !== 1 || job.reqJob) && !isFree) return console.warn("Only Tier 1 allowed");
+        if ((job.tier !== 1 || job.reqJob) && !isFree) return console.warn("雇用できるのはTier 1のみです");
 
         if(!isFree) this.helix -= MASTER_DATA.config.HIRE_COST;
         const c = new Character(jobId);
@@ -323,7 +325,9 @@ class Character {
                 for(let st in it.stats) s[st] = (s[st]||0) + it.stats[st];
             }
         }
-        for(let k in s) s[k] += Math.floor((s[k]*0.1) * (this.level-1));
+        for(let k in s) {
+            s[k] += Math.floor((s[k]*0.1) * (this.level-1));
+        }
         return s;
     }
     
@@ -348,7 +352,7 @@ class Character {
             this.exp = 0;
             this.maxExp *= 1.2;
             this.hp = this.totalStats.hp;
-            UI.log(`${this.name} Level Up! (Lv.${this.level})`);
+            UI.log(`${this.name} レベルアップ! (Lv.${this.level})`);
         }
     }
     
@@ -386,7 +390,7 @@ class Character {
         if(newScore > curScore) {
             if(cur) Game.inventory.push(cur);
             this.equipment[targetSlot] = item;
-            UI.log(`${this.name}が${item.name}を装備`, "log-equip");
+            UI.log(`${this.name}が${item.name}を装備しました`, "log-equip");
             return true;
         }
         return false;
@@ -464,25 +468,25 @@ const UI = {
         modal.innerHTML = `
             <div class="modal-box" style="text-align:center; padding:40px;">
                 <h1 style="color:var(--accent-color); font-size:32px; margin-bottom:10px;">🧬 Genetic Rogue</h1>
-                <p style="color:#888; margin-bottom:40px;">Ver.12.5</p>
+                <p style="color:#888; margin-bottom:40px;">Ver.12.7</p>
                 <div style="display:flex; flex-direction:column; gap:20px; width:200px; margin:0 auto;">
-                    <button id="title-load" style="padding:15px; font-weight:bold; font-size:16px; ${loadStyle}" ${loadDisabled}>続きから (Load)</button>
-                    <button id="title-new" style="padding:15px; font-size:16px;">はじめから (New Game)</button>
+                    <button id="title-load" style="padding:15px; font-weight:bold; font-size:16px; ${loadStyle}" ${loadDisabled}>続きから</button>
+                    <button id="title-new" style="padding:15px; font-size:16px;">はじめから</button>
                 </div>
             </div>
         `;
         document.body.appendChild(modal);
 
         document.getElementById('title-load').onclick = () => {
-            if(Game.load()) {
+            if (Game.load()) {
                 modal.remove();
             } else {
-                alert("セーブデータの読み込みに失敗しました");
+                alert("データの読み込みに失敗しました。");
             }
         };
         document.getElementById('title-new').onclick = () => {
-            if(hasData) {
-                if(!confirm("セーブデータが存在します。上書きして新規開始しますか？")) return;
+            if (hasData) {
+                if (!confirm("セーブデータがあります。上書きして新しく始めますか？")) return;
             }
             modal.remove();
             this.showCharMake();
@@ -494,16 +498,9 @@ const UI = {
         modal.className = 'modal-overlay';
         modal.style.display = 'flex';
 
-        // ★修正: 職業選択肢のフィルタリング (Tier 1 & No Req & BaseJob is Tier 1)
+        // 職業選択肢の生成
         const jobOptions = Object.values(DB.jobs)
-            .filter(j => {
-                if (j.tier !== 1) return false;
-                if (j.reqJob) return false;
-                
-                // マスタデータ定義で基本職がTier 1であることを確認
-                const baseDef = MASTER_DATA.jobs.find(def => def.id === j.baseId);
-                return baseDef && baseDef.tier === 1;
-            })
+            .filter(j => j.tier === 1 && !j.reqJob)
             .map(j => `<option value="${j.id}">${j.name}</option>`)
             .join('');
 
@@ -549,7 +546,7 @@ const UI = {
         document.getElementById('cm-start').onclick = () => {
             const r = document.getElementById('cm-race').value;
             const j = document.getElementById('cm-job').value;
-            if(!j) return alert("職業を選択してください");
+            if (!j) return alert("職業を選択してください");
             Game.startNewGame(r, j);
             modal.remove();
         };
@@ -651,7 +648,6 @@ const UI = {
     renderHire() {
         const el = document.getElementById('guild-list');
         el.innerHTML = "";
-        // ★修正: 雇用リストも同様にフィルタリング
         Object.values(DB.jobs).filter(j => {
             if (j.tier !== 1) return false;
             if (j.reqJob) return false;
