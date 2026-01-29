@@ -1,16 +1,14 @@
 /**
- * Genetic Rogue Ver.13.10 - Fix Missing UI Functions
+ * Genetic Rogue Ver.13.11 - Command Center UI Logic
  * Main Logic & UI Controller
  */
 
 // --- UTILS ---
 const UTILS = {
     genName: () => {
-        // Use Master Data if available
         if (typeof MASTER_DATA !== 'undefined' && MASTER_DATA.names && MASTER_DATA.names.length > 0) {
             return MASTER_DATA.names[Math.floor(Math.random() * MASTER_DATA.names.length)];
         }
-        // Fallback
         const n = ["アレク", "ベル", "シド", "ダン", "イヴ", "フェイ", "ジン"];
         return n[Math.floor(Math.random() * n.length)] + Math.floor(Math.random() * 99);
     }
@@ -20,13 +18,11 @@ const Game = {
     helix: 100, floor: 1, maxFloor: 1, floorProgress: 0,
     party: [], roster: [], inventory: [],
     exploring: false, timer: null, currentEnemy: null,
-    SAVE_KEY: 'genetic_rogue_v13_10', // Key update
+    SAVE_KEY: 'genetic_rogue_v13_11', // Key update
 
     init() {
         UI.init();
-        if (!typeof DB === 'undefined' || !DB.jobs || Object.keys(DB.jobs).length === 0) {
-            console.error("DB Error");
-            // If DB isn't ready, try to init it (though index.html order should prevent this)
+        if (typeof DB === 'undefined' || !DB.jobs || Object.keys(DB.jobs).length === 0) {
             if(typeof DB !== 'undefined') DB.init();
         }
         UI.showTitleScreen();
@@ -47,14 +43,13 @@ const Game = {
         this.party.push(c);
 
         let starter = DB.createRandomItem(1);
-        if(!starter) starter = { uid: "starter", name:"冒険者の短剣", kind:"dg", type:"weapon", slot:"main_hand", stats:{str:2}, rarity:1 };
         this.inventory.push(starter);
         c.autoEquip(starter);
 
         this.save();
         UI.updateAll();
-        UI.log("冒険を開始しました", "log-sys");
-        UI.log(`${c.name} が準備を整えました。`, "log-sys");
+        UI.log("システム起動。冒険を開始します。", "log-sys");
+        UI.logDetail(`[INFO] New Game Started. Leader: ${c.name}`);
     },
 
     save() {
@@ -79,7 +74,8 @@ const Game = {
                 if(c) this.party.push(c);
             });
             UI.updateAll();
-            UI.log("データをロードしました。", "log-sys");
+            UI.log("データロード完了。", "log-sys");
+            UI.logDetail(`[INFO] Data Loaded. Floor: ${this.floor}`);
             return true;
         } catch(e) { 
             console.error(e); 
@@ -98,8 +94,12 @@ const Game = {
         this.floorProgress = 0;
         this.exploring = true;
         this.currentEnemy = null;
-        UI.toggle(true);
-        UI.log(`階層 ${this.floor} 探索開始`);
+        
+        UI.toggleExplore(true); // ボタン表示切替
+        UI.log(`階層 ${this.floor} の探索を開始します`, "log-sys");
+        UI.logDetail(`[EXPLORE] Start Floor ${this.floor}`);
+        UI.updateEnemyInfo(null); // クリア
+        
         this.timer = setInterval(()=>this.tick(), 800);
     },
 
@@ -109,14 +109,16 @@ const Game = {
         this.party.forEach(c=>c.hp=c.totalStats.hp);
         this.currentEnemy = null;
         this.save();
-        UI.toggle(false);
+        UI.toggleExplore(false);
         UI.updateAll();
-        UI.log("帰還しました。");
+        UI.log("拠点に帰還しました", "log-sys");
+        UI.logDetail("[EXPLORE] Return to base. All HP restored.");
     },
 
     tick() {
         if(this.party.every(c=>c.hp<=0)) {
-            UI.log("全滅しました...", "log-defeat");
+            UI.log("パーティが全滅しました...", "log-defeat");
+            UI.logDetail("[DEFEAT] Party wiped out.");
             this.stop();
             return;
         }
@@ -125,11 +127,14 @@ const Game = {
             this.combatRound();
         } else {
             this.floorProgress++;
-            if(this.floorProgress >= 30) {
+            const maxStep = MASTER_DATA.config.FLOOR_STEP_MAX || 30;
+
+            if(this.floorProgress >= maxStep) {
                 this.floor++;
                 this.floorProgress = 0;
                 if(this.floor > this.maxFloor) this.maxFloor = this.floor;
                 UI.log(`>>> 階層 ${this.floor} に到達！`, "log-victory");
+                UI.logDetail(`[PROGRESS] Reached Floor ${this.floor}`);
             }
             UI.updateAll();
 
@@ -143,9 +148,14 @@ const Game = {
 
     encounter() {
         this.currentEnemy = DB.createEnemy(this.floor, this.floor % 5 === 0);
+        this.currentEnemy.maxHp = this.currentEnemy.hp; // 最大HP保存
+        
         const ename = this.currentEnemy.name;
         const eElem = this.currentEnemy.elem ? `[${MASTER_DATA.elements.find(e=>e.key===this.currentEnemy.elem).name}]` : "";
+        
         UI.log(`遭遇: ${ename} ${eElem} (HP:${this.currentEnemy.hp})`, "log-combat");
+        UI.logDetail(`[ENCOUNTER] ${ename} (Tier:${this.currentEnemy.tier}) appeared.`);
+        UI.updateEnemyInfo(this.currentEnemy);
     },
 
     combatRound() {
@@ -172,12 +182,15 @@ const Game = {
             
             let modText = elemMod > 1 ? "(弱点!)" : (elemMod < 1 ? "(半減)" : "");
             UI.log(`${c.name}の攻撃${modText} -> ${dmg}`);
+            UI.logDetail(`[ATK] ${c.name} -> ${enemy.name}: ${dmg} (Elem:${elemMod})`);
         });
+
+        UI.updateEnemyInfo(enemy); // HPバー更新
 
         if(enemy.hp <= 0) {
             UI.log("勝利！", "log-victory");
+            UI.logDetail(`[WIN] ${enemy.name} defeated. +${enemy.gold}G`);
             this.helix += enemy.gold;
-            // Char Exp + Job Exp
             const exp = enemy.exp || 10;
             activeParty.forEach(c => {
                 c.gainExp(exp);
@@ -201,7 +214,11 @@ const Game = {
                 dmg = Math.floor(dmg * elemMod);
                 target.hp -= dmg;
                 UI.log(`${target.name} に ${dmg} のダメージ`, "log-dmg");
-                if(target.hp <= 0) UI.log(`${target.name} は倒れた...`, "log-defeat");
+                UI.logDetail(`[DEF] ${enemy.name} -> ${target.name}: ${dmg}`);
+                if(target.hp <= 0) {
+                     UI.log(`${target.name} は倒れた...`, "log-defeat");
+                     UI.logDetail(`[DEAD] ${target.name} is down.`);
+                }
             }
         }
     },
@@ -218,10 +235,12 @@ const Game = {
         
         if(maxAgi > diff + (Math.random()*20)) {
             UI.log("回避に成功した！");
+            UI.logDetail(`[TRAP] Evaded ${trap.name} (AGI check pass)`);
         } else {
             if(trap.type === 'dmg') {
                 this.party.forEach(c => { if(c.hp>0) c.hp -= dmg; });
                 UI.log(`全員に ${dmg} ダメージ！`, "log-dmg");
+                UI.logDetail(`[TRAP] Triggered ${trap.name}: ${dmg} dmg to all`);
             } else {
                 UI.log("毒を受けた！（未実装効果）", "log-trap");
             }
@@ -230,6 +249,7 @@ const Game = {
 
     loot() {
         const item = DB.createRandomItem(this.floor);
+        UI.logItem(`[獲得] ${item.name} (Tier:${item.tier})`, item.rarity);
         
         let isEquipped = false;
         for (const char of this.party) {
@@ -250,14 +270,10 @@ const Game = {
         if (!jobId || !DB.jobs[jobId]) return console.error("Invalid JobID");
         const job = DB.jobs[jobId];
         
-        // Filter check again for safety
         if ((job.tier !== 1 || job.reqJob) && !isFree) return console.warn("Only Tier 1 allowed");
 
-        // 名前入力
         UI.showNameInput((name) => {
             if(!isFree) this.helix -= MASTER_DATA.config.HIRE_COST;
-            
-            // Random race for hire
             const races = Object.keys(MASTER_DATA.races);
             const raceId = races[Math.floor(Math.random()*races.length)];
             
@@ -274,8 +290,8 @@ const Game = {
     classChange(charId, newJobId) {
         const c = this.roster.find(x=>x.id===charId);
         if(!c) return;
-        if(c.level < 10) return alert("Lv10以上必要です");
-        if(this.helix < MASTER_DATA.config.CC_COST) return alert("Helix不足");
+        if(c.level < 10) return alert("Need Lv 10+");
+        if(this.helix < MASTER_DATA.config.CC_COST) return alert("Not enough Helix");
         this.helix -= MASTER_DATA.config.CC_COST;
         c.classChange(newJobId);
         UI.updateAll();
@@ -310,17 +326,19 @@ const Game = {
         } else {
             alert("売却できるアイテム（コモン以下）がありません。");
         }
-    }
+    },
+
+    breed(id1, id2) { /* ... */ }
 };
 
 class Character {
     constructor(jobKey, parents, data) {
         if(data && data.id) { 
-            // Migrate
+            // Migration
             if (!data.equipment.head) data.equipment.head = null;
             if (!data.equipment.accessory1) data.equipment.accessory1 = data.equipment.accessory;
             if (!data.equipment.accessory2) data.equipment.accessory2 = null;
-            if (data.equipment.accessory) delete data.equipment.accessory;
+            delete data.equipment.accessory;
             if (data.jobExp === undefined) data.jobExp = 0;
             if (!data.learnedSkills) data.learnedSkills = [];
             if (!data.masteredJobs) data.masteredJobs = [];
@@ -370,7 +388,6 @@ class Character {
         const job = this.job;
         const raceMod = MASTER_DATA.races[this.race] ? MASTER_DATA.races[this.race].mod : null;
 
-        // Passive
         let passiveMul = { hp:1, str:1, vit:1, mag:1, int:1, agi:1, luc:1 };
         this.learnedSkills.forEach(skName => {
             const skData = MASTER_DATA.skills.data[skName];
@@ -412,7 +429,8 @@ class Character {
         if(this.exp >= this.maxExp) {
             this.level++; this.exp=0; this.maxExp*=1.2;
             this.hp = this.totalStats.hp;
-            UI.log(`${this.name} Level Up! (Lv.${this.level})`);
+            UI.log(`${this.name} Level Up! (Lv.${this.level})`, "log-lvlup");
+            UI.logDetail(`[GROWTH] ${this.name} -> Lv.${this.level}`);
         }
     }
 
@@ -433,7 +451,7 @@ class Character {
         if (mSkill) {
             if (!this.learnedSkills.includes(mSkill)) {
                 this.learnedSkills.push(mSkill);
-                UI.log(`${this.name}は${this.job.name}を極めた！ スキル「${mSkill}」を習得！`, "log-lvlup");
+                UI.log(`${this.name}は${this.job.name}を極めた！ スキル「${mSkill}」習得！`, "log-lvlup");
             } else {
                 UI.log(`${this.name}は${this.job.name}を極めた！`, "log-lvlup");
             }
@@ -510,14 +528,18 @@ class Character {
 
 // --- UI Controller ---
 const UI = {
-    currentTab: 'roster',
+    currentTab: 'enemy', // Changed to right bottom tabs default
+    currentLabTab: 'roster',
     selChar: null,
     equipChar: null,
     invFilter: 'all', 
 
     init() {
         const bind = (id, fn) => { const el = document.getElementById(id); if(el) el.onclick = fn; };
-        bind('btn-explore', () => Game.explore(document.getElementById('floor-select').value));
+        bind('btn-explore', () => {
+             const sel = document.getElementById('floor-select');
+             Game.explore(sel ? sel.value : 1);
+        });
         bind('btn-return', () => Game.stop());
         bind('btn-lab', () => this.openModal('modal-lab', () => this.renderLab()));
         bind('btn-inv', () => this.openModal('modal-inv', () => this.renderInv()));
@@ -525,12 +547,28 @@ const UI = {
         bind('btn-help', () => this.openModal('modal-rules'));
         bind('btn-sell-trash', () => Game.sellTrash());
         document.querySelectorAll('.close-modal').forEach(b => { b.onclick = () => this.closeModal(); });
+        
+        // Lab Tabs
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.onclick = (e) => {
                 const tabId = e.target.getAttribute('data-tab');
-                if(tabId) this.switchTab(tabId);
+                if(tabId) this.switchLabTab(tabId);
             };
         });
+    },
+
+    toggleExplore(isExplore) {
+        const explBtn = document.getElementById('btn-explore');
+        const retBtn = document.getElementById('btn-return');
+        if(isExplore) {
+            explBtn.disabled = true; 
+            explBtn.classList.add('disabled');
+            retBtn.disabled = false;
+        } else {
+            explBtn.disabled = false;
+            explBtn.classList.remove('disabled');
+            retBtn.disabled = true;
+        }
     },
 
     showTitleScreen() {
@@ -545,7 +583,7 @@ const UI = {
         modal.innerHTML = `
             <div class="modal-box" style="text-align:center; padding:40px;">
                 <h1 style="color:var(--accent-color); font-size:32px; margin-bottom:10px;">🧬 Genetic Rogue</h1>
-                <p style="color:#888; margin-bottom:40px;">Ver.13.10</p>
+                <p style="color:#888; margin-bottom:40px;">Ver.13.11</p>
                 <div style="display:flex; flex-direction:column; gap:20px; width:200px; margin:0 auto;">
                     <button id="title-load" style="padding:15px; font-weight:bold; font-size:16px; ${loadStyle}" ${loadDisabled}>続きから</button>
                     <button id="title-new" style="padding:15px; font-size:16px;">はじめから</button>
@@ -564,13 +602,11 @@ const UI = {
         };
     },
 
-    // Name Input Dialog
     showNameInput(callback) {
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
         modal.style.display = 'flex';
         modal.style.zIndex = '200';
-        
         modal.innerHTML = `
             <div class="modal-box" style="width:300px;">
                 <div class="modal-header"><h3>名前入力</h3></div>
@@ -582,10 +618,7 @@ const UI = {
             </div>
         `;
         document.body.appendChild(modal);
-        
-        document.getElementById('btn-name-random').onclick = () => {
-            document.getElementById('input-char-name').value = UTILS.genName();
-        };
+        document.getElementById('btn-name-random').onclick = () => { document.getElementById('input-char-name').value = UTILS.genName(); };
         document.getElementById('btn-name-ok').onclick = () => {
             const name = document.getElementById('input-char-name').value || UTILS.genName();
             modal.remove();
@@ -650,9 +683,11 @@ const UI = {
         document.getElementById('helix-display').innerText = Game.helix;
         const lh = document.getElementById('lab-helix-display'); if(lh) lh.innerText = Game.helix;
         document.getElementById('floor-display').innerText = Game.floor;
-        document.getElementById('floor-progress').innerText = `(${Game.floorProgress}/30)`;
         
-        // Floor select update
+        const maxStep = MASTER_DATA.config.FLOOR_STEP_MAX || 30;
+        const progPct = Math.floor((Game.floorProgress / maxStep) * 100);
+        document.getElementById('floor-progress-text').innerText = `Progress: ${progPct}% (${Game.floorProgress}/${maxStep})`;
+        
         const fs = document.getElementById('floor-select');
         if(fs && fs.options.length < Game.maxFloor) {
             fs.innerHTML = "";
@@ -675,7 +710,7 @@ const UI = {
             div.className = "char-card";
             if(char.hp<=0) div.classList.add("dead");
             const s = char.totalStats;
-            const hpPct = (char.hp / s.hp) * 100;
+            const hpPct = Math.max(0, Math.min(100, (char.hp / s.hp) * 100));
             div.innerHTML = `
                 <div class="char-header">${char.name} <span class="job-label">${char.job.name}</span></div>
                 <div style="font-size:10px; color:#888;">Lv.${char.level}</div>
@@ -686,84 +721,84 @@ const UI = {
             c.appendChild(div);
         });
     },
-    
-    renderInv(filter = 'all') {
-        this.invFilter = filter;
-        const iList = document.getElementById('inv-list'); iList.innerHTML = "";
-        
-        if(!this.equipChar) { iList.innerHTML = "キャラクターを選択してください"; return; }
 
-        // Filter UI
-        const filters = {all:'すべて', weapon:'武器', armor:'防具', accessory:'装飾'};
-        let fHtml = '<div style="display:flex; gap:5px; margin-bottom:5px;">';
-        for(let k in filters) {
-            let active = k===filter ? 'color:var(--accent-color); border-color:var(--accent-color);' : '';
-            fHtml += `<button style="font-size:10px; padding:2px 5px; ${active}" onclick="UI.renderInv('${k}')">${filters[k]}</button>`;
-        }
-        iList.innerHTML = fHtml + '</div>';
-
-        // Current Equip
-        let eqHtml = '<div style="background:#222; padding:5px; margin-bottom:10px;">';
-        for(let s in this.equipChar.equipment) {
-            let it = this.equipChar.equipment[s];
-            let name = it ? `<span class="rar-${it.rarity}">${it.name}</span>` : "なし";
-            let btn = it ? `<button style="font-size:9px;" onclick="UI.doUnequip('${s}')">外す</button>` : "";
-            eqHtml += `<div style="font-size:10px; display:flex; justify-content:space-between;"><span>${s.substr(0,3)}</span><span>${name} ${btn}</span></div>`;
-        }
-        iList.innerHTML += eqHtml + '</div>';
-
-        // Items
-        let items = Game.inventory.filter(i => filter==='all' || i.type===filter);
-        if(items.length===0) iList.innerHTML += "<div>アイテムなし</div>";
-        
-        items.forEach(item => {
-            const idx = Game.inventory.indexOf(item);
-            const div = document.createElement('div');
-            const check = this.equipChar.canEquip(item);
-            
-            let stats = "";
-            const statMap = {str:"腕力", vit:"耐久", mag:"魔力", int:"知力", agi:"素早", luc:"運", dex:"器用"};
-            for(let k in item.stats) if(item.stats[k]) stats += `${statMap[k]||k}:${item.stats[k]} `;
-
-            const rarClass = `rar-${item.rarity}`; 
-
-            div.className = "list-item";
-            if(!check.ok) div.style.opacity = "0.5";
-
-            div.innerHTML = `
-                <div style="display:flex; justify-content:space-between;">
-                    <span class="${rarClass}" style="font-weight:bold;">${item.name}</span>
-                    <button style="font-size:9px;" onclick="event.stopPropagation(); UI.sellItem(${idx})">売却</button>
-                </div>
-                <div style="font-size:9px; color:#aaa;">${stats} ${item.elem ? `[${MASTER_DATA.elements.find(e=>e.key===item.elem).name}]` : ''}</div>
-                ${!check.ok ? `<div style="color:red; font-size:9px;">${check.reason}</div>` : ''}
-            `;
-            if(check.ok) {
-                div.onclick = () => { 
-                    this.equipChar.equip(item); 
-                    Game.inventory.splice(idx,1); 
-                    this.renderInv(filter); this.renderParty(); 
-                };
-            }
-            iList.appendChild(div);
+    // --- Right Bottom Tab Logic ---
+    switchSubTab(tabName) {
+        this.currentTab = tabName;
+        // Buttons
+        document.querySelectorAll('.sub-tab-btn').forEach(btn => {
+            btn.classList.remove('active');
+            if(btn.getAttribute('onclick').includes(tabName)) btn.classList.add('active');
         });
-    },
-    
-    sellItem(idx) {
-        const item = Game.inventory[idx];
-        if(!item) return;
-        const price = 10 + (item.tier*10) + (item.rarity*20);
-        Game.helix += price;
-        Game.inventory.splice(idx,1);
-        UI.log(`${item.name}を売却 (+${price}G)`, "log-item");
-        Game.save(); UI.updateAll();
-        if(document.getElementById('modal-inv').style.display === 'flex') this.renderInv(this.invFilter);
+        // Contents
+        const contents = document.querySelectorAll('#sub-info-panel .sub-tab-content > div');
+        contents.forEach(div => div.style.display = 'none');
+        document.getElementById(`sub-content-${tabName}`).style.display = 'block';
     },
 
+    updateEnemyInfo(enemy) {
+        const el = document.getElementById('enemy-info-display');
+        if(!el) return;
+        
+        if(!enemy || enemy.hp <= 0) {
+            el.innerHTML = '<div style="margin-top:20px; color:#444;">NO SIGNAL</div>';
+            return;
+        }
+
+        const hpPct = Math.floor((enemy.hp / enemy.maxHp) * 100);
+        const elemName = enemy.elem ? MASTER_DATA.elements.find(e=>e.key===enemy.elem).name : "無";
+        const elemColor = enemy.elem ? MASTER_DATA.elements.find(e=>e.key===enemy.elem).color : "#888";
+        
+        el.innerHTML = `
+            <div style="font-size:14px; font-weight:bold; color:var(--danger-color);">${enemy.name}</div>
+            <div style="font-size:10px; margin-bottom:5px;">Tier: ${enemy.tier}</div>
+            <div style="display:flex; align-items:center; gap:5px; margin-bottom:5px;">
+                <span style="font-size:10px; color:#aaa;">属性:</span>
+                <span style="color:${elemColor}; border:1px solid ${elemColor}; padding:0 4px; border-radius:3px; font-size:10px;">${elemName}</span>
+            </div>
+            <div class="bar-wrap" style="height:10px; background:#333;">
+                <div class="bar-val enemy-hp-bar" style="width:${hpPct}%"></div>
+            </div>
+            <div style="text-align:right; font-size:10px;">${enemy.hp} / ${enemy.maxHp}</div>
+        `;
+    },
+    
+    // --- Logging Methods ---
+    log(msg, type='') {
+        const p = document.getElementById('log-list');
+        const entry = document.createElement('div');
+        entry.className = `log-entry ${type}`;
+        entry.innerText = msg;
+        p.appendChild(entry);
+        p.scrollTop = p.scrollHeight;
+    },
+
+    logDetail(msg) {
+        const p = document.getElementById('battle-log-list');
+        const d = document.createElement('div');
+        d.innerText = msg;
+        p.prepend(d); // Newest top
+        if(p.children.length > 50) p.lastChild.remove();
+    },
+
+    logItem(msg, rarity) {
+        const p = document.getElementById('item-log-list');
+        const d = document.createElement('div');
+        d.innerHTML = `<span class="rar-${rarity}">${msg}</span>`;
+        p.prepend(d);
+        if(p.children.length > 50) p.lastChild.remove();
+        
+        // Also log to main
+        this.log(msg.replace(/<[^>]*>/g, ''), 'log-item');
+    },
+
+    // --- Modal Logic ---
     openModal(id, fn) { document.getElementById(id).style.display='flex'; if(fn) fn(); },
     closeModal() { document.querySelectorAll('.modal-overlay').forEach(e => e.style.display='none'); },
-    switchTab(mode) {
-        this.currentTab = mode;
+
+    // --- Lab Logic ---
+    switchLabTab(mode) {
+        this.currentLabTab = mode;
         document.querySelectorAll('.tab-content').forEach(e => e.style.display = 'none');
         document.getElementById('tab-lab-' + mode).style.display = 'block';
         document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -772,9 +807,9 @@ const UI = {
         this.renderLab();
     },
     renderLab() {
-        if(this.currentTab === 'roster') this.renderRoster();
-        else if(this.currentTab === 'hire') this.renderHire();
-        else if(this.currentTab === 'class') this.renderClass();
+        if(this.currentLabTab === 'roster') this.renderRoster();
+        else if(this.currentLabTab === 'hire') this.renderHire();
+        else if(this.currentLabTab === 'class') this.renderClass();
     },
     renderRoster() {
         const el = document.getElementById('lab-list'); el.innerHTML = "";
@@ -810,6 +845,63 @@ const UI = {
             el.appendChild(div);
         });
     },
+
+    // --- Inventory UI ---
+    renderInv(filter = 'all') {
+        this.invFilter = filter;
+        const iList = document.getElementById('inv-list'); iList.innerHTML = "";
+        if(!this.equipChar) { iList.innerHTML = "キャラクターを選択してください"; return; }
+
+        const filters = {all:'すべて', weapon:'武器', armor:'防具', accessory:'装飾'};
+        let fHtml = '<div style="display:flex; gap:5px; margin-bottom:5px;">';
+        for(let k in filters) {
+            let active = k===filter ? 'color:var(--accent-color); border-color:var(--accent-color);' : '';
+            fHtml += `<button style="font-size:10px; padding:2px 5px; ${active}" onclick="UI.renderInv('${k}')">${filters[k]}</button>`;
+        }
+        iList.innerHTML = fHtml + '</div>';
+
+        let eqHtml = '<div style="background:#222; padding:5px; margin-bottom:10px;">';
+        for(let s in this.equipChar.equipment) {
+            let it = this.equipChar.equipment[s];
+            let name = it ? `<span class="rar-${it.rarity}">${it.name}</span>` : "なし";
+            let btn = it ? `<button style="font-size:9px;" onclick="UI.doUnequip('${s}')">外す</button>` : "";
+            eqHtml += `<div style="font-size:10px; display:flex; justify-content:space-between;"><span>${s.substr(0,3)}</span><span>${name} ${btn}</span></div>`;
+        }
+        iList.innerHTML += eqHtml + '</div>';
+
+        let items = Game.inventory.filter(i => filter==='all' || i.type===filter);
+        if(items.length===0) iList.innerHTML += "<div>アイテムなし</div>";
+        
+        items.forEach(item => {
+            const idx = Game.inventory.indexOf(item);
+            const div = document.createElement('div');
+            const check = this.equipChar.canEquip(item);
+            let stats = "";
+            const statMap = {str:"腕力", vit:"耐久", mag:"魔力", int:"知力", agi:"素早", luc:"運", dex:"器用"};
+            for(let k in item.stats) if(item.stats[k]) stats += `${statMap[k]||k}:${item.stats[k]} `;
+            const rarClass = `rar-${item.rarity}`; 
+            div.className = "list-item";
+            if(!check.ok) div.style.opacity = "0.5";
+
+            div.innerHTML = `
+                <div style="display:flex; justify-content:space-between;">
+                    <span class="${rarClass}" style="font-weight:bold;">${item.name}</span>
+                    <button style="font-size:9px;" onclick="event.stopPropagation(); UI.sellItem(${idx})">売却</button>
+                </div>
+                <div style="font-size:9px; color:#aaa;">${stats} ${item.elem ? `[${MASTER_DATA.elements.find(e=>e.key===item.elem).name}]` : ''}</div>
+                ${!check.ok ? `<div style="color:red; font-size:9px;">${check.reason}</div>` : ''}
+            `;
+            if(check.ok) {
+                div.onclick = () => { 
+                    this.equipChar.equip(item); 
+                    Game.inventory.splice(idx,1); 
+                    this.renderInv(filter); this.renderParty(); 
+                };
+            }
+            iList.appendChild(div);
+        });
+    },
+    
     showCharDetail(c) {
         const s = c.totalStats;
         const html = `
@@ -833,15 +925,6 @@ const UI = {
             this.equipChar.unequip(slot);
             Game.save(); this.renderInv(this.invFilter);
         }
-    },
-    toggle(on) {
-        document.getElementById('btn-explore').disabled = on;
-        document.getElementById('btn-return').disabled = !on;
-    },
-    log(msg, type) {
-        const p = document.getElementById('log-list');
-        p.innerHTML += `<div class="log-entry ${type}">${msg}</div>`;
-        document.getElementById('log-panel').scrollTop = 99999;
     }
 };
 
