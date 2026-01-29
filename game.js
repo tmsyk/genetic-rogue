@@ -1,5 +1,5 @@
 /**
- * Genetic Rogue Ver.13.13 - Fix HP Overflow
+ * Genetic Rogue Ver.13.14 - Enhanced Party UI
  * Main Logic & UI Controller
  */
 
@@ -18,7 +18,7 @@ const Game = {
     helix: 100, floor: 1, maxFloor: 1, floorProgress: 0,
     party: [], roster: [], inventory: [],
     exploring: false, timer: null, currentEnemy: null,
-    SAVE_KEY: 'genetic_rogue_v13_13', // Key update
+    SAVE_KEY: 'genetic_rogue_v13_13', // Key same as before to keep data
 
     init() {
         UI.init();
@@ -70,7 +70,7 @@ const Game = {
             this.inventory = d.inventory || [];
             this.roster = (d.roster||[]).map(x => {
                 const c = new Character(null, null, x);
-                c.validateHp(); // ★修正: ロード時にHP整合性チェック
+                c.validateHp(); 
                 return c;
             });
             this.party = [];
@@ -348,7 +348,6 @@ class Character {
             if (!data.masteredJobs) data.masteredJobs = [];
             Object.assign(this, data); 
             
-            // ★修正: コンストラクタでのデータ復元時にもHPチェック
             this.validateHp();
             return; 
         }
@@ -357,6 +356,7 @@ class Character {
         this.jobKey = jobKey;
         this.name = (data && data.name) ? data.name : UTILS.genName();
         this.level = 1; this.exp = 0; this.maxExp = 100;
+        this.hp = 100;
         this.jobExp = 0; this.learnedSkills = []; this.masteredJobs = [];
 
         this.baseStats = {...MASTER_DATA.config.BASE_STATS};
@@ -386,7 +386,6 @@ class Character {
             this.pedigree = { f: null, m: null };
         }
         
-        // ★修正: 新規作成時はHPを最大値に設定
         this.hp = this.totalStats.hp;
     }
 
@@ -419,7 +418,6 @@ class Character {
         return s;
     }
     
-    // ★追加: HP上限チェックメソッド
     validateHp() {
         const max = this.totalStats.hp;
         if (this.hp > max) {
@@ -510,7 +508,6 @@ class Character {
             if(cur) Game.inventory.push(cur);
             this.equipment[targetSlot] = item;
             UI.log(`${this.name}が${item.name}を装備`, "log-equip");
-            // ★修正: 装備変更後にHPチェック
             this.validateHp();
             return true;
         }
@@ -528,7 +525,6 @@ class Character {
         }
         if (this.equipment[targetSlot]) Game.inventory.push(this.equipment[targetSlot]);
         this.equipment[targetSlot] = item;
-        // ★修正: 装備変更後にHPチェック
         this.validateHp();
         return true;
     }
@@ -537,7 +533,6 @@ class Character {
         if(this.equipment[slot]) {
             Game.inventory.push(this.equipment[slot]);
             this.equipment[slot] = null;
-            // ★修正: 装備解除後にHPチェック
             this.validateHp();
         }
     }
@@ -615,7 +610,7 @@ const UI = {
         modal.innerHTML = `
             <div class="modal-box" style="text-align:center; padding:40px;">
                 <h1 style="color:var(--accent-color); font-size:32px; margin-bottom:10px;">🧬 Genetic Rogue</h1>
-                <p style="color:#888; margin-bottom:40px;">Ver.13.13</p>
+                <p style="color:#888; margin-bottom:40px;">Ver.13.14</p>
                 <div style="display:flex; flex-direction:column; gap:20px; width:200px; margin:0 auto;">
                     <button id="title-load" style="padding:15px; font-weight:bold; font-size:16px; ${loadStyle}" ${loadDisabled}>続きから (Load)</button>
                     <button id="title-new" style="padding:15px; font-size:16px;">はじめから (New Game)</button>
@@ -741,24 +736,68 @@ const UI = {
         Game.party.forEach(char => {
             const div = document.createElement('div');
             div.className = "char-card";
+            div.style.padding = "12px"; // Padding increase
+
             if(char.hp<=0) div.classList.add("dead");
+            
             const s = char.totalStats;
             const hpPct = Math.max(0, Math.min(100, (char.hp / s.hp) * 100));
             const expPct = Math.min(100, (char.exp / char.maxExp) * 100);
+            
+            // Race
+            const raceName = MASTER_DATA.races[char.race] ? MASTER_DATA.races[char.race].name : "不明";
+
+            // Elements
+            let elemHtml = "";
+            if (char.elements && char.elements.length > 0) {
+                elemHtml = char.elements.map(e => {
+                    const elData = MASTER_DATA.elements.find(x => x.key === e);
+                    return elData ? `<span style="color:${elData.color}; margin-right:2px; font-weight:bold;">${elData.name}</span>` : "";
+                }).join("");
+            }
+            if (elemHtml === "") elemHtml = "<span style='color:#666;'>無</span>";
+
+            // Equip List
+            let equipHtml = '<div style="margin-top:8px; padding-top:4px; border-top:1px solid #444; font-size:12px; line-height:1.4;">';
+            const slotNames = { main_hand:"主", off_hand:"副", head:"頭", body:"体", accessory1:"飾", accessory2:"飾" };
+            let hasEquip = false;
+            for(let slot in char.equipment) {
+                let item = char.equipment[slot];
+                if(item) {
+                    hasEquip = true;
+                    let color = item.rarity >= 3 ? 'var(--info-color)' : '#ccc';
+                    if (item.rarity >= 4) color = 'var(--accent-color)';
+                    
+                    equipHtml += `<div style="display:flex; justify-content:space-between;">
+                        <span style="color:#888; font-size:11px; width:15px;">${slotNames[slot]||slot.substr(0,1)}</span>
+                        <span style="color:${color}; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:140px;">${item.name}</span>
+                    </div>`;
+                }
+            }
+            if(!hasEquip) equipHtml += '<div style="color:#666; font-size:11px;">装備なし</div>';
+            equipHtml += '</div>';
 
             div.innerHTML = `
-                <div class="char-header">${char.name} <span class="job-label">${char.job.name}</span></div>
-                <div style="font-size:10px; color:#888;">Lv.${char.level}</div>
-                <div class="bar-wrap"><div class="bar-val hp-bar" style="width:${hpPct}%"></div></div>
-                <div style="text-align:right; font-size:9px;">${Math.floor(char.hp)}/${s.hp}</div>
-                <div class="bar-wrap" style="height:2px; margin-top:2px;"><div class="bar-val exp-bar" style="width:${expPct}%"></div></div>
+                <div class="char-header" style="font-size:16px; margin-bottom:4px;">
+                    ${char.name} 
+                    <span class="job-label" style="font-size:12px; padding:2px 6px;">${char.job.name}</span>
+                </div>
+                <div style="font-size:13px; color:#ddd; margin-bottom:6px;">
+                    Lv.${char.level} <span style="color:#888;">|</span> ${raceName} <span style="color:#888;">|</span> ${elemHtml}
+                </div>
+                
+                <div class="bar-wrap" style="height:8px; background:#444;"><div class="bar-val hp-bar" style="width:${hpPct}%"></div></div>
+                <div style="text-align:right; font-size:11px; margin-bottom:2px;">HP: ${Math.floor(char.hp)} / ${s.hp}</div>
+                <div class="bar-wrap" style="height:4px; background:#444;"><div class="bar-val exp-bar" style="width:${expPct}%"></div></div>
+                
+                ${equipHtml}
             `;
             div.onclick = () => UI.showCharDetail(char);
             c.appendChild(div);
         });
     },
 
-    // --- Right Bottom Tab Logic ---
+    // ... (Remaining functions switchSubTab, updateEnemyInfo, log, etc. kept same)
     switchSubTab(tabName) {
         this.currentTab = tabName;
         document.querySelectorAll('.sub-tab-btn').forEach(btn => {
@@ -798,7 +837,6 @@ const UI = {
         `;
     },
     
-    // --- Logging Methods ---
     log(msg, type='') {
         const p = document.getElementById('log-list');
         if(!p) return;
@@ -828,11 +866,9 @@ const UI = {
         this.log(msg.replace(/<[^>]*>/g, ''), 'log-item');
     },
 
-    // --- Modal Logic ---
     openModal(id, fn) { document.getElementById(id).style.display='flex'; if(fn) fn(); },
     closeModal() { document.querySelectorAll('.modal-overlay').forEach(e => e.style.display='none'); },
 
-    // --- Lab Logic ---
     switchLabTab(mode) {
         this.currentLabTab = mode;
         document.querySelectorAll('.tab-content').forEach(e => e.style.display = 'none');
@@ -882,7 +918,6 @@ const UI = {
         });
     },
 
-    // --- Inventory UI ---
     renderInv(filter = 'all') {
         this.invFilter = filter;
         const iList = document.getElementById('inv-list'); iList.innerHTML = "";
