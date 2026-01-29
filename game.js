@@ -1,5 +1,5 @@
 /**
- * Genetic Rogue Ver.13.8 - UI & Auto-Rename
+ * Genetic Rogue Ver.13.10 - Fix Missing UI Functions
  * Main Logic & UI Controller
  */
 
@@ -7,11 +7,11 @@
 const UTILS = {
     genName: () => {
         // Use Master Data if available
-        if (MASTER_DATA.names && MASTER_DATA.names.length > 0) {
+        if (typeof MASTER_DATA !== 'undefined' && MASTER_DATA.names && MASTER_DATA.names.length > 0) {
             return MASTER_DATA.names[Math.floor(Math.random() * MASTER_DATA.names.length)];
         }
         // Fallback
-        const n = ["Alex", "Bell", "Cid", "Dan", "Eve"];
+        const n = ["アレク", "ベル", "シド", "ダン", "イヴ", "フェイ", "ジン"];
         return n[Math.floor(Math.random() * n.length)] + Math.floor(Math.random() * 99);
     }
 };
@@ -20,12 +20,14 @@ const Game = {
     helix: 100, floor: 1, maxFloor: 1, floorProgress: 0,
     party: [], roster: [], inventory: [],
     exploring: false, timer: null, currentEnemy: null,
-    SAVE_KEY: 'genetic_rogue_v13_8',
+    SAVE_KEY: 'genetic_rogue_v13_10', // Key update
 
     init() {
         UI.init();
-        if (!DB || !DB.jobs || Object.keys(DB.jobs).length === 0) {
-            alert("DB Init Error"); return;
+        if (!typeof DB === 'undefined' || !DB.jobs || Object.keys(DB.jobs).length === 0) {
+            console.error("DB Error");
+            // If DB isn't ready, try to init it (though index.html order should prevent this)
+            if(typeof DB !== 'undefined') DB.init();
         }
         UI.showTitleScreen();
     },
@@ -45,15 +47,16 @@ const Game = {
         this.party.push(c);
 
         let starter = DB.createRandomItem(1);
+        if(!starter) starter = { uid: "starter", name:"冒険者の短剣", kind:"dg", type:"weapon", slot:"main_hand", stats:{str:2}, rarity:1 };
         this.inventory.push(starter);
         c.autoEquip(starter);
 
         this.save();
         UI.updateAll();
         UI.log("冒険を開始しました", "log-sys");
+        UI.log(`${c.name} が準備を整えました。`, "log-sys");
     },
 
-    // ... (save, load, explore, stop, tick, etc. same as v12.8)
     save() {
         const data = {
             helix: this.helix, floor: this.floor, maxFloor: this.maxFloor,
@@ -152,7 +155,6 @@ const Game = {
         activeParty.forEach(c => {
             if(enemy.hp <= 0) return;
             
-            // 属性補正計算
             let elemMod = 1.0;
             let atkElem = c.attackElement;
             if(atkElem && enemy.elem) {
@@ -161,7 +163,6 @@ const Game = {
             }
 
             let dmg = Math.max(1, Math.floor(c.totalStats.str - (enemy.vit/2)));
-            // 魔法職ならMAG依存
             if (c.job.type === 'mag' || c.job.type === 'sup') {
                 dmg = Math.max(1, Math.floor(c.totalStats.mag - (enemy.mag/2)));
             }
@@ -176,13 +177,17 @@ const Game = {
         if(enemy.hp <= 0) {
             UI.log("勝利！", "log-victory");
             this.helix += enemy.gold;
-            activeParty.forEach(c => c.gainExp(enemy.exp));
+            // Char Exp + Job Exp
+            const exp = enemy.exp || 10;
+            activeParty.forEach(c => {
+                c.gainExp(exp);
+                c.gainJobExp(Math.floor(exp * 0.5));
+            });
             if(Math.random() < 0.3) this.loot();
             this.currentEnemy = null;
         } else {
             const target = activeParty[Math.floor(Math.random()*activeParty.length)];
             if(target) {
-                // 敵の属性攻撃
                 let elemMod = 1.0;
                 if(enemy.elem) {
                     const defElems = target.defenseElements;
@@ -240,17 +245,23 @@ const Game = {
         }
     },
 
-    // 雇用時にも名前入力ダイアログを出す
     hire(jobId, isFree=false) {
         if(!isFree && this.helix < MASTER_DATA.config.HIRE_COST) return;
         if (!jobId || !DB.jobs[jobId]) return console.error("Invalid JobID");
         const job = DB.jobs[jobId];
+        
+        // Filter check again for safety
         if ((job.tier !== 1 || job.reqJob) && !isFree) return console.warn("Only Tier 1 allowed");
 
-        // 名前入力ダイアログ表示
+        // 名前入力
         UI.showNameInput((name) => {
             if(!isFree) this.helix -= MASTER_DATA.config.HIRE_COST;
-            const c = new Character(jobId, null, { name: name });
+            
+            // Random race for hire
+            const races = Object.keys(MASTER_DATA.races);
+            const raceId = races[Math.floor(Math.random()*races.length)];
+            
+            const c = new Character(jobId, null, { name: name, race: raceId });
             this.roster.push(c);
             if (this.party.length < MASTER_DATA.config.MAX_PARTY) this.party.push(c);
             
@@ -263,19 +274,18 @@ const Game = {
     classChange(charId, newJobId) {
         const c = this.roster.find(x=>x.id===charId);
         if(!c) return;
-        if(c.level < 10) return alert("Need Lv 10+");
-        if(this.helix < MASTER_DATA.config.CC_COST) return alert("Not enough Helix");
+        if(c.level < 10) return alert("Lv10以上必要です");
+        if(this.helix < MASTER_DATA.config.CC_COST) return alert("Helix不足");
         this.helix -= MASTER_DATA.config.CC_COST;
         c.classChange(newJobId);
         UI.updateAll();
         alert(`${c.name} は転職しました！`);
     },
     
-    // 個別売却対応
     sellItem(idx) {
         const item = this.inventory[idx];
         if(!item) return;
-        const price = 10 + (item.tier * 10) + (item.rarity * 20);
+        const price = 10 + (item.tier*10) + (item.rarity*20);
         this.helix += price;
         this.inventory.splice(idx, 1);
         UI.log(`売却: ${item.name} (+${price}G)`, "log-item");
@@ -306,10 +316,11 @@ const Game = {
 class Character {
     constructor(jobKey, parents, data) {
         if(data && data.id) { 
+            // Migrate
             if (!data.equipment.head) data.equipment.head = null;
             if (!data.equipment.accessory1) data.equipment.accessory1 = data.equipment.accessory;
             if (!data.equipment.accessory2) data.equipment.accessory2 = null;
-            delete data.equipment.accessory;
+            if (data.equipment.accessory) delete data.equipment.accessory;
             if (data.jobExp === undefined) data.jobExp = 0;
             if (!data.learnedSkills) data.learnedSkills = [];
             if (!data.masteredJobs) data.masteredJobs = [];
@@ -323,6 +334,7 @@ class Character {
         this.level = 1; this.exp = 0; this.maxExp = 100;
         this.hp = 100;
         this.jobExp = 0; this.learnedSkills = []; this.masteredJobs = [];
+
         this.baseStats = {...MASTER_DATA.config.BASE_STATS};
         for(let k in this.baseStats) this.baseStats[k] = Math.floor(this.baseStats[k] * (0.9 + Math.random()*0.2));
         
@@ -358,7 +370,7 @@ class Character {
         const job = this.job;
         const raceMod = MASTER_DATA.races[this.race] ? MASTER_DATA.races[this.race].mod : null;
 
-        // Passive Skills
+        // Passive
         let passiveMul = { hp:1, str:1, vit:1, mag:1, int:1, agi:1, luc:1 };
         this.learnedSkills.forEach(skName => {
             const skData = MASTER_DATA.skills.data[skName];
@@ -370,7 +382,7 @@ class Character {
         for(let k in s) {
             let m = (job && job.mod) ? (job.mod.all || job.mod[k] || 1.0) : 1.0;
             if (raceMod && raceMod[k]) m *= raceMod[k];
-            m *= passiveMul[k];
+            if (passiveMul[k]) m *= passiveMul[k];
             s[k] = Math.floor(s[k] * m);
         }
         for(let k in this.equipment) {
@@ -418,9 +430,13 @@ class Character {
         if (this.masteredJobs.includes(this.jobKey)) return;
         this.masteredJobs.push(this.jobKey);
         const mSkill = this.job.masterSkill;
-        if (mSkill && !this.learnedSkills.includes(mSkill)) {
-            this.learnedSkills.push(mSkill);
-            UI.log(`${this.name}は${this.job.name}を極めた！ スキル「${mSkill}」を習得！`, "log-lvlup");
+        if (mSkill) {
+            if (!this.learnedSkills.includes(mSkill)) {
+                this.learnedSkills.push(mSkill);
+                UI.log(`${this.name}は${this.job.name}を極めた！ スキル「${mSkill}」を習得！`, "log-lvlup");
+            } else {
+                UI.log(`${this.name}は${this.job.name}を極めた！`, "log-lvlup");
+            }
         } else {
             UI.log(`${this.name}は${this.job.name}を極めた！`, "log-lvlup");
         }
@@ -523,17 +539,21 @@ const UI = {
         modal.id = 'modal-title';
         modal.style.display = 'flex';
         const hasData = Game.hasSaveData();
+        const loadDisabled = hasData ? '' : 'disabled';
+        const loadStyle = hasData ? 'background:var(--accent-color); color:#000;' : 'opacity:0.5; cursor:not-allowed;';
+
         modal.innerHTML = `
             <div class="modal-box" style="text-align:center; padding:40px;">
                 <h1 style="color:var(--accent-color); font-size:32px; margin-bottom:10px;">🧬 Genetic Rogue</h1>
-                <p style="color:#888; margin-bottom:40px;">Ver.13.7</p>
+                <p style="color:#888; margin-bottom:40px;">Ver.13.10</p>
                 <div style="display:flex; flex-direction:column; gap:20px; width:200px; margin:0 auto;">
-                    <button id="title-load" style="padding:15px;" ${hasData?'':'disabled'}>続きから</button>
-                    <button id="title-new" style="padding:15px;">はじめから</button>
+                    <button id="title-load" style="padding:15px; font-weight:bold; font-size:16px; ${loadStyle}" ${loadDisabled}>続きから</button>
+                    <button id="title-new" style="padding:15px; font-size:16px;">はじめから</button>
                 </div>
             </div>
         `;
         document.body.appendChild(modal);
+
         document.getElementById('title-load').onclick = () => {
             if(Game.load()) modal.remove(); else alert("ロード失敗");
         };
@@ -544,12 +564,12 @@ const UI = {
         };
     },
 
-    // 名前入力ダイアログ
+    // Name Input Dialog
     showNameInput(callback) {
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
         modal.style.display = 'flex';
-        modal.style.zIndex = '200'; // 上に表示
+        modal.style.zIndex = '200';
         
         modal.innerHTML = `
             <div class="modal-box" style="width:300px;">
@@ -574,7 +594,6 @@ const UI = {
     },
 
     showCharMake() {
-        // キャラメイクでも名前入力を挟む
         this.showNameInput((name) => {
             const modal = document.createElement('div');
             modal.className = 'modal-overlay';
@@ -606,7 +625,6 @@ const UI = {
                 const j = document.getElementById('cm-job').value;
                 const rd = MASTER_DATA.races[r];
                 const jd = DB.jobs[j];
-                // 計算 (Base=5) * RaceMod * JobMod
                 const calc = (stat) => Math.floor(5 * (rd.mod[stat]||1) * (jd.mod[stat]||1));
                 
                 let html = "<div style='font-size:12px;'>";
@@ -633,6 +651,19 @@ const UI = {
         const lh = document.getElementById('lab-helix-display'); if(lh) lh.innerText = Game.helix;
         document.getElementById('floor-display').innerText = Game.floor;
         document.getElementById('floor-progress').innerText = `(${Game.floorProgress}/30)`;
+        
+        // Floor select update
+        const fs = document.getElementById('floor-select');
+        if(fs && fs.options.length < Game.maxFloor) {
+            fs.innerHTML = "";
+            for(let i=1; i<=Game.maxFloor; i++) {
+                const opt = document.createElement('option');
+                opt.value = i; opt.innerText = `${i}F`;
+                if(i===Game.maxFloor) opt.selected = true;
+                fs.appendChild(opt);
+            }
+        }
+        
         this.renderParty();
         if(document.getElementById('modal-lab').style.display === 'flex') this.renderLab();
     },
@@ -656,7 +687,6 @@ const UI = {
         });
     },
     
-    // Improved Inv Render
     renderInv(filter = 'all') {
         this.invFilter = filter;
         const iList = document.getElementById('inv-list'); iList.innerHTML = "";
@@ -691,13 +721,11 @@ const UI = {
             const div = document.createElement('div');
             const check = this.equipChar.canEquip(item);
             
-            // 日本語ステータス変換
             let stats = "";
             const statMap = {str:"腕力", vit:"耐久", mag:"魔力", int:"知力", agi:"素早", luc:"運", dex:"器用"};
             for(let k in item.stats) if(item.stats[k]) stats += `${statMap[k]||k}:${item.stats[k]} `;
 
-            // レアリティ色
-            const rarClass = `rar-${item.rarity}`; // CSSで定義済み想定
+            const rarClass = `rar-${item.rarity}`; 
 
             div.className = "list-item";
             if(!check.ok) div.style.opacity = "0.5";
@@ -729,12 +757,9 @@ const UI = {
         Game.inventory.splice(idx,1);
         UI.log(`${item.name}を売却 (+${price}G)`, "log-item");
         Game.save(); UI.updateAll();
-        // インベントリ画面が開いていれば更新
         if(document.getElementById('modal-inv').style.display === 'flex') this.renderInv(this.invFilter);
     },
 
-    // ... (Other UI methods: openModal, closeModal, switchTab, renderLab, renderRoster, renderHire, renderClass)
-    // 省略部分はVer12.7と同じ
     openModal(id, fn) { document.getElementById(id).style.display='flex'; if(fn) fn(); },
     closeModal() { document.querySelectorAll('.modal-overlay').forEach(e => e.style.display='none'); },
     switchTab(mode) {
@@ -786,9 +811,6 @@ const UI = {
         });
     },
     showCharDetail(c) {
-        // ... (Same as before)
-        this.openEquipFor(c.id); // Placeholder to just open equip for now or show details
-        // Detailed implementation omitted for brevity, use previous logic
         const s = c.totalStats;
         const html = `
             <div class="detail-header"><h2>${c.name}</h2><div>Lv.${c.level} ${c.job.name}</div></div>
@@ -811,6 +833,15 @@ const UI = {
             this.equipChar.unequip(slot);
             Game.save(); this.renderInv(this.invFilter);
         }
+    },
+    toggle(on) {
+        document.getElementById('btn-explore').disabled = on;
+        document.getElementById('btn-return').disabled = !on;
+    },
+    log(msg, type) {
+        const p = document.getElementById('log-list');
+        p.innerHTML += `<div class="log-entry ${type}">${msg}</div>`;
+        document.getElementById('log-panel').scrollTop = 99999;
     }
 };
 
