@@ -43,7 +43,7 @@ header { background: var(--panel-bg); border-bottom: 1px solid #333; display: fl
 /* Main Content Area */
 main { 
     display: grid; 
-    grid-template-columns: 1fr 380px; /* 左:ログ(可変), 右:固定 */
+    grid-template-columns: 1fr 2fr; /* 修正: 左(ログ)1に対して右(情報)を2の割合にする */
     gap: 1px; 
     background: #222; 
     overflow: hidden; 
