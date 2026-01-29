@@ -1,5 +1,5 @@
 /**
- * Genetic Rogue Ver.13.11 - Command Center UI Logic
+ * Genetic Rogue Ver.13.12 - Fix UI Update Error
  * Main Logic & UI Controller
  */
 
@@ -18,7 +18,7 @@ const Game = {
     helix: 100, floor: 1, maxFloor: 1, floorProgress: 0,
     party: [], roster: [], inventory: [],
     exploring: false, timer: null, currentEnemy: null,
-    SAVE_KEY: 'genetic_rogue_v13_11', // Key update
+    SAVE_KEY: 'genetic_rogue_v13_12', // Key update
 
     init() {
         UI.init();
@@ -338,7 +338,7 @@ class Character {
             if (!data.equipment.head) data.equipment.head = null;
             if (!data.equipment.accessory1) data.equipment.accessory1 = data.equipment.accessory;
             if (!data.equipment.accessory2) data.equipment.accessory2 = null;
-            delete data.equipment.accessory;
+            if (data.equipment.accessory) delete data.equipment.accessory;
             if (data.jobExp === undefined) data.jobExp = 0;
             if (!data.learnedSkills) data.learnedSkills = [];
             if (!data.masteredJobs) data.masteredJobs = [];
@@ -528,7 +528,7 @@ class Character {
 
 // --- UI Controller ---
 const UI = {
-    currentTab: 'enemy', // Changed to right bottom tabs default
+    currentTab: 'enemy', 
     currentLabTab: 'roster',
     selChar: null,
     equipChar: null,
@@ -553,6 +553,18 @@ const UI = {
             btn.onclick = (e) => {
                 const tabId = e.target.getAttribute('data-tab');
                 if(tabId) this.switchLabTab(tabId);
+            };
+        });
+
+        // Bottom Tabs
+        document.querySelectorAll('.sub-tab-btn').forEach(btn => {
+            btn.onclick = (e) => {
+                // Find tab name from onclick attribute is risky if minified, but ok for now
+                // Better: data attribute
+                // Assuming button has onclick="UI.switchSubTab('name')"
+                const txt = btn.getAttribute('onclick');
+                const match = txt.match(/'([^']+)'/);
+                if(match) this.switchSubTab(match[1]);
             };
         });
     },
@@ -583,7 +595,7 @@ const UI = {
         modal.innerHTML = `
             <div class="modal-box" style="text-align:center; padding:40px;">
                 <h1 style="color:var(--accent-color); font-size:32px; margin-bottom:10px;">🧬 Genetic Rogue</h1>
-                <p style="color:#888; margin-bottom:40px;">Ver.13.11</p>
+                <p style="color:#888; margin-bottom:40px;">Ver.13.12</p>
                 <div style="display:flex; flex-direction:column; gap:20px; width:200px; margin:0 auto;">
                     <button id="title-load" style="padding:15px; font-weight:bold; font-size:16px; ${loadStyle}" ${loadDisabled}>続きから</button>
                     <button id="title-new" style="padding:15px; font-size:16px;">はじめから</button>
@@ -602,11 +614,13 @@ const UI = {
         };
     },
 
+    // Name Input Dialog
     showNameInput(callback) {
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
         modal.style.display = 'flex';
         modal.style.zIndex = '200';
+        
         modal.innerHTML = `
             <div class="modal-box" style="width:300px;">
                 <div class="modal-header"><h3>名前入力</h3></div>
@@ -618,7 +632,10 @@ const UI = {
             </div>
         `;
         document.body.appendChild(modal);
-        document.getElementById('btn-name-random').onclick = () => { document.getElementById('input-char-name').value = UTILS.genName(); };
+        
+        document.getElementById('btn-name-random').onclick = () => {
+            document.getElementById('input-char-name').value = UTILS.genName();
+        };
         document.getElementById('btn-name-ok').onclick = () => {
             const name = document.getElementById('input-char-name').value || UTILS.genName();
             modal.remove();
@@ -679,14 +696,27 @@ const UI = {
         });
     },
 
+    // ★修正: updateAll での安全な要素更新
     updateAll() {
-        document.getElementById('helix-display').innerText = Game.helix;
-        const lh = document.getElementById('lab-helix-display'); if(lh) lh.innerText = Game.helix;
-        document.getElementById('floor-display').innerText = Game.floor;
+        const setNum = (id, val) => {
+            const el = document.getElementById(id);
+            if(el) el.innerText = val;
+        };
+        
+        setNum('helix-display', Game.helix);
+        setNum('lab-helix-display', Game.helix);
+        setNum('floor-display', Game.floor);
         
         const maxStep = MASTER_DATA.config.FLOOR_STEP_MAX || 30;
         const progPct = Math.floor((Game.floorProgress / maxStep) * 100);
-        document.getElementById('floor-progress-text').innerText = `Progress: ${progPct}% (${Game.floorProgress}/${maxStep})`;
+        
+        // 互換性チェック
+        const fpText = `Progress: ${progPct}% (${Game.floorProgress}/${maxStep})`;
+        if(document.getElementById('floor-progress-text')) {
+             setNum('floor-progress-text', fpText);
+        } else {
+             setNum('floor-progress', `(${Game.floorProgress}/${maxStep})`);
+        }
         
         const fs = document.getElementById('floor-select');
         if(fs && fs.options.length < Game.maxFloor) {
@@ -711,11 +741,14 @@ const UI = {
             if(char.hp<=0) div.classList.add("dead");
             const s = char.totalStats;
             const hpPct = Math.max(0, Math.min(100, (char.hp / s.hp) * 100));
+            const expPct = Math.min(100, (char.exp / char.maxExp) * 100);
+
             div.innerHTML = `
                 <div class="char-header">${char.name} <span class="job-label">${char.job.name}</span></div>
                 <div style="font-size:10px; color:#888;">Lv.${char.level}</div>
                 <div class="bar-wrap"><div class="bar-val hp-bar" style="width:${hpPct}%"></div></div>
                 <div style="text-align:right; font-size:9px;">${Math.floor(char.hp)}/${s.hp}</div>
+                <div class="bar-wrap" style="height:2px; margin-top:2px;"><div class="bar-val exp-bar" style="width:${expPct}%"></div></div>
             `;
             div.onclick = () => UI.showCharDetail(char);
             c.appendChild(div);
@@ -725,15 +758,14 @@ const UI = {
     // --- Right Bottom Tab Logic ---
     switchSubTab(tabName) {
         this.currentTab = tabName;
-        // Buttons
         document.querySelectorAll('.sub-tab-btn').forEach(btn => {
             btn.classList.remove('active');
             if(btn.getAttribute('onclick').includes(tabName)) btn.classList.add('active');
         });
-        // Contents
         const contents = document.querySelectorAll('#sub-info-panel .sub-tab-content > div');
         contents.forEach(div => div.style.display = 'none');
-        document.getElementById(`sub-content-${tabName}`).style.display = 'block';
+        const target = document.getElementById(`sub-content-${tabName}`);
+        if(target) target.style.display = 'block';
     },
 
     updateEnemyInfo(enemy) {
@@ -766,6 +798,7 @@ const UI = {
     // --- Logging Methods ---
     log(msg, type='') {
         const p = document.getElementById('log-list');
+        if(!p) return;
         const entry = document.createElement('div');
         entry.className = `log-entry ${type}`;
         entry.innerText = msg;
@@ -775,20 +808,20 @@ const UI = {
 
     logDetail(msg) {
         const p = document.getElementById('battle-log-list');
+        if(!p) return;
         const d = document.createElement('div');
         d.innerText = msg;
-        p.prepend(d); // Newest top
+        p.prepend(d);
         if(p.children.length > 50) p.lastChild.remove();
     },
 
     logItem(msg, rarity) {
         const p = document.getElementById('item-log-list');
+        if(!p) return;
         const d = document.createElement('div');
         d.innerHTML = `<span class="rar-${rarity}">${msg}</span>`;
         p.prepend(d);
         if(p.children.length > 50) p.lastChild.remove();
-        
-        // Also log to main
         this.log(msg.replace(/<[^>]*>/g, ''), 'log-item');
     },
 
