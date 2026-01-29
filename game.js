@@ -1,5 +1,5 @@
 /**
- * Genetic Rogue Ver.13.14 - Enhanced Party UI
+ * Genetic Rogue Ver.13.15 - Fix Selection Logic
  * Main Logic & UI Controller
  */
 
@@ -18,7 +18,7 @@ const Game = {
     helix: 100, floor: 1, maxFloor: 1, floorProgress: 0,
     party: [], roster: [], inventory: [],
     exploring: false, timer: null, currentEnemy: null,
-    SAVE_KEY: 'genetic_rogue_v13_13', // Key same as before to keep data
+    SAVE_KEY: 'genetic_rogue_v13_13', 
 
     init() {
         UI.init();
@@ -610,7 +610,7 @@ const UI = {
         modal.innerHTML = `
             <div class="modal-box" style="text-align:center; padding:40px;">
                 <h1 style="color:var(--accent-color); font-size:32px; margin-bottom:10px;">🧬 Genetic Rogue</h1>
-                <p style="color:#888; margin-bottom:40px;">Ver.13.14</p>
+                <p style="color:#888; margin-bottom:40px;">Ver.13.15</p>
                 <div style="display:flex; flex-direction:column; gap:20px; width:200px; margin:0 auto;">
                     <button id="title-load" style="padding:15px; font-weight:bold; font-size:16px; ${loadStyle}" ${loadDisabled}>続きから (Load)</button>
                     <button id="title-new" style="padding:15px; font-size:16px;">はじめから (New Game)</button>
@@ -714,7 +714,14 @@ const UI = {
         
         const maxStep = MASTER_DATA.config.FLOOR_STEP_MAX || 30;
         const progPct = Math.floor((Game.floorProgress / maxStep) * 100);
-        document.getElementById('floor-progress-text').innerText = `Progress: ${progPct}% (${Game.floorProgress}/${maxStep})`;
+        
+        // 互換性
+        const fp = document.getElementById('floor-progress-text');
+        if(fp) fp.innerText = `Progress: ${progPct}% (${Game.floorProgress}/${maxStep})`;
+        else {
+             const fpOld = document.getElementById('floor-progress');
+             if(fpOld) fpOld.innerText = `(${Game.floorProgress}/${maxStep})`;
+        }
         
         const fs = document.getElementById('floor-select');
         if(fs && fs.options.length < Game.maxFloor) {
@@ -736,7 +743,7 @@ const UI = {
         Game.party.forEach(char => {
             const div = document.createElement('div');
             div.className = "char-card";
-            div.style.padding = "12px"; // Padding increase
+            div.style.padding = "12px"; 
 
             if(char.hp<=0) div.classList.add("dead");
             
@@ -797,7 +804,7 @@ const UI = {
         });
     },
 
-    // ... (Remaining functions switchSubTab, updateEnemyInfo, log, etc. kept same)
+    // --- Right Bottom Tab Logic ---
     switchSubTab(tabName) {
         this.currentTab = tabName;
         document.querySelectorAll('.sub-tab-btn').forEach(btn => {
@@ -837,6 +844,7 @@ const UI = {
         `;
     },
     
+    // --- Logging Methods ---
     log(msg, type='') {
         const p = document.getElementById('log-list');
         if(!p) return;
@@ -866,9 +874,11 @@ const UI = {
         this.log(msg.replace(/<[^>]*>/g, ''), 'log-item');
     },
 
+    // --- Modal Logic ---
     openModal(id, fn) { document.getElementById(id).style.display='flex'; if(fn) fn(); },
     closeModal() { document.querySelectorAll('.modal-overlay').forEach(e => e.style.display='none'); },
 
+    // --- Lab Logic ---
     switchLabTab(mode) {
         this.currentLabTab = mode;
         document.querySelectorAll('.tab-content').forEach(e => e.style.display = 'none');
@@ -906,22 +916,80 @@ const UI = {
             el.appendChild(div);
         });
     },
+    
+    // ★修正: キャラクターリストを常に描画するように変更
     renderClass() {
-        const el = document.getElementById('cc-job-list'); el.innerHTML = "";
-        if(!this.selChar) return el.innerHTML = "キャラを選択";
-        const cJob = DB.getJob(this.selChar.jobKey);
-        Object.values(DB.jobs).filter(j => j.tier === cJob.tier + 1 && j.lineage === cJob.lineage).forEach(j => {
-            const div = document.createElement('div'); div.className = "list-item";
-            div.innerHTML = `${j.name} (T${j.tier})`;
-            div.onclick = () => { Game.classChange(this.selChar.id, j.id); this.selChar=null; this.renderClass(); };
+        const el = document.getElementById('cc-job-list'); 
+        el.innerHTML = "";
+        
+        // キャラクターリストの描画（常に行う）
+        const rosterDiv = document.getElementById('cc-char-list');
+        if (rosterDiv) {
+            rosterDiv.innerHTML = "";
+            Game.roster.forEach(c => {
+                const div = document.createElement('div');
+                div.className = `list-item ${this.selChar === c ? 'selected' : ''}`;
+                const jobData = DB.getJob(c.jobKey);
+                const jobName = jobData ? jobData.name : c.jobKey;
+                div.innerHTML = `<div>${c.name}</div><div style="font-size:10px;">Lv${c.level} ${jobName}</div>`;
+                div.onclick = () => { this.selChar = c; this.renderClass(); };
+                rosterDiv.appendChild(div);
+            });
+        }
+
+        if(!this.selChar) {
+            el.innerHTML = "<div style='color:#888; padding:10px;'>左側からキャラクターを選択してください</div>";
+            return;
+        }
+
+        const currentJob = DB.getJob(this.selChar.jobKey);
+        if(!currentJob) return;
+
+        const nextJobs = Object.keys(DB.jobs).filter(k => {
+            const j = DB.jobs[k];
+            return j.tier === currentJob.tier + 1 && j.lineage === currentJob.lineage;
+        });
+
+        if(nextJobs.length === 0) el.innerHTML = "<div style='padding:10px; color:#888;'>転職可能な上位職がありません</div>";
+
+        nextJobs.forEach(k => {
+            const job = DB.jobs[k];
+            const div = document.createElement('div');
+            div.className = "list-item";
+            div.innerHTML = `${job.name} (T${job.tier})`;
+            div.onclick = () => { Game.classChange(this.selChar.id, k); this.selChar=null; this.renderClass(); };
             el.appendChild(div);
         });
+        
+        const back = document.createElement('div');
+        back.style.marginTop = "10px";
+        back.innerHTML = "<button onclick='UI.selChar=null; UI.renderClass()'>選択解除</button>";
+        el.appendChild(back);
     },
-
+    
+    // ★修正: 装備画面でRoster全員を表示するように変更
     renderInv(filter = 'all') {
         this.invFilter = filter;
-        const iList = document.getElementById('inv-list'); iList.innerHTML = "";
-        if(!this.equipChar) { iList.innerHTML = "キャラクターを選択してください"; return; }
+        const cList = document.getElementById('equip-char-list'); 
+        cList.innerHTML = "";
+        
+        // パーティだけでなく全雇用キャラを表示
+        Game.roster.forEach(c => {
+            let el = document.createElement('div');
+            el.className = `list-item ${this.equipChar===c?'selected':''}`;
+            const inPt = Game.party.find(p=>p.id===c.id) ? "[PT]" : "";
+            el.innerHTML = `<div>${c.name} <span style="font-size:9px; color:#aaa;">${inPt}</span></div><div style="font-size:10px;">${c.job.name}</div>`;
+            el.onclick = () => { this.equipChar = c; this.renderInv(this.invFilter); };
+            cList.appendChild(el);
+        });
+
+        const iList = document.getElementById('inv-list');
+        iList.innerHTML = "";
+        
+        if(!this.equipChar) {
+            iList.innerHTML = "<div style='padding:10px; color:#888;'>キャラクターを選択してください</div>";
+            return;
+        }
 
         const filters = {all:'すべて', weapon:'武器', armor:'防具', accessory:'装飾'};
         let fHtml = '<div style="display:flex; gap:5px; margin-bottom:5px;">';
@@ -941,7 +1009,7 @@ const UI = {
         iList.innerHTML += eqHtml + '</div>';
 
         let items = Game.inventory.filter(i => filter==='all' || i.type===filter);
-        if(items.length===0) iList.innerHTML += "<div>アイテムなし</div>";
+        if(items.length===0) iList.innerHTML += "<div style='padding:10px; color:#666;'>アイテムがありません</div>";
         
         items.forEach(item => {
             const idx = Game.inventory.indexOf(item);
@@ -973,6 +1041,18 @@ const UI = {
         });
     },
     
+    sellItem(idx) {
+        const item = Game.inventory[idx];
+        if(!item) return;
+        const price = 10 + (item.tier*10) + (item.rarity*20);
+        Game.helix += price;
+        Game.inventory.splice(idx,1);
+        UI.log(`売却: ${item.name} (+${price}G)`, "log-item");
+        Game.save(); UI.updateAll();
+        if(document.getElementById('modal-inv').style.display === 'flex') this.renderInv(this.invFilter);
+    },
+
+    // ... (rest same as before)
     showCharDetail(c) {
         const s = c.totalStats;
         const html = `
@@ -996,6 +1076,15 @@ const UI = {
             this.equipChar.unequip(slot);
             Game.save(); this.renderInv(this.invFilter);
         }
+    },
+    toggle(on) {
+        document.getElementById('btn-explore').disabled = on;
+        document.getElementById('btn-return').disabled = !on;
+    },
+    log(msg, type) {
+        const p = document.getElementById('log-list');
+        p.innerHTML += `<div class="log-entry ${type}">${msg}</div>`;
+        document.getElementById('log-panel').scrollTop = 99999;
     }
 };
 
