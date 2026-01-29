@@ -1756,7 +1756,7 @@ const RAW_LINEAGE = DataParser.parse(CSV_LINEAGE);
 const parsedLineage = DataParser.convertLineage(RAW_LINEAGE);
 const RAW_RACES = DataParser.parse(CSV_RACES);
 const parsedRaces = DataParser.convertRaces(RAW_RACES);
-const RAW_NAMES = DataParser.parse(CSV_NAMES).map(n => n.name).filter(n => n);
+const RAW_NAMES = DataParser.parse(CSV_NAMES).flatMap(n => Object.values(n)).filter(n => n && n !== 'name');
 
 const MASTER_DATA = {
     config: {
