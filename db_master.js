@@ -1712,7 +1712,7 @@ const DataParser = {
             data[s.name] = { 
                 desc: s.desc, 
                 type: s.type,
-                mod: mod
+                mod: mod // ★追加
             };
             if(pool[s.type]) pool[s.type].push(s.name);
         });
