@@ -16,60 +16,121 @@
     --log-font: 'Helvetica Neue', Arial, sans-serif;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { background: var(--bg-color); color: var(--text-color); font-family: var(--log-font); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
-/* ... (Existing Styles) ... */
-
-/* Element Chart Styles */
-.element-chart-container {
-    position: relative;
-    width: 300px;
-    height: 300px;
-    margin: 0 auto 10px;
-    background: #111;
-    border-radius: 50%;
-    border: 1px dashed #333;
+/* 修正: 100dvhを使用してモバイル等でのはみ出しを防止 */
+body { 
+    background: var(--bg-color); 
+    color: var(--text-color); 
+    font-family: var(--log-font); 
+    height: 100dvh; 
+    display: flex; 
+    flex-direction: column; 
+    overflow: hidden; 
 }
-.elem-node {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: bold;
-    color: #fff;
-    text-shadow: 0 0 3px #000;
-    position: absolute;
-    font-size: 12px;
-    border: 2px solid #333;
-}
-.elem-arrow {
-    position: absolute;
-    color: #666;
-    font-size: 20px;
-    font-weight: bold;
-}
-.el-fire { background: var(--elem-fire); box-shadow: 0 0 8px var(--elem-fire); }
-.el-ice { background: var(--elem-ice); box-shadow: 0 0 8px var(--elem-ice); color: #333; text-shadow:none; }
-.el-wind { background: var(--elem-wind); box-shadow: 0 0 8px var(--elem-wind); color: #333; text-shadow:none; }
-.el-earth { background: var(--elem-earth); box-shadow: 0 0 8px var(--elem-earth); }
-.el-thunder { background: var(--elem-thunder); box-shadow: 0 0 8px var(--elem-thunder); color: #333; text-shadow:none; }
-.el-water { background: var(--elem-water); box-shadow: 0 0 8px var(--elem-water); }
-.el-light { background: var(--elem-light); box-shadow: 0 0 8px var(--elem-light); color: #333; text-shadow:none; }
-.el-dark { background: var(--elem-dark); box-shadow: 0 0 8px var(--elem-dark); border: 1px solid #fff; }
 
-/* ... (Rest of existing styles) ... */
-
-/* Layout */
-#app { display: grid; grid-template-rows: 50px 1fr 60px; height: 100%; width: 100%; max-width: 1400px; margin: 0 auto; }
+/* Main Layout */
+/* 修正: フッターの高さを100pxから140pxに拡張してボタンを表示しやすく */
+#app { 
+    display: grid; 
+    grid-template-rows: 50px 1fr 140px; 
+    height: 100%; 
+    width: 100%; 
+    max-width: 1400px; 
+    margin: 0 auto; 
+}
 header { background: var(--panel-bg); border-bottom: 1px solid #333; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; }
-main { display: grid; grid-template-columns: 350px 1fr; gap: 1px; background: #222; overflow: hidden; min-height: 0; }
+
+/* Main Content Area */
+main { 
+    display: grid; 
+    grid-template-columns: 1fr 380px; /* 左:ログ(可変), 右:固定 */
+    gap: 1px; 
+    background: #222; 
+    overflow: hidden; 
+    min-height: 0; 
+}
 @media (max-width: 800px) { main { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; } }
 
-/* Logs */
-#log-panel { background: var(--bg-color); padding: 10px; overflow-y: auto; font-size: 12px; line-height: 1.5; }
+/* Left Column: Log Panel */
+#log-panel { background: var(--bg-color); padding: 10px; overflow-y: auto; font-size: 13px; line-height: 1.5; border-right: 1px solid #333; }
 .log-entry { margin-bottom: 3px; padding-left: 5px; border-left: 2px solid #333; }
+
+/* Right Column: Split Info Panel */
+#right-column {
+    display: grid;
+    grid-template-rows: 1fr 1fr; /* 上下等分割 */
+    background: var(--panel-bg);
+    overflow: hidden;
+}
+
+/* Right Top: Party Container */
+#party-container { 
+    padding: 10px; overflow-y: auto; display: grid; 
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); 
+    gap: 8px; align-content: start; border-bottom: 1px solid #333;
+}
+
+/* Right Bottom: Sub Info Panel */
+#sub-info-panel {
+    display: flex; flex-direction: column; background: #080808; overflow: hidden;
+}
+.sub-tabs-header {
+    display: flex; border-bottom: 1px solid #333; background: #1a1a1a; flex-shrink: 0;
+}
+.sub-tab-btn {
+    flex: 1; background: transparent; border: none; color: #666; 
+    padding: 8px 0; font-size: 11px; cursor: pointer; border-bottom: 2px solid transparent;
+}
+.sub-tab-btn:hover { background: #222; color: #ddd; }
+.sub-tab-btn.active { color: var(--accent-color); border-bottom-color: var(--accent-color); background: #111; }
+.sub-tab-content {
+    flex: 1; padding: 10px; overflow-y: auto;
+}
+.mini-log { font-size: 11px; color: #999; line-height: 1.4; }
+.mini-log div { margin-bottom: 2px; border-bottom: 1px solid #1a1a1a; }
+
+/* Command Footer - 修正: レイアウト調整 */
+footer { 
+    background: #000; border-top: 1px solid #333; 
+    padding: 8px; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center;
+}
+.command-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr; /* 左(探索)を広く */
+    grid-template-rows: 1fr 1fr;
+    gap: 6px;
+    width: 100%; 
+    max-width: 800px; 
+    height: 100%;
+}
+.cmd-btn {
+    background: #222; border: 1px solid #444; border-radius: 4px; color: #ccc;
+    cursor: pointer; display: flex; flex-direction: column; 
+    align-items: center; justify-content: center; padding: 0;
+    transition: all 0.1s;
+    min-height: 0; /* Flexbox内での縮小を許可 */
+}
+.cmd-btn:hover:not(:disabled) { background: #333; border-color: #666; transform: translateY(-1px); }
+.cmd-btn:active:not(:disabled) { transform: translateY(1px); }
+.cmd-btn:disabled { opacity: 0.3; cursor: not-allowed; border-color: #333; background: #111; }
+.cmd-btn.primary { background: #003322; border-color: #006644; color: var(--accent-color); }
+.cmd-btn.primary:hover { background: #004433; border-color: var(--accent-color); }
+.cmd-btn.danger { background: #331111; border-color: #662222; color: var(--danger-color); }
+.cmd-btn.big-btn { grid-row: 1 / 3; grid-column: 1 / 2; } /* 縦長ボタン */
+
+.btn-label { font-size: 13px; font-weight: bold; letter-spacing: 1px; }
+.btn-sub { font-size: 10px; color: #888; margin-top: 2px; }
+
+.floor-selector-wrap {
+    background: #111; border: 1px solid #333; border-radius: 4px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+#floor-select { background: transparent; color: #fff; border: none; font-size: 14px; font-weight: bold; text-align: center; width: 100%; outline: none;}
+
+/* Log Colors */
 .log-combat { color: #888; border-color: #444; }
 .log-dmg { color: #aaa; }
 .log-victory { color: #fff; border-color: var(--accent-color); }
@@ -84,40 +145,33 @@ main { display: grid; grid-template-columns: 350px 1fr; gap: 1px; background: #2
 .log-lvlup { color: #e67e22; border-color: #e67e22; font-weight: bold; }
 .log-sell { color: #f1c40f; border-color: #f1c40f; }
 
-/* Party Cards */
-#info-panel { background: var(--panel-bg); display: flex; flex-direction: column; overflow: hidden; }
-#party-container { 
-    padding: 10px; overflow-y: auto; display: grid; 
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); 
-    gap: 10px; align-content: start; height: 100%;
-}
-.char-card { background: #1a1a1a; border: 1px solid #333; padding: 10px; border-radius: 4px; font-size: 11px; position: relative; transition: all 0.2s; cursor: pointer; }
-.char-card:hover { border-color: #666; background: #222; transform: translateY(-2px); }
+/* Char Cards */
+.char-card { background: #1a1a1a; border: 1px solid #333; padding: 8px; border-radius: 4px; font-size: 11px; cursor: pointer; }
+.char-card:hover { border-color: #666; background: #222; }
 .char-card.dead { opacity: 0.6; filter: grayscale(100%); border-color: #333 !important; cursor: not-allowed; }
 .char-card.dead::after { content: "戦闘不能"; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: var(--danger-color); font-weight: bold; font-size: 20px; border: 2px solid var(--danger-color); padding: 5px 10px; transform: rotate(-10deg); }
 
-.char-header { display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 4px; align-items: center; }
-.job-label { font-size: 10px; padding: 1px 4px; border-radius: 3px; background: #333; color: #fff; }
+.char-header { display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 2px; }
+.job-label { font-size: 10px; background: #333; color: #fff; padding: 0 4px; border-radius: 2px; }
 .personality-label { color: var(--warn-color); margin-right: 5px; font-size: 10px; }
 
 /* Bars */
-.bar-container { display: flex; flex-direction: column; gap: 2px; margin: 5px 0; }
-.bar-row { display: flex; align-items: center; gap: 5px; font-size: 9px; color: #888; }
-.bar-wrap { flex: 1; background: #333; height: 6px; border-radius: 3px; overflow: hidden; position: relative; }
+.bar-wrap { background: #333; height: 5px; margin: 2px 0; border-radius: 2px; overflow: hidden; }
 .bar-val { height: 100%; transition: width 0.3s; }
 .hp-bar { background: var(--accent-color); }
 .exp-bar { background: #3498db; }
+.enemy-hp-bar { background: var(--danger-color); }
 
 /* Elements (Small Icons) */
 .elem-icon { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:3px; }
 
 /* Stats & Equip */
-.stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; color: #aaa; margin-top: 6px; }
+.stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; color: #aaa; margin-top: 4px; font-size: 10px; }
 .stat-val span { color: #fff; }
 .stat-bonus { color: var(--accent-color); }
 
-.equip-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-top: 8px; border-top: 1px solid #333; padding-top: 6px; }
-.equip-slot { background: #111; padding: 4px; border-radius: 2px; color: #666; font-size: 10px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; cursor: help; }
+.equip-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; margin-top: 5px; border-top: 1px solid #333; padding-top: 4px; }
+.equip-slot { background: #111; padding: 2px 4px; border-radius: 2px; color: #666; font-size: 10px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; cursor: help; }
 .equip-active { color: #ddd; border: 1px solid #333; }
 
 /* Skills */
@@ -131,14 +185,6 @@ main { display: grid; grid-template-columns: 350px 1fr; gap: 1px; background: #2
 .rar-6 { color: var(--rar-god); text-shadow: 0 0 3px rgba(224, 86, 253, 0.6); }
 
 /* Footer & Modals */
-footer { background: var(--panel-bg); border-top: 1px solid #333; display: flex; align-items: center; justify-content: center; gap: 10px; }
-button { background: #333; color: #fff; border: 1px solid #555; padding: 8px 16px; cursor: pointer; border-radius: 3px; font-size: 12px; transition: all 0.2s; }
-button:hover:not(:disabled) { background: #444; border-color: #777; }
-button:disabled { opacity: 0.3; cursor: not-allowed; }
-button.primary { background: #004433; border-color: var(--accent-color); color: var(--accent-color); }
-button.danger { border-color: var(--danger-color); color: var(--danger-color); }
-button.recycle { border-color: #f1c40f; color: #f1c40f; }
-
 button.icon-btn { 
     font-size: 16px; padding: 5px 12px; border: 1px solid #444; 
     background: #222; color: #eee; border-radius: 4px; cursor: pointer; 
@@ -180,3 +226,42 @@ button.icon-btn:hover { background: #333; border-color: #777; }
 .rule-section p, .rule-section li { color: #ccc; font-size: 13px; line-height: 1.6; }
 .rule-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 5px; }
 .rule-table th, .rule-table td { border: 1px solid #444; padding: 5px; text-align: left; }
+
+/* Element Chart Styles */
+.element-chart-container {
+    position: relative;
+    width: 300px;
+    height: 300px;
+    margin: 0 auto 10px;
+    background: #111;
+    border-radius: 50%;
+    border: 1px dashed #333;
+}
+.elem-node {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    color: #fff;
+    text-shadow: 0 0 3px #000;
+    position: absolute;
+    font-size: 12px;
+    border: 2px solid #333;
+}
+.elem-arrow {
+    position: absolute;
+    color: #666;
+    font-size: 20px;
+    font-weight: bold;
+}
+.el-fire { background: var(--elem-fire); box-shadow: 0 0 8px var(--elem-fire); }
+.el-ice { background: var(--elem-ice); box-shadow: 0 0 8px var(--elem-ice); color: #333; text-shadow:none; }
+.el-wind { background: var(--elem-wind); box-shadow: 0 0 8px var(--elem-wind); color: #333; text-shadow:none; }
+.el-earth { background: var(--elem-earth); box-shadow: 0 0 8px var(--elem-earth); }
+.el-thunder { background: var(--elem-thunder); box-shadow: 0 0 8px var(--elem-thunder); color: #333; text-shadow:none; }
+.el-water { background: var(--elem-water); box-shadow: 0 0 8px var(--elem-water); }
+.el-light { background: var(--elem-light); box-shadow: 0 0 8px var(--elem-light); color: #333; text-shadow:none; }
+.el-dark { background: var(--elem-dark); box-shadow: 0 0 8px var(--elem-dark); border: 1px solid #fff; }
