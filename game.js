@@ -1,5 +1,5 @@
 /**
- * Genetic Rogue Ver.13.12 - Fix UI Update Error
+ * Genetic Rogue Ver.13.13 - Fix HP Overflow
  * Main Logic & UI Controller
  */
 
@@ -18,7 +18,7 @@ const Game = {
     helix: 100, floor: 1, maxFloor: 1, floorProgress: 0,
     party: [], roster: [], inventory: [],
     exploring: false, timer: null, currentEnemy: null,
-    SAVE_KEY: 'genetic_rogue_v13_12', // Key update
+    SAVE_KEY: 'genetic_rogue_v13_13', // Key update
 
     init() {
         UI.init();
@@ -43,6 +43,7 @@ const Game = {
         this.party.push(c);
 
         let starter = DB.createRandomItem(1);
+        if(!starter) starter = { uid: "starter", name:"冒険者の短剣", kind:"dg", type:"weapon", slot:"main_hand", stats:{str:2}, rarity:1 };
         this.inventory.push(starter);
         c.autoEquip(starter);
 
@@ -67,7 +68,11 @@ const Game = {
             if(!d) return false;
             this.helix = d.helix; this.maxFloor = d.maxFloor;
             this.inventory = d.inventory || [];
-            this.roster = (d.roster||[]).map(x => new Character(null, null, x));
+            this.roster = (d.roster||[]).map(x => {
+                const c = new Character(null, null, x);
+                c.validateHp(); // ★修正: ロード時にHP整合性チェック
+                return c;
+            });
             this.party = [];
             (d.partyIds||[]).forEach(id => {
                 const c = this.roster.find(x=>x.id===id);
@@ -95,10 +100,10 @@ const Game = {
         this.exploring = true;
         this.currentEnemy = null;
         
-        UI.toggleExplore(true); // ボタン表示切替
+        UI.toggleExplore(true);
         UI.log(`階層 ${this.floor} の探索を開始します`, "log-sys");
         UI.logDetail(`[EXPLORE] Start Floor ${this.floor}`);
-        UI.updateEnemyInfo(null); // クリア
+        UI.updateEnemyInfo(null);
         
         this.timer = setInterval(()=>this.tick(), 800);
     },
@@ -148,7 +153,7 @@ const Game = {
 
     encounter() {
         this.currentEnemy = DB.createEnemy(this.floor, this.floor % 5 === 0);
-        this.currentEnemy.maxHp = this.currentEnemy.hp; // 最大HP保存
+        this.currentEnemy.maxHp = this.currentEnemy.hp;
         
         const ename = this.currentEnemy.name;
         const eElem = this.currentEnemy.elem ? `[${MASTER_DATA.elements.find(e=>e.key===this.currentEnemy.elem).name}]` : "";
@@ -185,7 +190,7 @@ const Game = {
             UI.logDetail(`[ATK] ${c.name} -> ${enemy.name}: ${dmg} (Elem:${elemMod})`);
         });
 
-        UI.updateEnemyInfo(enemy); // HPバー更新
+        UI.updateEnemyInfo(enemy);
 
         if(enemy.hp <= 0) {
             UI.log("勝利！", "log-victory");
@@ -334,15 +339,17 @@ const Game = {
 class Character {
     constructor(jobKey, parents, data) {
         if(data && data.id) { 
-            // Migration
             if (!data.equipment.head) data.equipment.head = null;
             if (!data.equipment.accessory1) data.equipment.accessory1 = data.equipment.accessory;
             if (!data.equipment.accessory2) data.equipment.accessory2 = null;
-            if (data.equipment.accessory) delete data.equipment.accessory;
+            delete data.equipment.accessory;
             if (data.jobExp === undefined) data.jobExp = 0;
             if (!data.learnedSkills) data.learnedSkills = [];
             if (!data.masteredJobs) data.masteredJobs = [];
             Object.assign(this, data); 
+            
+            // ★修正: コンストラクタでのデータ復元時にもHPチェック
+            this.validateHp();
             return; 
         }
 
@@ -350,7 +357,6 @@ class Character {
         this.jobKey = jobKey;
         this.name = (data && data.name) ? data.name : UTILS.genName();
         this.level = 1; this.exp = 0; this.maxExp = 100;
-        this.hp = 100;
         this.jobExp = 0; this.learnedSkills = []; this.masteredJobs = [];
 
         this.baseStats = {...MASTER_DATA.config.BASE_STATS};
@@ -379,6 +385,9 @@ class Character {
         } else {
             this.pedigree = { f: null, m: null };
         }
+        
+        // ★修正: 新規作成時はHPを最大値に設定
+        this.hp = this.totalStats.hp;
     }
 
     get job() { return DB.getJob(this.jobKey); }
@@ -408,6 +417,14 @@ class Character {
         }
         for(let k in s) s[k] += Math.floor((s[k]*0.1) * (this.level-1));
         return s;
+    }
+    
+    // ★追加: HP上限チェックメソッド
+    validateHp() {
+        const max = this.totalStats.hp;
+        if (this.hp > max) {
+            this.hp = max;
+        }
     }
     
     get attackElement() {
@@ -493,6 +510,8 @@ class Character {
             if(cur) Game.inventory.push(cur);
             this.equipment[targetSlot] = item;
             UI.log(`${this.name}が${item.name}を装備`, "log-equip");
+            // ★修正: 装備変更後にHPチェック
+            this.validateHp();
             return true;
         }
         return false;
@@ -509,6 +528,8 @@ class Character {
         }
         if (this.equipment[targetSlot]) Game.inventory.push(this.equipment[targetSlot]);
         this.equipment[targetSlot] = item;
+        // ★修正: 装備変更後にHPチェック
+        this.validateHp();
         return true;
     }
 
@@ -516,6 +537,8 @@ class Character {
         if(this.equipment[slot]) {
             Game.inventory.push(this.equipment[slot]);
             this.equipment[slot] = null;
+            // ★修正: 装備解除後にHPチェック
+            this.validateHp();
         }
     }
     
@@ -559,9 +582,6 @@ const UI = {
         // Bottom Tabs
         document.querySelectorAll('.sub-tab-btn').forEach(btn => {
             btn.onclick = (e) => {
-                // Find tab name from onclick attribute is risky if minified, but ok for now
-                // Better: data attribute
-                // Assuming button has onclick="UI.switchSubTab('name')"
                 const txt = btn.getAttribute('onclick');
                 const match = txt.match(/'([^']+)'/);
                 if(match) this.switchSubTab(match[1]);
@@ -595,10 +615,10 @@ const UI = {
         modal.innerHTML = `
             <div class="modal-box" style="text-align:center; padding:40px;">
                 <h1 style="color:var(--accent-color); font-size:32px; margin-bottom:10px;">🧬 Genetic Rogue</h1>
-                <p style="color:#888; margin-bottom:40px;">Ver.13.12</p>
+                <p style="color:#888; margin-bottom:40px;">Ver.13.13</p>
                 <div style="display:flex; flex-direction:column; gap:20px; width:200px; margin:0 auto;">
-                    <button id="title-load" style="padding:15px; font-weight:bold; font-size:16px; ${loadStyle}" ${loadDisabled}>続きから</button>
-                    <button id="title-new" style="padding:15px; font-size:16px;">はじめから</button>
+                    <button id="title-load" style="padding:15px; font-weight:bold; font-size:16px; ${loadStyle}" ${loadDisabled}>続きから (Load)</button>
+                    <button id="title-new" style="padding:15px; font-size:16px;">はじめから (New Game)</button>
                 </div>
             </div>
         `;
@@ -620,7 +640,6 @@ const UI = {
         modal.className = 'modal-overlay';
         modal.style.display = 'flex';
         modal.style.zIndex = '200';
-        
         modal.innerHTML = `
             <div class="modal-box" style="width:300px;">
                 <div class="modal-header"><h3>名前入力</h3></div>
@@ -632,10 +651,7 @@ const UI = {
             </div>
         `;
         document.body.appendChild(modal);
-        
-        document.getElementById('btn-name-random').onclick = () => {
-            document.getElementById('input-char-name').value = UTILS.genName();
-        };
+        document.getElementById('btn-name-random').onclick = () => { document.getElementById('input-char-name').value = UTILS.genName(); };
         document.getElementById('btn-name-ok').onclick = () => {
             const name = document.getElementById('input-char-name').value || UTILS.genName();
             modal.remove();
@@ -696,27 +712,14 @@ const UI = {
         });
     },
 
-    // ★修正: updateAll での安全な要素更新
     updateAll() {
-        const setNum = (id, val) => {
-            const el = document.getElementById(id);
-            if(el) el.innerText = val;
-        };
-        
-        setNum('helix-display', Game.helix);
-        setNum('lab-helix-display', Game.helix);
-        setNum('floor-display', Game.floor);
+        document.getElementById('helix-display').innerText = Game.helix;
+        const lh = document.getElementById('lab-helix-display'); if(lh) lh.innerText = Game.helix;
+        document.getElementById('floor-display').innerText = Game.floor;
         
         const maxStep = MASTER_DATA.config.FLOOR_STEP_MAX || 30;
         const progPct = Math.floor((Game.floorProgress / maxStep) * 100);
-        
-        // 互換性チェック
-        const fpText = `Progress: ${progPct}% (${Game.floorProgress}/${maxStep})`;
-        if(document.getElementById('floor-progress-text')) {
-             setNum('floor-progress-text', fpText);
-        } else {
-             setNum('floor-progress', `(${Game.floorProgress}/${maxStep})`);
-        }
+        document.getElementById('floor-progress-text').innerText = `Progress: ${progPct}% (${Game.floorProgress}/${maxStep})`;
         
         const fs = document.getElementById('floor-select');
         if(fs && fs.options.length < Game.maxFloor) {
