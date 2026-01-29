@@ -1,5 +1,5 @@
 /**
- * Genetic Rogue Ver.13.18 - Skill-Based Class Change & UI
+ * Genetic Rogue Ver.13.19 - Skill-Based Class Change & Equip Fix
  * Main Logic & UI Controller
  */
 
@@ -19,7 +19,7 @@ const Game = {
     party: [], roster: [], inventory: [],
     exploring: false, timer: null, currentEnemy: null,
     speed: 800,
-    SAVE_KEY: 'genetic_rogue_v13_17',
+    SAVE_KEY: 'genetic_rogue_v13_19', // Key update
 
     init() {
         UI.init();
@@ -44,6 +44,7 @@ const Game = {
         this.party.push(c);
 
         let starter = DB.createRandomItem(1);
+        if(!starter) starter = { uid: "starter", name:"冒険者の短剣", kind:"dg", type:"weapon", slot:"main_hand", stats:{str:2}, rarity:1 };
         this.inventory.push(starter);
         c.autoEquip(starter);
 
@@ -321,8 +322,8 @@ const Game = {
     classChange(charId, newJobId) {
         const c = this.roster.find(x=>x.id===charId);
         if(!c) return;
-        if(c.level < 10) return alert("Lv10以上必要です");
-        if(this.helix < MASTER_DATA.config.CC_COST) return alert("Helix不足");
+        if(c.level < 10) return alert("Need Lv 10+");
+        if(this.helix < MASTER_DATA.config.CC_COST) return alert("Not enough Helix");
         this.helix -= MASTER_DATA.config.CC_COST;
         c.classChange(newJobId);
         UI.updateAll();
@@ -385,6 +386,7 @@ const Game = {
 class Character {
     constructor(jobKey, parents, data) {
         if(data && data.id) { 
+            // Migrate
             if (!data.equipment.head) data.equipment.head = null;
             if (!data.equipment.accessory1) data.equipment.accessory1 = data.equipment.accessory;
             if (!data.equipment.accessory2) data.equipment.accessory2 = null;
@@ -393,6 +395,7 @@ class Character {
             if (!data.learnedSkills) data.learnedSkills = [];
             if (!data.masteredJobs) data.masteredJobs = [];
             Object.assign(this, data); 
+            
             this.validateHp();
             return; 
         }
@@ -427,6 +430,8 @@ class Character {
                 [pSkills[i], pSkills[j]] = [pSkills[j], pSkills[i]];
             }
             this.learnedSkills = pSkills.slice(0, 4);
+            
+            // Stat inheritance
             const p1s = parents[0].totalStats;
             const p2s = parents[1].totalStats;
             for(let k in this.baseStats) {
@@ -529,7 +534,8 @@ class Character {
     canEquip(item) {
         if (!item || !item.kind) return { ok: false, reason: "無効" };
         const job = this.job;
-        if (job && job.equip && !job.equip.includes(item.kind) && item.kind !== 'ac') return { ok: false, reason: "職不可" };
+        // Check if equip type exists in job's allowed list
+        if (job && job.equip && Array.isArray(job.equip) && !job.equip.includes(item.kind) && item.kind !== 'ac') return { ok: false, reason: "職不可" };
         if (item.req) {
             const stats = this.totalStats;
             for (let key in item.req) {
@@ -599,11 +605,11 @@ class Character {
 const UI = {
     currentTab: 'enemy', 
     currentLabTab: 'roster',
-    breedState: null, // null, 'p1', 'p2'
-    breedParents: [null, null],
     selChar: null,
     equipChar: null,
     invFilter: 'all', 
+    breedState: null,
+    breedParents: [null, null],
 
     init() {
         const bind = (id, fn) => { const el = document.getElementById(id); if(el) el.onclick = fn; };
@@ -617,14 +623,24 @@ const UI = {
         bind('btn-settings', () => this.openModal('modal-settings'));
         bind('btn-help', () => this.openModal('modal-rules'));
         bind('btn-sell-trash', () => Game.sellTrash());
+        
         bind('act-breed', () => UI.startBreedMode());
-        document.querySelectorAll('.close-modal').forEach(b => { b.onclick = () => this.closeModal(); });
+        
+        document.querySelectorAll('.close-modal').forEach(b => {
+            b.onclick = () => this.closeModal();
+        });
+        
+        document.addEventListener('keydown', (e) => {
+            if(e.key === 'Escape') this.closeModal();
+        });
+        
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.onclick = (e) => {
                 const tabId = e.target.getAttribute('data-tab');
                 if(tabId) this.switchLabTab(tabId);
             };
         });
+
         document.querySelectorAll('.sub-tab-btn').forEach(btn => {
             btn.onclick = (e) => {
                 const txt = btn.getAttribute('onclick');
@@ -632,19 +648,25 @@ const UI = {
                 if(match) this.switchSubTab(match[1]);
             };
         });
+        
         const tt = document.createElement('div');
         tt.id = 'ui-tooltip';
         tt.className = 'item-tooltip';
         document.body.appendChild(tt);
     },
-
+    
+    // ... (ToggleExplore, Title, NameInput, CharMake - same as before)
     toggleExplore(isExplore) {
         const explBtn = document.getElementById('btn-explore');
         const retBtn = document.getElementById('btn-return');
         if(isExplore) {
-            explBtn.disabled = true; explBtn.classList.add('disabled'); retBtn.disabled = false;
+            explBtn.disabled = true; 
+            explBtn.classList.add('disabled');
+            retBtn.disabled = false;
         } else {
-            explBtn.disabled = false; explBtn.classList.remove('disabled'); retBtn.disabled = true;
+            explBtn.disabled = false;
+            explBtn.classList.remove('disabled');
+            retBtn.disabled = true;
         }
     },
 
@@ -656,18 +678,27 @@ const UI = {
         const hasData = Game.hasSaveData();
         const loadDisabled = hasData ? '' : 'disabled';
         const loadStyle = hasData ? 'background:var(--accent-color); color:#000;' : 'opacity:0.5; cursor:not-allowed;';
+
         modal.innerHTML = `
             <div class="modal-box" style="text-align:center; padding:40px;">
                 <h1 style="color:var(--accent-color); font-size:32px; margin-bottom:10px;">🧬 Genetic Rogue</h1>
-                <p style="color:#888; margin-bottom:40px;">Ver.13.18</p>
+                <p style="color:#888; margin-bottom:40px;">Ver.13.19</p>
                 <div style="display:flex; flex-direction:column; gap:20px; width:200px; margin:0 auto;">
-                    <button id="title-load" style="padding:15px; font-weight:bold; font-size:16px; ${loadStyle}" ${loadDisabled}>続きから</button>
-                    <button id="title-new" style="padding:15px; font-size:16px;">はじめから</button>
+                    <button id="title-load" style="padding:15px; font-weight:bold; font-size:16px; ${loadStyle}" ${loadDisabled}>続きから (Load)</button>
+                    <button id="title-new" style="padding:15px; font-size:16px;">はじめから (New Game)</button>
                 </div>
-            </div>`;
+            </div>
+        `;
         document.body.appendChild(modal);
-        document.getElementById('title-load').onclick = () => { if(Game.load()) modal.remove(); else alert("ロード失敗"); };
-        document.getElementById('title-new').onclick = () => { if(hasData && !confirm("データを上書きしますか？")) return; modal.remove(); this.showCharMake(); };
+
+        document.getElementById('title-load').onclick = () => {
+            if(Game.load()) modal.remove(); else alert("ロード失敗");
+        };
+        document.getElementById('title-new').onclick = () => {
+            if(hasData && !confirm("データを上書きしますか？")) return;
+            modal.remove();
+            this.showCharMake();
+        };
     },
 
     showNameInput(callback) {
@@ -675,6 +706,7 @@ const UI = {
         modal.className = 'modal-overlay';
         modal.style.display = 'flex';
         modal.style.zIndex = '200';
+        
         modal.innerHTML = `
             <div class="modal-box" style="width:300px;">
                 <div class="modal-header"><h3>名前入力</h3></div>
@@ -683,12 +715,17 @@ const UI = {
                     <button id="btn-name-random" style="margin-bottom:20px;">ランダム生成</button>
                     <button id="btn-name-ok" class="primary" style="width:100%; padding:10px;">決定</button>
                 </div>
-            </div>`;
+            </div>
+        `;
         document.body.appendChild(modal);
-        document.getElementById('btn-name-random').onclick = () => { document.getElementById('input-char-name').value = UTILS.genName(); };
+        
+        document.getElementById('btn-name-random').onclick = () => {
+            document.getElementById('input-char-name').value = UTILS.genName();
+        };
         document.getElementById('btn-name-ok').onclick = () => {
             const name = document.getElementById('input-char-name').value || UTILS.genName();
-            modal.remove(); callback(name);
+            modal.remove();
+            callback(name);
         };
     },
 
@@ -697,8 +734,15 @@ const UI = {
             const modal = document.createElement('div');
             modal.className = 'modal-overlay';
             modal.style.display = 'flex';
-            const jobOptions = Object.values(DB.jobs).filter(j => j.tier === 1 && !j.reqJob).map(j => `<option value="${j.id}">${j.name}</option>`).join('');
-            const raceOptions = Object.keys(MASTER_DATA.races).map(k => `<option value="${k}">${MASTER_DATA.races[k].name}</option>`).join('');
+            
+            const jobOptions = Object.values(DB.jobs)
+                .filter(j => j.tier === 1 && !j.reqJob)
+                .map(j => `<option value="${j.id}">${j.name}</option>`)
+                .join('');
+            const raceOptions = Object.keys(MASTER_DATA.races)
+                .map(k => `<option value="${k}">${MASTER_DATA.races[k].name}</option>`)
+                .join('');
+
             modal.innerHTML = `
                 <div class="modal-box">
                     <div class="modal-header"><h3>キャラクター作成: ${name}</h3></div>
@@ -708,19 +752,24 @@ const UI = {
                         <div id="cm-preview" style="background:#1a1a1a; padding:10px; margin-bottom:10px;"></div>
                         <button id="cm-start" class="primary" style="width:100%;">冒険を始める</button>
                     </div>
-                </div>`;
+                </div>
+            `;
             document.body.appendChild(modal);
+
             const updatePreview = () => {
                 const r = document.getElementById('cm-race').value;
                 const j = document.getElementById('cm-job').value;
                 const rd = MASTER_DATA.races[r];
                 const jd = DB.jobs[j];
                 const calc = (stat) => Math.floor(5 * (rd.mod[stat]||1) * (jd.mod[stat]||1));
+                
                 let html = "<div style='font-size:12px;'>";
-                html += `HP: ${calc('hp')*10} | STR: ${calc('str')} | VIT: ${calc('vit')}<br>MAG: ${calc('mag')} | INT: ${calc('int')} | AGI: ${calc('agi')} | LUC: ${calc('luc')}`;
+                html += `HP: ${calc('hp')*10} | STR: ${calc('str')} | VIT: ${calc('vit')}<br>`;
+                html += `MAG: ${calc('mag')} | INT: ${calc('int')} | AGI: ${calc('agi')} | LUC: ${calc('luc')}`;
                 html += "</div>";
                 document.getElementById('cm-preview').innerHTML = html;
             };
+            
             document.getElementById('cm-race').onchange = updatePreview;
             document.getElementById('cm-job').onchange = updatePreview;
             document.getElementById('cm-start').onclick = () => {
@@ -737,11 +786,16 @@ const UI = {
         document.getElementById('helix-display').innerText = Game.helix;
         const lh = document.getElementById('lab-helix-display'); if(lh) lh.innerText = Game.helix;
         document.getElementById('floor-display').innerText = Game.floor;
+        
         const maxStep = MASTER_DATA.config.FLOOR_STEP_MAX || 30;
         const progPct = Math.floor((Game.floorProgress / maxStep) * 100);
+        
         const fp = document.getElementById('floor-progress-text');
         if(fp) fp.innerText = `Progress: ${progPct}% (${Game.floorProgress}/${maxStep})`;
-        else { const fpOld = document.getElementById('floor-progress'); if(fpOld) fpOld.innerText = `(${Game.floorProgress}/${maxStep})`; }
+        else {
+             const fpOld = document.getElementById('floor-progress');
+             if(fpOld) fpOld.innerText = `(${Game.floorProgress}/${maxStep})`;
+        }
         
         const fs = document.getElementById('floor-select');
         if(fs && fs.options.length < Game.maxFloor) {
@@ -753,6 +807,7 @@ const UI = {
                 fs.appendChild(opt);
             }
         }
+        
         this.renderParty();
         if(document.getElementById('modal-lab').style.display === 'flex') this.renderLab();
     },
@@ -763,11 +818,15 @@ const UI = {
             const div = document.createElement('div');
             div.className = "char-card";
             div.style.padding = "12px"; 
+
             if(char.hp<=0) div.classList.add("dead");
+            
             const s = char.totalStats;
             const hpPct = Math.max(0, Math.min(100, (char.hp / s.hp) * 100));
             const expPct = Math.min(100, (char.exp / char.maxExp) * 100);
+            
             const raceName = MASTER_DATA.races[char.race] ? MASTER_DATA.races[char.race].name : "不明";
+
             let elemHtml = "";
             if (char.elements && char.elements.length > 0) {
                 elemHtml = char.elements.map(e => {
@@ -776,6 +835,7 @@ const UI = {
                 }).join("");
             }
             if (elemHtml === "") elemHtml = "<span style='color:#666;'>無</span>";
+
             let equipHtml = '<div style="margin-top:8px; padding-top:4px; border-top:1px solid #444; font-size:12px; line-height:1.4;">';
             const slotNames = { main_hand:"主", off_hand:"副", head:"頭", body:"体", accessory1:"飾1", accessory2:"飾2" };
             let hasEquip = false;
@@ -785,18 +845,29 @@ const UI = {
                     hasEquip = true;
                     let color = item.rarity >= 3 ? 'var(--info-color)' : '#ccc';
                     if (item.rarity >= 4) color = 'var(--accent-color)';
-                    equipHtml += `<div style="display:flex; justify-content:space-between;"><span style="color:#888; font-size:11px; width:15px;">${slotNames[slot]||slot.substr(0,1)}</span><span style="color:${color}; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:140px;">${item.name}</span></div>`;
+                    
+                    equipHtml += `<div style="display:flex; justify-content:space-between;">
+                        <span style="color:#888; font-size:11px; width:15px;">${slotNames[slot]||slot.substr(0,1)}</span>
+                        <span style="color:${color}; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:140px;">${item.name}</span>
+                    </div>`;
                 }
             }
             if(!hasEquip) equipHtml += '<div style="color:#666; font-size:11px;">装備なし</div>';
             equipHtml += '</div>';
 
             div.innerHTML = `
-                <div class="char-header" style="font-size:16px; margin-bottom:4px;">${char.name} <span class="job-label" style="font-size:12px; padding:2px 6px;">${char.job.name}</span></div>
-                <div style="font-size:13px; color:#ddd; margin-bottom:6px;">Lv.${char.level} <span style="color:#888;">|</span> ${raceName} <span style="color:#888;">|</span> ${elemHtml}</div>
+                <div class="char-header" style="font-size:16px; margin-bottom:4px;">
+                    ${char.name} 
+                    <span class="job-label" style="font-size:12px; padding:2px 6px;">${char.job.name}</span>
+                </div>
+                <div style="font-size:13px; color:#ddd; margin-bottom:6px;">
+                    Lv.${char.level} <span style="color:#888;">|</span> ${raceName} <span style="color:#888;">|</span> ${elemHtml}
+                </div>
+                
                 <div class="bar-wrap" style="height:8px; background:#444;"><div class="bar-val hp-bar" style="width:${hpPct}%"></div></div>
                 <div style="text-align:right; font-size:11px; margin-bottom:2px;">HP: ${Math.floor(char.hp)} / ${s.hp}</div>
                 <div class="bar-wrap" style="height:4px; background:#444;"><div class="bar-val exp-bar" style="width:${expPct}%"></div></div>
+                
                 ${equipHtml}
             `;
             div.onclick = () => UI.showCharDetail(char);
@@ -819,15 +890,26 @@ const UI = {
     updateEnemyInfo(enemy) {
         const el = document.getElementById('enemy-info-display');
         if(!el) return;
-        if(!enemy || enemy.hp <= 0) return el.innerHTML = '<div style="margin-top:20px; color:#444;">NO SIGNAL</div>';
+        
+        if(!enemy || enemy.hp <= 0) {
+            el.innerHTML = '<div style="margin-top:20px; color:#444;">NO SIGNAL</div>';
+            return;
+        }
+
         const hpPct = Math.floor((enemy.hp / enemy.maxHp) * 100);
         const elemName = enemy.elem ? MASTER_DATA.elements.find(e=>e.key===enemy.elem).name : "無";
         const elemColor = enemy.elem ? MASTER_DATA.elements.find(e=>e.key===enemy.elem).color : "#888";
+        
         el.innerHTML = `
             <div style="font-size:14px; font-weight:bold; color:var(--danger-color);">${enemy.name}</div>
             <div style="font-size:10px; margin-bottom:5px;">Tier: ${enemy.tier}</div>
-            <div style="display:flex; align-items:center; gap:5px; margin-bottom:5px;"><span style="font-size:10px; color:#aaa;">属性:</span><span style="color:${elemColor}; border:1px solid ${elemColor}; padding:0 4px; border-radius:3px; font-size:10px;">${elemName}</span></div>
-            <div class="bar-wrap" style="height:10px; background:#333;"><div class="bar-val enemy-hp-bar" style="width:${hpPct}%"></div></div>
+            <div style="display:flex; align-items:center; gap:5px; margin-bottom:5px;">
+                <span style="font-size:10px; color:#aaa;">属性:</span>
+                <span style="color:${elemColor}; border:1px solid ${elemColor}; padding:0 4px; border-radius:3px; font-size:10px;">${elemName}</span>
+            </div>
+            <div class="bar-wrap" style="height:10px; background:#333;">
+                <div class="bar-val enemy-hp-bar" style="width:${hpPct}%"></div>
+            </div>
             <div style="text-align:right; font-size:10px;">${enemy.hp} / ${enemy.maxHp}</div>
         `;
     },
@@ -864,6 +946,7 @@ const UI = {
     openModal(id, fn) { document.getElementById(id).style.display='flex'; if(fn) fn(); },
     closeModal() { document.querySelectorAll('.modal-overlay').forEach(e => e.style.display='none'); },
 
+    // --- Lab Logic ---
     switchLabTab(mode) {
         this.currentLabTab = mode;
         this.breedState = null; 
@@ -954,10 +1037,11 @@ const UI = {
         });
     },
     
-    // ★修正: Skill-Based Class Change Logic in Render
     renderClass() {
-        const el = document.getElementById('cc-job-list'); el.innerHTML = "";
+        const el = document.getElementById('cc-job-list'); 
+        el.innerHTML = "";
         
+        // Character List
         const rosterDiv = document.getElementById('cc-char-list');
         if(rosterDiv) {
             rosterDiv.innerHTML = "";
@@ -972,39 +1056,32 @@ const UI = {
 
         if(!this.selChar) { el.innerHTML = "<div style='padding:10px; color:#666;'>左のリストから選択</div>"; return; }
 
-        const cJob = DB.getJob(this.selChar.jobKey);
-        
-        // ★ New Logic: Filter based on skills
+        // Filter valid jobs based on skills
         const nextJobs = Object.values(DB.jobs).filter(j => {
-            if (j.id === cJob.id) return false; // Current job
-            if (j.tier !== cJob.tier + 1) return false; // Must be next tier? Or relax to any tier? Let's stick to +1 for now.
-            // If job has a required job, check if char has that job's master skill.
+            if (j.id === this.selChar.jobKey) return false;
+            // Simplified condition: Tier + 1 OR Tier 1 (if not learned) AND Skills check
+            // Actually, game design usually only allows Tier Up.
+            // Let's stick to: Tier must be current + 1 OR (Tier 1 if you want to switch base job? Maybe too complex)
+            // For now: Target Tier must be current Tier + 1
+            if (j.tier !== this.selChar.job.tier + 1) return false;
+
             if (j.reqJob) {
+                 // Find base job data for reqJob ID string
                  const reqJobData = Object.values(DB.jobs).find(x => x.baseId === j.reqJob);
                  if (reqJobData && reqJobData.masterSkill) {
-                     if (!this.selChar.learnedSkills.includes(reqJobData.masterSkill)) return false;
+                     return this.selChar.learnedSkills.includes(reqJobData.masterSkill);
                  }
+                 // If reqJob has no master skill defined, maybe allow it? Or block?
+                 // Let's assume strict: must have skill.
+                 return false; 
             } else {
-                // If no requirement, it's a base job (tier 1), but we filter by tier+1 so this case is rare unless lateral change allowed.
-                // If we want to allow switching to other Tier 1 jobs, we can allow it if level > 10.
-                if (j.tier === 1 && this.selChar.level >= 10) return true;
-                return false;
+                // No requirement (Base job). 
+                // But since we filter by Tier+1, this usually won't happen unless current is Tier 0.
+                return true; 
             }
-            
-            // Element check
-            if (j.reqEl && j.reqEl.length > 0) {
-                 // Check if char has ONE of the required elements
-                 // Character elements are usually inherited or set.
-                 // Current logic has empty elements array in constructor. Let's assume elements come from elsewhere or just ignore for now?
-                 // Wait, game doesn't seem to set char.elements in constructor except empty.
-                 // We will skip element check strictly or check if char has inherent element.
-                 // If we want strict element check, we need to implement element acquiring.
-            }
-            
-            return true;
         });
 
-        if(nextJobs.length===0) el.innerHTML = "<div style='padding:10px; color:#666;'>転職可能な上位職がありません</div>";
+        if(nextJobs.length===0) el.innerHTML = "<div style='padding:10px; color:#666;'>転職可能な上位職がありません<br>(前提スキルの習得が必要です)</div>";
 
         nextJobs.forEach(j => {
             const div = document.createElement('div'); div.className = "list-item";
@@ -1019,12 +1096,11 @@ const UI = {
         el.appendChild(back);
     },
     
-    // ★ Helper for Class Change from Detail
+    // ★追加: 詳細画面からクラスチェンジを開く
     openClassChange(charId) {
-        this.closeModal(); // Close detail
-        this.switchLabTab('class'); // Switch main UI to Lab > Class
-        this.openModal('modal-lab'); // Open Lab modal
-        // Auto select character
+        this.closeModal(); 
+        this.switchLabTab('class'); 
+        this.openModal('modal-lab'); 
         this.selChar = Game.roster.find(c => c.id === charId);
         this.renderClass();
     },
@@ -1034,6 +1110,7 @@ const UI = {
         const cList = document.getElementById('equip-char-list'); 
         cList.innerHTML = "";
         
+        // Show all roster
         Game.roster.forEach(c => {
             let el = document.createElement('div');
             el.className = `list-item ${this.equipChar===c?'selected':''}`;
@@ -1063,7 +1140,7 @@ const UI = {
             let name = it ? `<span class="rar-${it.rarity}">${it.name}</span>` : "なし";
             let btn = it ? `<button style="font-size:9px;" onclick="UI.doUnequip('${s}')">外す</button>` : "";
             eqHtml += `<div style="font-size:10px; display:flex; justify-content:space-between; margin-bottom:2px;">
-                <span style="color:#888; width:20px;">${slotNames[s]||s}</span>
+                <span style="color:#888; width:20px;">${slotNames[s]||s.substr(0,1)}</span>
                 <span>${name} ${btn}</span>
             </div>`;
         }
@@ -1169,7 +1246,6 @@ const UI = {
         if(tt) tt.style.display = 'none';
     },
 
-    // ★修正: Add Class Change Button to Detail Modal
     showCharDetail(c) {
         const s = c.totalStats;
         const html = `

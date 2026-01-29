@@ -1,5 +1,5 @@
 /**
- * Genetic Rogue - Database Manager (Ver.13.18 - No Element Prefix)
+ * Genetic Rogue - Database Manager (Ver.13.19 - Direct Load)
  */
 
 const DB = {
@@ -12,51 +12,30 @@ const DB = {
     },
 
     generateJobs() {
-        const ranks = MASTER_DATA.job_ranks;
-        const elements = MASTER_DATA.elements;
-        const allElements = [{key:null, name:"", mod:{}}].concat(elements);
+        // ★修正: ループによる自動生成をやめ、CSVデータをそのままロードする
+        // これにより「属性ごとの重複」や「意図しないランク」の生成を防ぐ
+        MASTER_DATA.jobs.forEach(job => {
+            
+            // ★追加: 前提ジョブIDから「必要なスキル(reqSkill)」を特定する
+            // 転職条件をジョブIDではなく、そのジョブで習得するマスタースキルに変更するため
+            let reqSkill = null;
+            if (job.reqJob) {
+                const parentJob = MASTER_DATA.jobs.find(j => j.id === job.reqJob);
+                if (parentJob && parentJob.masterSkill) {
+                    reqSkill = parentJob.masterSkill;
+                }
+            }
 
-        MASTER_DATA.jobs.forEach(base => {
-            ranks.forEach(rank => {
-                allElements.forEach(el => {
-                    if(rank.tier === 1 && el.key !== null) return; 
-                    if(rank.tier === 5 && el.key === null) return; 
-
-                    let suffix = rank.prefix ? `_${rank.prefix}` : "";
-                    const uniqueId = `${el.key||'n'}_${rank.tier}_${base.id}${suffix}`;
-                    
-                    // ★修正: 属性名(el.name)を職業名に含めないように変更
-                    // Before: const name = `${el.name}${rank.prefix}${base.name}`;
-                    const name = `${rank.prefix}${base.name}`;
-                    
-                    let mod = { all: rank.mod };
-                    if(el.key) mod.mag = (mod.mag||0) + 0.2; 
-
-                    let reqJob = base.reqJob; 
-                    if (!reqJob && rank.tier > 1) {
-                        reqJob = base.id; 
-                    }
-
-                    let reqEl = base.reqEl ? [...base.reqEl] : [];
-                    if (el.key) reqEl.push(el.key);
-
-                    this.jobs[uniqueId] = {
-                        id: uniqueId,
-                        name: name,
-                        tier: rank.tier,
-                        type: base.type,
-                        equip: base.equip,
-                        lineage: base.lineage,
-                        mod: mod,
-                        reqEl: reqEl.length > 0 ? reqEl : null,
-                        reqJob: reqJob,
-                        reqStats: base.reqStats, 
-                        baseId: base.id,
-                        maxJobExp: rank.tier * 500,
-                        masterSkill: base.masterSkill
-                    };
-                });
-            });
+            // IDをキーとして登録
+            this.jobs[job.id] = {
+                ...job,
+                // 基本プロパティの補完
+                maxJobExp: job.tier * 500,
+                // 属性要件の処理（CSVにあれば）
+                reqEl: job.reqEl || null,
+                // ★追加: 転職条件スキル
+                reqSkill: reqSkill
+            };
         });
     },
 
@@ -69,6 +48,8 @@ const DB = {
         const types = Object.keys(MASTER_DATA.items.types);
         const typeKey = types[Math.floor(Math.random() * types.length)];
         const typeData = MASTER_DATA.items.types[typeKey];
+        
+        // Tierフィルタリング
         const materials = MASTER_DATA.items.materials.filter(m => m.tier <= maxTier);
         const matPool = materials.length > 0 ? materials : MASTER_DATA.items.materials.filter(m => m.tier === 1);
         
@@ -91,17 +72,19 @@ const DB = {
         let item = {
             uid: Math.random().toString(36).substr(2),
             name: `${mat.name}${typeData.name}`,
-            kind: typeKey,
+            kind: typeData.kind,
             slot: typeData.slot,
             stats: { ...typeData.base },
             rarity: rarity,
             tier: Math.max(1, mat.tier), 
             elem: mat.elem || typeData.elem || null
         };
+
         for(let k in mat.mod) {
             if(k==='all') ['str','vit','mag','int','agi','luc'].forEach(s => item.stats[s] = (item.stats[s]||0) + mat.mod.all);
             else item.stats[k] = (item.stats[k]||0) + mat.mod[k];
         }
+
         if(rarity > 2) {
             const affixes = MASTER_DATA.items.affixes.filter(a => a.tier <= rarity);
             if(affixes.length > 0) {
@@ -113,7 +96,9 @@ const DB = {
                 }
             }
         }
+        
         for(let k in item.stats) item.stats[k] = Math.ceil(item.stats[k] * (1 + floor * 0.1));
+
         return item;
     },
 
@@ -126,6 +111,7 @@ const DB = {
         let prefix = isElite ? prefixes[Math.floor(Math.random() * prefixes.length)] : prefixes[0];
         let scale = 1 + (floor - 1) * 0.4;
         if(isElite) scale *= 1.5;
+
         return {
             name: prefix.name + base.name,
             hp: Math.floor(base.hp * scale * (prefix.mod || 1)),
