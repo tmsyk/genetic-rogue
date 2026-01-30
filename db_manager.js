@@ -74,6 +74,7 @@ const DB = {
             name: `${mat.name}${typeData.name}`,
             kind: typeData.kind,
             slot: typeData.slot,
+            type: typeData.type,
             stats: { ...typeData.base },
             rarity: rarity,
             tier: Math.max(1, mat.tier),

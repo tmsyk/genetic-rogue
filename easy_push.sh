@@ -1,4 +1,6 @@
 #!/bin/bash
+# gitのプッシュを簡単にするスクリプト
+# Usage: ./easy_push.sh [commit message]
 
 # Default commit message if none provided
 MSG="${1:-Update}"

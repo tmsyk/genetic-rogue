@@ -1317,8 +1317,7 @@ const UI = {
         iList.innerHTML += eqHtml + '</div>';
 
         // Inventory Items
-        // Fix: DB uses 'kind', UI used 'type'.
-        let items = Game.inventory.filter(i => filter === 'all' || i.kind === filter);
+        let items = Game.inventory.filter(i => filter === 'all' || i.type === filter);
         if (items.length === 0) iList.innerHTML += "<div style='padding:10px; color:#666;'>アイテムなし</div>";
 
         items.forEach(item => {

@@ -197,57 +197,57 @@ leviathan,リヴァイアサン,5,phy,"sp,wh,no",special,2.5,2.2,2.2,1.5,1,1.2,1
 fenrir,フェンリル,5,spd,"kn,dg,no",shadow,2,2.5,1.5,1,1,2.5,1,werewolf,氷狼牙,60,110,0,0,0,110,0,ice`;
 
 const CSV_ITEMS = `id,name,kind,type,slot,base_str,base_vit,base_mag,base_int,base_agi,base_luc,base_dex,tier,req_stat,req_val,element
-w1,ショートソード,sw,weapon,main_hand,5,0,0,0,0,0,0,1,,,none
-w2,ロングソード,sw,weapon,main_hand,10,0,0,0,0,0,0,2,,,none
-w3,ブロードソード,sw,weapon,main_hand,15,2,0,0,-2,0,4,2,str,10,none
-w4,バスタードソード,sw,weapon,main_hand,22,0,0,0,-3,0,5,2,str,20,none
-w5,ミスリルソード,sw,weapon,main_hand,30,0,5,0,5,0,5,3,,,none
-w6,フレイムタン,sw,weapon,main_hand,35,0,10,0,0,0,5,3,mag,20,fire
-w7,アイスブランド,sw,weapon,main_hand,35,0,10,0,0,0,5,3,mag,20,ice
-w8,クリスタルソード,sw,weapon,main_hand,45,0,15,0,2,5,10,3,,,none
-w9,高周波ブレード,sw,weapon,main_hand,60,0,0,5,10,0,15,4,dex,50,thunder
-w10,ビームサーベル,sw,weapon,main_hand,75,0,10,10,5,0,10,4,int,40,light
-w11,プラズマカッター,sw,weapon,main_hand,85,0,0,15,5,0,10,4,dex,60,thunder
-w12,フォトンブレード,sw,weapon,main_hand,95,0,20,10,10,0,15,5,int,80,light
-w13,エクスカリバー,sw,weapon,main_hand,120,20,30,20,10,10,10,5,str,100,light
-w14,ラグナロク,sw,weapon,main_hand,150,0,50,0,20,0,20,5,,,dark
-w15,アポカリプス,sw,weapon,main_hand,180,-20,20,0,0,-10,0,5,,,dark
-w16,さびた剣,sw,weapon,main_hand,2,0,0,0,-1,-5,0,1,,,none
-w17,訓練用の剣,sw,weapon,main_hand,3,0,0,0,0,0,1,1,,,none
-w18,エストック,sw,weapon,main_hand,18,0,0,0,5,0,8,2,dex,20,none
-w19,クレイモア,sw,weapon,main_hand,28,5,0,0,-5,0,0,2,str,30,none
-w20,ドラゴンキラー,sw,weapon,main_hand,50,10,0,0,0,5,5,3,str,50,none
-kat1,打刀,kat,weapon,main_hand,12,0,0,0,5,0,5,1,dex,10,none
-kat2,脇差,kat,weapon,main_hand,8,0,0,0,8,2,8,1,agi,15,none
-kat3,野太刀,kat,weapon,main_hand,25,0,0,0,-5,0,5,2,str,25,none
-kat4,菊一文字,kat,weapon,main_hand,40,0,5,5,10,5,10,3,dex,40,none
-kat5,村正,kat,weapon,main_hand,65,-10,10,0,15,0,15,4,,,dark
-kat6,レーザーカタナ,kat,weapon,main_hand,80,0,0,15,20,0,20,4,int,50,light
-kat7,正宗,kat,weapon,main_hand,130,10,20,20,30,20,30,5,,,light
-kat8,童子切安綱,kat,weapon,main_hand,140,5,0,0,10,10,10,5,,,none
-dg1,ナイフ,dg,weapon,main_hand,3,0,0,0,3,0,3,1,,,none
-dg2,ダガー,dg,weapon,main_hand,6,0,0,0,5,0,5,1,,,none
-dg3,ポイズンダガー,dg,weapon,main_hand,10,0,5,0,5,0,5,2,,,dark
-dg4,アサシンダガー,dg,weapon,main_hand,15,0,0,0,10,5,10,2,agi,30,dark
-dg5,マインゴーシュ,dg,weapon,main_hand,12,5,0,0,5,0,10,2,dex,25,none
-dg6,ソードブレイカー,dg,weapon,main_hand,20,5,0,0,10,0,15,3,dex,40,none
-dg7,ヒートナイフ,dg,weapon,main_hand,40,0,10,5,15,0,15,4,int,30,fire
-dg8,粒子ナイフ,dg,weapon,main_hand,55,0,0,15,25,0,20,4,dex,60,light
-dg9,神殺しの短剣,dg,weapon,main_hand,100,0,30,0,50,30,50,5,,,dark
-sp1,スピア,sp,weapon,main_hand,8,0,0,0,2,0,2,1,,,none
-sp2,パルチザン,sp,weapon,main_hand,15,0,0,0,3,0,4,2,str,15,none
-sp3,ハルバード,sp,weapon,main_hand,22,0,0,0,0,0,0,2,str,25,none
-sp4,トライデント,sp,weapon,main_hand,20,0,5,0,5,0,5,2,,,ice
-sp5,ホーリーランス,sp,weapon,main_hand,45,5,15,10,5,5,5,3,int,30,light
-sp6,ドリルスピア,sp,weapon,main_hand,60,10,0,5,-5,0,10,4,str,60,earth
-sp7,レーザーランス,sp,weapon,main_hand,80,0,10,20,10,0,10,4,int,50,light
-sp8,グングニル,sp,weapon,main_hand,140,0,40,30,30,30,30,5,,,wind
-sp9,ロンギヌス,sp,weapon,main_hand,160,20,50,20,10,0,10,5,,,light
-ax1,ハンドアクス,ax,weapon,main_hand,10,0,0,0,-2,0,2,1,,,none
-ax2,トマホーク,ax,weapon,main_hand,14,0,0,0,2,0,5,2,dex,15,wind
-ax3,バトルアクス,ax,weapon,main_hand,25,0,0,0,-5,0,0,2,str,30,none
-ax4,グレートアクス,ax,weapon,main_hand,35,5,0,0,-10,0,0,3,str,50,none
-ax5,ドワーフの斧,ax,weapon,main_hand,45,10,0,0,-5,0,5,3,vit,40,earth
+w1,ショートソード,sw,weapon,main_hand,3,0,0,0,0,0,0,1,,,none
+w2,ロングソード,sw,weapon,main_hand,5,0,0,0,0,0,0,2,,,none
+w3,ブロードソード,sw,weapon,main_hand,8,1,0,0,-1,0,2,2,str,10,none
+w4,バスタードソード,sw,weapon,main_hand,12,0,0,0,-2,0,3,2,str,20,none
+w5,ミスリルソード,sw,weapon,main_hand,16,0,3,0,3,0,3,3,,,none
+w6,フレイムタン,sw,weapon,main_hand,18,0,5,0,0,0,3,3,mag,20,fire
+w7,アイスブランド,sw,weapon,main_hand,18,0,5,0,0,0,3,3,mag,20,ice
+w8,クリスタルソード,sw,weapon,main_hand,24,0,8,0,1,3,5,3,,,none
+w9,高周波ブレード,sw,weapon,main_hand,30,0,0,3,5,0,8,4,dex,50,thunder
+w10,ビームサーベル,sw,weapon,main_hand,38,0,5,5,3,0,5,4,int,40,light
+w11,プラズマカッター,sw,weapon,main_hand,42,0,0,8,3,0,5,4,dex,60,thunder
+w12,フォトンブレード,sw,weapon,main_hand,48,0,10,5,5,0,8,5,int,80,light
+w13,エクスカリバー,sw,weapon,main_hand,60,10,15,10,5,5,5,5,str,100,light
+w14,ラグナロク,sw,weapon,main_hand,75,0,25,0,10,0,10,5,,,dark
+w15,アポカリプス,sw,weapon,main_hand,90,-10,10,0,0,-5,0,5,,,dark
+w16,さびた剣,sw,weapon,main_hand,1,0,0,0,-1,-3,0,1,,,none
+w17,訓練用の剣,sw,weapon,main_hand,2,0,0,0,0,0,1,1,,,none
+w18,エストック,sw,weapon,main_hand,9,0,0,0,3,0,4,2,dex,20,none
+w19,クレイモア,sw,weapon,main_hand,14,3,0,0,-3,0,0,2,str,30,none
+w20,ドラゴンキラー,sw,weapon,main_hand,25,5,0,0,0,3,3,3,str,50,none
+kat1,打刀,kat,weapon,main_hand,6,0,0,0,3,0,3,1,dex,10,none
+kat2,脇差,kat,weapon,main_hand,4,0,0,0,4,1,4,1,agi,15,none
+kat3,野太刀,kat,weapon,main_hand,12,0,0,0,-3,0,3,2,str,25,none
+kat4,菊一文字,kat,weapon,main_hand,20,0,3,3,5,3,5,3,dex,40,none
+kat5,村正,kat,weapon,main_hand,32,-5,5,0,8,0,8,4,,,dark
+kat6,レーザーカタナ,kat,weapon,main_hand,40,0,0,8,10,0,10,4,int,50,light
+kat7,正宗,kat,weapon,main_hand,65,5,10,10,15,10,15,5,,,light
+kat8,童子切安綱,kat,weapon,main_hand,70,3,0,0,5,5,5,5,,,none
+dg1,ナイフ,dg,weapon,main_hand,2,0,0,0,2,0,2,1,,,none
+dg2,ダガー,dg,weapon,main_hand,3,0,0,0,3,0,3,1,,,none
+dg3,ポイズンダガー,dg,weapon,main_hand,5,0,3,0,3,0,3,2,,,dark
+dg4,アサシンダガー,dg,weapon,main_hand,8,0,0,0,5,3,5,2,agi,30,dark
+dg5,マインゴーシュ,dg,weapon,main_hand,6,3,0,0,3,0,5,2,dex,25,none
+dg6,ソードブレイカー,dg,weapon,main_hand,10,3,0,0,5,0,8,3,dex,40,none
+dg7,ヒートナイフ,dg,weapon,main_hand,20,0,5,3,8,0,8,4,int,30,fire
+dg8,粒子ナイフ,dg,weapon,main_hand,28,0,0,8,12,0,10,4,dex,60,light
+dg9,神殺しの短剣,dg,weapon,main_hand,50,0,15,0,25,15,25,5,,,dark
+sp1,スピア,sp,weapon,main_hand,4,0,0,0,1,0,1,1,,,none
+sp2,パルチザン,sp,weapon,main_hand,8,0,0,0,2,0,2,2,str,15,none
+sp3,ハルバード,sp,weapon,main_hand,11,0,0,0,0,0,0,2,str,25,none
+sp4,トライデント,sp,weapon,main_hand,10,0,3,0,3,0,3,2,,,ice
+sp5,ホーリーランス,sp,weapon,main_hand,22,3,8,5,3,3,3,3,int,30,light
+sp6,ドリルスピア,sp,weapon,main_hand,30,5,0,3,-3,0,5,4,str,60,earth
+sp7,レーザーランス,sp,weapon,main_hand,40,0,5,10,5,0,5,4,int,50,light
+sp8,グングニル,sp,weapon,main_hand,70,0,20,15,15,15,15,5,,,wind
+sp9,ロンギヌス,sp,weapon,main_hand,80,10,25,10,5,0,5,5,,,light
+ax1,ハンドアクス,ax,weapon,main_hand,5,0,0,0,-1,0,1,1,,,none
+ax2,トマホーク,ax,weapon,main_hand,7,0,0,0,1,0,3,2,dex,15,wind
+ax3,バトルアクス,ax,weapon,main_hand,12,0,0,0,-3,0,0,2,str,30,none
+ax4,グレートアクス,ax,weapon,main_hand,18,3,0,0,-5,0,0,3,str,50,none
+ax5,ドワーフの斧,ax,weapon,main_hand,22,5,0,0,-3,0,3,3,vit,40,earth
 ax6,ビームアクス,ax,weapon,main_hand,70,0,0,10,0,0,10,4,int,40,light
 ax7,グラビティアクス,ax,weapon,main_hand,90,10,10,20,-20,0,0,4,str,80,dark
 ax8,パンゲアブレイカー,ax,weapon,main_hand,180,30,0,0,-30,0,0,5,,,earth
@@ -874,6 +874,11 @@ const MASTER_DATA = {
         materials: DataParser.convertMaterials(RAW_MATS),
         affixes: [
             { name: "錆びた", tier: 1, type: "bad", stats: { str: -3, vit: -1 }, w: 30 },
+            { name: "ボロボロの", tier: 1, type: "bad", stats: { all: -2 }, w: 30 },
+            { name: "汚れた", tier: 1, type: "bad", stats: { vit: -3 }, w: 30 },
+            { name: "重い", tier: 1, type: "bad", stats: { agi: -5 }, w: 30 },
+            { name: "ナマクラ", tier: 1, type: "bad", stats: { str: -5 }, w: 30 },
+            { name: "不運な", tier: 1, type: "bad", stats: { luc: -5 }, w: 30 },
             { name: "鋭利な", tier: 1, type: "good", stats: { str: 3 }, w: 40 },
             { name: "頑丈な", tier: 1, type: "good", stats: { vit: 3 }, w: 40 },
             { name: "知的な", tier: 2, type: "good", stats: { int: 5 }, w: 30 },
