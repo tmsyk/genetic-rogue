@@ -565,6 +565,18 @@ const CSV_SKILLS = `name,type,desc,mod_hp,mod_str,mod_vit,mod_mag,mod_int,mod_ag
 氷狼牙,passive,AGI極大UPと即死効果,1.1,1.2,1,1,1,1.3,1.1,
 絶対零度,passive,氷属性魔法威力大幅UP,1,1,1,1.2,1.1,1,1,`;
 
+const CSV_RELICS = `id,name,type,val,desc
+r1,経験の書,exp,1.1,獲得経験値+10%
+r2,黄金の天秤,gold,1.2,獲得ゴールド+20%
+r3,盗賊の極意,drop,1.1,アイテムドロップ率UP
+r4,遺伝子保管庫,breed,1.1,配合時のステータス継承率UP
+r5,戦士の石像,stat_str,1.05,味方全員のSTR+5%
+r6,守りの宝玉,stat_vit,1.05,味方全員のVIT+5%
+r7,賢者の水晶,stat_vis,1.05,味方全員のMAG/INT+5%
+r8,疾風の羽,stat_agi,1.05,味方全員のAGI+5%
+r9,幸運のコイン,stat_luc,1.1,味方全員のLUC+10%
+r10,古代の王冠,all,1.02,全ステータス+2%`;
+
 // ==========================================
 // 2. CSVパーサーとデータ変換ロジック
 // ==========================================
@@ -572,7 +584,7 @@ const CSV_SKILLS = `name,type,desc,mod_hp,mod_str,mod_vit,mod_mag,mod_int,mod_ag
 const DataParser = {
     // 修正: 空のフィールドも正しく読み取れるパーサー
     parse(csvText) {
-        if(!csvText) return [];
+        if (!csvText) return [];
         const lines = csvText.trim().split('\n');
         const headers = lines[0].split(',').map(h => h.trim());
         const result = [];
@@ -583,12 +595,12 @@ const DataParser = {
             const row = [];
             let current = '';
             let inQuote = false;
-            
-            for(let j=0; j<line.length; j++) {
+
+            for (let j = 0; j < line.length; j++) {
                 const char = line[j];
-                if(char === '"') {
+                if (char === '"') {
                     inQuote = !inQuote;
-                } else if(char === ',' && !inQuote) {
+                } else if (char === ',' && !inQuote) {
                     row.push(current);
                     current = '';
                 } else {
@@ -613,12 +625,26 @@ const DataParser = {
         return result;
     },
 
+    convertRelics(rawRelics) {
+        const relics = {};
+        rawRelics.forEach(r => {
+            relics[r.id] = {
+                id: r.id,
+                name: r.name,
+                desc: r.desc,
+                type: r.type,
+                val: r.val
+            };
+        });
+        return relics;
+    },
+
     convertRaces(rawRaces) {
         const races = {};
         rawRaces.forEach(r => {
             races[r.id] = {
                 id: r.id, name: r.name,
-                mod: { hp:r.mod_hp, str:r.mod_str, vit:r.mod_vit, mag:r.mod_mag, int:r.mod_int, agi:r.mod_agi, luc:r.mod_luc }
+                mod: { hp: r.mod_hp, str: r.mod_str, vit: r.mod_vit, mag: r.mod_mag, int: r.mod_int, agi: r.mod_agi, luc: r.mod_luc }
             };
         });
         return races;
@@ -636,7 +662,7 @@ const DataParser = {
                 luc: job.mod_luc || 1.0,
                 hp: job.mod_hp || 1.0
             };
-            
+
             const reqStats = {};
             ['hp', 'str', 'vit', 'mag', 'int', 'agi', 'luc'].forEach(stat => {
                 const key = `req_${stat}`;
@@ -697,13 +723,13 @@ const DataParser = {
         });
         return items;
     },
-    
+
     convertMaterials(rawMats) {
         return rawMats.map(mat => {
             const mod = {};
-            ['str','vit','mag','int','agi','luc'].forEach(stat => {
+            ['str', 'vit', 'mag', 'int', 'agi', 'luc'].forEach(stat => {
                 const key = `mod_${stat}`;
-                if(mat[key]) mod[stat] = mat[key];
+                if (mat[key]) mod[stat] = mat[key];
             });
             return {
                 name: mat.name,
@@ -714,7 +740,7 @@ const DataParser = {
             };
         });
     },
-    
+
     convertEnemies(rawEnemies) {
         return rawEnemies.map(e => ({
             name: e.name,
@@ -745,9 +771,9 @@ const DataParser = {
         const result = {};
         rawPers.forEach(p => {
             const mod = {};
-            ['hp','str','vit','mag','int','agi','luc'].forEach(stat => {
+            ['hp', 'str', 'vit', 'mag', 'int', 'agi', 'luc'].forEach(stat => {
                 const key = `mod_${stat}`;
-                if(p[key]) mod[stat] = p[key];
+                if (p[key]) mod[stat] = p[key];
             });
             result[p.name] = mod;
         });
@@ -756,21 +782,21 @@ const DataParser = {
 
     convertSkills(rawSkills) {
         const data = {};
-        const pool = { phy:[], mag:[], spd:[], tnk:[], sup:[] };
+        const pool = { phy: [], mag: [], spd: [], tnk: [], sup: [] };
         rawSkills.forEach(s => {
             // パッシブ補正値の読み込み
             const mod = {};
-            ['hp','str','vit','mag','int','agi','luc'].forEach(stat => {
+            ['hp', 'str', 'vit', 'mag', 'int', 'agi', 'luc'].forEach(stat => {
                 const key = `mod_${stat}`;
-                if(s[key] && s[key] > 0) mod[stat] = s[key];
+                if (s[key] && s[key] > 0) mod[stat] = s[key];
             });
 
-            data[s.name] = { 
-                desc: s.desc, 
+            data[s.name] = {
+                desc: s.desc,
                 type: s.type,
                 mod: mod
             };
-            if(pool[s.type]) pool[s.type].push(s.name);
+            if (pool[s.type]) pool[s.type].push(s.name);
         });
         return { data: data, pool: pool };
     },
@@ -812,6 +838,8 @@ const RAW_LINEAGE = DataParser.parse(CSV_LINEAGE);
 const parsedLineage = DataParser.convertLineage(RAW_LINEAGE);
 const RAW_RACES = DataParser.parse(CSV_RACES);
 const parsedRaces = DataParser.convertRaces(RAW_RACES);
+const RAW_RELICS = DataParser.parse(CSV_RELICS);
+const parsedRelics = DataParser.convertRelics(RAW_RELICS);
 const RAW_NAMES = DataParser.parse(CSV_NAMES).flatMap(n => Object.values(n)).filter(n => n && n !== 'name');
 
 const MASTER_DATA = {
@@ -821,13 +849,13 @@ const MASTER_DATA = {
         HIRE_COST: 100,
         CC_COST: 100,
         MAX_LEVEL: 99,
-        BASE_STATS: { hp:50, str:5, vit:5, mag:5, int:5, agi:5, luc:5 },
+        BASE_STATS: { hp: 50, str: 5, vit: 5, mag: 5, int: 5, agi: 5, luc: 5 },
         FLOOR_STEP_MAX: 30
     },
     elements: parsedElements.list,
     element_chart: parsedElements.chart,
     jobs: DataParser.convertJobs(RAW_JOBS),
-    
+
     // TierはCSV側で管理するため、ここでは簡易定義のみ残す（使用しない場合も多い）
     job_ranks: [
         { tier: 1, prefix: "", mod: 1.0 },
@@ -840,11 +868,11 @@ const MASTER_DATA = {
         types: DataParser.convertItems(RAW_ITEMS),
         materials: DataParser.convertMaterials(RAW_MATS),
         affixes: [
-            { name:"錆びた", tier:1, type:"bad", stats:{str:-3, vit:-1}, w:30 },
-            { name:"鋭利な", tier:1, type:"good", stats:{str:3}, w:40 },
-            { name:"頑丈な", tier:1, type:"good", stats:{vit:3}, w:40 },
-            { name:"知的な", tier:2, type:"good", stats:{int:5}, w:30 },
-            { name:"英雄の", tier:4, type:"legend", stats:{all:5, str:20}, w:5 }
+            { name: "錆びた", tier: 1, type: "bad", stats: { str: -3, vit: -1 }, w: 30 },
+            { name: "鋭利な", tier: 1, type: "good", stats: { str: 3 }, w: 40 },
+            { name: "頑丈な", tier: 1, type: "good", stats: { vit: 3 }, w: 40 },
+            { name: "知的な", tier: 2, type: "good", stats: { int: 5 }, w: 30 },
+            { name: "英雄の", tier: 4, type: "legend", stats: { all: 5, str: 20 }, w: 5 }
         ]
     },
     enemies: {
@@ -870,5 +898,6 @@ const MASTER_DATA = {
     skills: parsedSkills,
     lineages: parsedLineage,
     races: parsedRaces,
+    relics: parsedRelics,
     names: RAW_NAMES // Add names list
 };
