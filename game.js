@@ -984,6 +984,15 @@ const UI = {
                     Lv.${char.level} <span style="color:#888;">|</span> ${raceName} <span style="color:#888;">|</span> ${elemHtml}
                 </div>
                 
+                <!-- Job Exp Bar -->
+                <div style="display:flex; justify-content:space-between; font-size:10px; color:#aaa; margin-bottom:1px;">
+                    <span>Job Lv</span>
+                    <span>${char.masteredJobs.includes(char.jobKey) ? 'MASTER' : Math.floor(char.jobExp) + '/' + (char.job.maxJobExp || 500)}</span>
+                </div>
+                <div class="bar-wrap" style="height:3px; background:#222; margin-bottom:4px;">
+                    <div class="bar-val" style="width:${Math.min(100, (char.jobExp / (char.job.maxJobExp || 500)) * 100)}%; background:#e056fd;"></div>
+                </div>
+
                 <div class="bar-wrap" style="height:8px; background:#444;"><div class="bar-val hp-bar" style="width:${hpPct}%"></div></div>
                 <div style="text-align:right; font-size:11px; margin-bottom:2px;">HP: ${Math.floor(char.hp)} / ${s.hp}</div>
                 <div class="bar-wrap" style="height:4px; background:#444;"><div class="bar-val exp-bar" style="width:${expPct}%"></div></div>
