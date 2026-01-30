@@ -1448,6 +1448,12 @@ const UI = {
                 <div class="detail-row"><span class="detail-label">LUC</span> <span>${s.luc}</span></div>
                 </div>
                 <div>
+                    <h4>習得スキル</h4>
+                    <div style="font-size:11px; color:#ccc; margin-bottom:15px; background:#222; padding:5px; border-radius:4px;">
+                        ${c.learnedSkills.length > 0 ? c.learnedSkills.join(', ') : 'なし'}
+                    </div>
+                </div>
+                <div>
                     <button onclick="UI.openEquipFor('${c.id}')" style="width:100%; margin-bottom:5px;">装備変更</button>
                     <button onclick="UI.openClassChange('${c.id}')" style="width:100%;">転職</button>
                 </div>
