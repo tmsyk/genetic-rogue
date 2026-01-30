@@ -69,9 +69,8 @@ header {
 
 /* Main Content Area */
 main {
-    display: grid;
-    grid-template-columns: 1fr 2fr;
-    /* 左(ログ)1:右(情報)2 */
+    display: flex;
+    /* Changed from Grid to Flex for resizing */
     gap: 1px;
     background: #222;
     overflow: hidden;
@@ -80,8 +79,7 @@ main {
 
 @media (max-width: 800px) {
     main {
-        grid-template-columns: 1fr;
-        grid-template-rows: 1fr 1fr;
+        flex-direction: column;
     }
 }
 
@@ -93,6 +91,23 @@ main {
     font-size: 13px;
     line-height: 1.5;
     border-right: 1px solid #333;
+
+    /* Resizable */
+    width: 30%;
+    min-width: 200px;
+    resize: horizontal;
+    overflow: auto;
+    /* Required for resize */
+}
+
+/* Right Column: Info Panel */
+#right-column {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+    flex: 1;
+    /* Take remaining space */
 }
 
 .log-entry {

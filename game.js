@@ -573,7 +573,7 @@ class Character {
             const it = this.equipment[k];
             if (it) { for (let st in it.stats) s[st] = (s[st] || 0) + it.stats[st]; }
         }
-        for (let k in s) s[k] += Math.floor((s[k] * 0.1) * (this.level - 1));
+        for (let k in s) s[k] += Math.floor((s[k] * 0.02) * (this.level - 1));
 
         // Relic Stat Bonuses (Global)
         if (Game.relics) {
@@ -1289,20 +1289,26 @@ const UI = {
         }
         iList.innerHTML = fHtml + '</div>';
 
-        let eqHtml = '<div style="background:#222; padding:5px; margin-bottom:10px;">';
+        // Equipped List (simplified)
+        let eqHtml = '<div style="background:#222; padding:5px; margin-bottom:10px; border:1px solid #444;">';
         const slotNames = { main_hand: "主", off_hand: "副", head: "頭", body: "体", accessory1: "飾1", accessory2: "飾2" };
-        for (let s in this.equipChar.equipment) {
+        const displaySlots = ['main_hand', 'off_hand', 'head', 'body', 'accessory1', 'accessory2'];
+
+        displaySlots.forEach(s => {
             let it = this.equipChar.equipment[s];
-            let name = it ? `<span class="rar-${it.rarity}">${it.name}</span>` : "なし";
+            let name = it ? `<span class="rar-${it.rarity}">${it.name}</span>` : "<span style='color:#444;'>なし</span>";
             let btn = it ? `<button style="font-size:9px;" onclick="UI.doUnequip('${s}')">外す</button>` : "";
-            eqHtml += `<div style="font-size:10px; display:flex; justify-content:space-between; margin-bottom:2px;">
-                <span style="color:#888; width:20px;">${slotNames[s] || s.substr(0, 1)}</span>
-                <span>${name} ${btn}</span>
-            </div>`;
-        }
+            eqHtml += `<div style="font-size:10px; display:flex; justify-content:space-between; margin-bottom:2px; align-items:center;">
+                 <span style="color:#888; width:25px;">${slotNames[s]}</span>
+                 <div style="flex:1; margin-left:5px;">${name}</div>
+                 <div>${btn}</div>
+             </div>`;
+        });
         iList.innerHTML += eqHtml + '</div>';
 
-        let items = Game.inventory.filter(i => filter === 'all' || i.type === filter);
+        // Inventory Items
+        // Fix: DB uses 'kind', UI used 'type'.
+        let items = Game.inventory.filter(i => filter === 'all' || i.kind === filter);
         if (items.length === 0) iList.innerHTML += "<div style='padding:10px; color:#666;'>アイテムなし</div>";
 
         items.forEach(item => {

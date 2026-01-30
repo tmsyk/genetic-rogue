@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,228 +8,268 @@
     <link rel="icon" href="data:,">
     <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
 
-<div id="app">
-    <header>
-        <div>🧬 Genetic Rogue <span style="color:#666;">Ver.13.11</span></div>
-        <div style="font-size:14px; display:flex; align-items:center; gap:15px;">
-            <div style="display:flex; flex-direction:column; align-items:flex-end; line-height:1.2;">
-                <div><span style="color:#aaa; font-size:10px;">FLOOR</span> <span id="floor-display" style="font-weight:bold; color:#fff;">1</span></div>
-                <div style="font-size:10px; color:#666;" id="floor-progress-text">Progress: 0%</div>
-            </div>
-            <div style="display:flex; flex-direction:column; align-items:flex-end; line-height:1.2;">
-                <div><span style="color:#aaa; font-size:10px;">HELIX</span> <span id="helix-display" style="font-weight:bold; color:var(--accent-color);">0</span></div>
-            </div>
-        </div>
-    </header>
-
-    <main>
-        <!-- 左カラム: メインログ -->
-        <div id="log-panel">
-            <div id="log-list"></div>
-        </div>
-
-        <!-- 右カラム: 情報エリア -->
-        <div id="right-column">
-            <!-- 右上: パーティリスト -->
-            <div id="party-container"></div>
-            
-            <!-- 右下: 多機能サブパネル -->
-            <div id="sub-info-panel">
-                <div class="sub-tabs-header">
-                    <button class="sub-tab-btn active" onclick="UI.switchSubTab('enemy')">敵情報</button>
-                    <button class="sub-tab-btn" onclick="UI.switchSubTab('battle')">戦闘ログ</button>
-                    <button class="sub-tab-btn" onclick="UI.switchSubTab('item')">収集</button>
-                    <button class="sub-tab-btn" onclick="UI.switchSubTab('ai')">AI</button>
+    <div id="app">
+        <header>
+            <div>🧬 Genetic Rogue <span style="color:#666;">Ver.13.11</span></div>
+            <div style="font-size:14px; display:flex; align-items:center; gap:15px;">
+                <div style="display:flex; flex-direction:column; align-items:flex-end; line-height:1.2;">
+                    <div><span style="color:#aaa; font-size:10px;">FLOOR</span> <span id="floor-display"
+                            style="font-weight:bold; color:#fff;">1</span></div>
+                    <div style="font-size:10px; color:#666;" id="floor-progress-text">Progress: 0%</div>
                 </div>
-                <div class="sub-tab-content">
-                    <!-- 1. 敵情報タブ -->
-                    <div id="sub-content-enemy" class="active">
-                        <div id="enemy-info-display" style="padding:10px; text-align:center; color:#666;">
-                            遭遇データなし
+                <div style="display:flex; flex-direction:column; align-items:flex-end; line-height:1.2;">
+                    <div><span style="color:#aaa; font-size:10px;">HELIX</span> <span id="helix-display"
+                            style="font-weight:bold; color:var(--accent-color);">0</span></div>
+                </div>
+            </div>
+        </header>
+
+        <main>
+            <!-- 左カラム: メインログ -->
+            <div id="log-panel">
+                <div id="log-list"></div>
+            </div>
+
+            <!-- 右カラム: 情報エリア -->
+            <div id="right-column">
+                <!-- 右上: パーティリスト -->
+                <div id="party-container"></div>
+
+                <!-- 右下: 多機能サブパネル -->
+                <div id="sub-info-panel">
+                    <div class="sub-tabs-header">
+                        <button class="sub-tab-btn active" onclick="UI.switchSubTab('enemy')">敵情報</button>
+                        <button class="sub-tab-btn" onclick="UI.switchSubTab('battle')">戦闘ログ</button>
+                        <button class="sub-tab-btn" onclick="UI.switchSubTab('item')">収集</button>
+                        <button class="sub-tab-btn" onclick="UI.switchSubTab('ai')">AI</button>
+                    </div>
+                    <div class="sub-tab-content">
+                        <!-- 1. 敵情報タブ -->
+                        <div id="sub-content-enemy" class="active">
+                            <div id="enemy-info-display" style="padding:10px; text-align:center; color:#666;">
+                                遭遇データなし
+                            </div>
+                        </div>
+                        <!-- 2. 戦闘詳細ログタブ -->
+                        <div id="sub-content-battle" style="display:none;">
+                            <div id="battle-log-list" class="mini-log"></div>
+                        </div>
+                        <!-- 3. アイテムログタブ -->
+                        <div id="sub-content-item" style="display:none;">
+                            <div id="item-log-list" class="mini-log"></div>
+                        </div>
+                        <!-- 4. AIコンソールタブ -->
+                        <div id="sub-content-ai" style="display:none;">
+                            <div id="ai-log-list" class="mini-log" style="font-family:monospace; color:#0f0;">
+                                <div style="margin-bottom:5px;">> System Initialized.</div>
+                                <div style="margin-bottom:5px;">> Waiting for input...</div>
+                            </div>
                         </div>
                     </div>
-                    <!-- 2. 戦闘詳細ログタブ -->
-                    <div id="sub-content-battle" style="display:none;">
-                        <div id="battle-log-list" class="mini-log"></div>
+                </div>
+            </div>
+        </main>
+
+        <!-- フッター: コマンドセンター -->
+        <footer>
+            <div class="command-grid">
+                <!-- 行1 -->
+                <button id="btn-explore" class="cmd-btn primary big-btn">
+                    <div class="btn-label">EXPLORE</div>
+                    <div class="btn-sub">探索開始</div>
+                </button>
+                <button id="btn-return" class="cmd-btn danger" disabled>
+                    <div class="btn-label">RETURN</div>
+                    <div class="btn-sub">帰還</div>
+                </button>
+                <button id="btn-lab" class="cmd-btn">
+                    <div class="btn-label">LABO</div>
+                    <div class="btn-sub">ギルド/配合</div>
+                </button>
+
+                <!-- 行2 -->
+                <div class="floor-selector-wrap">
+                    <span style="font-size:9px; color:#666;">開始階層</span>
+                    <select id="floor-select"></select>
+                </div>
+                <button id="btn-inv" class="cmd-btn">
+                    <div class="btn-label">EQUIP</div>
+                    <div class="btn-sub">装備/売却</div>
+                </button>
+                <button id="btn-settings" class="cmd-btn">
+                    <div class="btn-label">SYSTEM</div>
+                    <div class="btn-sub">設定/ルール</div>
+                </button>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Modals (既存のモーダル群) -->
+    <!-- Lab & Guild -->
+    <div id="modal-lab" class="modal-overlay" style="display:none;">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3>遺伝子ラボ & ギルド <span style="font-size:16px; color:var(--accent-color); margin-left:15px;">Helix: <span
+                            id="lab-helix-display">0</span></span></h3>
+                <button class="close-modal">閉じる</button>
+            </div>
+            <div class="modal-body">
+                <div class="tab-group">
+                    <button class="tab-btn active" data-tab="roster">編成リスト</button>
+                    <button class="tab-btn" data-tab="hire">雇用 (Guild)</button>
+                    <button class="tab-btn" data-tab="class">転職 (Class Change)</button>
+                </div>
+                <div id="tab-lab-roster" class="tab-content">
+                    <div style="margin-bottom:10px; display:flex; gap:10px; align-items:center;">
+                        <button id="act-breed" disabled>配合</button>
+                        <button id="act-party" disabled>PT編成/解除</button>
+                        <span id="breed-info" style="font-size:11px; color:#888;">※配合条件: 両親Lv30以上</span>
                     </div>
-                    <!-- 3. アイテムログタブ -->
-                    <div id="sub-content-item" style="display:none;">
-                        <div id="item-log-list" class="mini-log"></div>
-                    </div>
-                    <!-- 4. AIコンソールタブ -->
-                    <div id="sub-content-ai" style="display:none;">
-                        <div id="ai-log-list" class="mini-log" style="font-family:monospace; color:#0f0;">
-                            <div style="margin-bottom:5px;">> System Initialized.</div>
-                            <div style="margin-bottom:5px;">> Waiting for input...</div>
+                    <div id="lab-list" class="grid-list"></div>
+                </div>
+                <div id="tab-lab-hire" class="tab-content" style="display:none;">
+                    <p style="color:#888; margin-bottom:10px;">雇用コスト: <span id="hire-cost">100</span> Helix</p>
+                    <div id="guild-list" class="grid-list"></div>
+                </div>
+                <div id="tab-lab-class" class="tab-content" style="display:none;">
+                    <div style="display:flex; gap:20px; height:100%;">
+                        <div style="width:250px; border-right:1px solid #333;">
+                            <h4>キャラクター選択</h4>
+                            <div id="cc-char-list"
+                                style="display:flex; flex-direction:column; gap:5px; margin-top:10px;"></div>
                         </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </main>
-
-    <!-- フッター: コマンドセンター -->
-    <footer>
-        <div class="command-grid">
-            <!-- 行1 -->
-            <button id="btn-explore" class="cmd-btn primary big-btn">
-                <div class="btn-label">EXPLORE</div>
-                <div class="btn-sub">探索開始</div>
-            </button>
-            <button id="btn-return" class="cmd-btn danger" disabled>
-                <div class="btn-label">RETURN</div>
-                <div class="btn-sub">帰還</div>
-            </button>
-            <button id="btn-lab" class="cmd-btn">
-                <div class="btn-label">LABO</div>
-                <div class="btn-sub">ギルド/配合</div>
-            </button>
-            
-            <!-- 行2 -->
-            <div class="floor-selector-wrap">
-                <span style="font-size:9px; color:#666;">開始階層</span>
-                <select id="floor-select"></select>
-            </div>
-            <button id="btn-inv" class="cmd-btn">
-                <div class="btn-label">EQUIP</div>
-                <div class="btn-sub">装備/売却</div>
-            </button>
-            <button id="btn-settings" class="cmd-btn">
-                <div class="btn-label">SYSTEM</div>
-                <div class="btn-sub">設定/ルール</div>
-            </button>
-        </div>
-    </footer>
-</div>
-
-<!-- Modals (既存のモーダル群) -->
-<!-- Lab & Guild -->
-<div id="modal-lab" class="modal-overlay" style="display:none;">
-    <div class="modal-box">
-        <div class="modal-header">
-            <h3>遺伝子ラボ & ギルド <span style="font-size:16px; color:var(--accent-color); margin-left:15px;">Helix: <span id="lab-helix-display">0</span></span></h3> 
-            <button class="close-modal">閉じる</button>
-        </div>
-        <div class="modal-body">
-            <div class="tab-group">
-                <button class="tab-btn active" data-tab="roster">編成リスト</button>
-                <button class="tab-btn" data-tab="hire">雇用 (Guild)</button>
-                <button class="tab-btn" data-tab="class">転職 (Class Change)</button>
-            </div>
-            <div id="tab-lab-roster" class="tab-content">
-                <div style="margin-bottom:10px; display:flex; gap:10px; align-items:center;">
-                    <button id="act-breed" disabled>配合</button>
-                    <button id="act-party" disabled>PT編成/解除</button>
-                    <span id="breed-info" style="font-size:11px; color:#888;">※配合条件: 両親Lv30以上</span>
-                </div>
-                <div id="lab-list" class="grid-list"></div>
-            </div>
-            <div id="tab-lab-hire" class="tab-content" style="display:none;">
-                <p style="color:#888; margin-bottom:10px;">雇用コスト: <span id="hire-cost">100</span> Helix</p>
-                <div id="guild-list" class="grid-list"></div>
-            </div>
-            <div id="tab-lab-class" class="tab-content" style="display:none;">
-                <div style="display:flex; gap:20px; height:100%;">
-                    <div style="width:250px; border-right:1px solid #333;">
-                        <h4>キャラクター選択</h4>
-                        <div id="cc-char-list" style="display:flex; flex-direction:column; gap:5px; margin-top:10px;"></div>
-                    </div>
-                    <div style="flex:1;">
-                        <h4>転職先クラス</h4>
-                        <p style="font-size:12px; color:#888; margin-bottom:10px;">条件: Lv10以上, コスト: 100G</p>
-                        <div id="cc-job-list" class="grid-list"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Inventory -->
-<div id="modal-inv" class="modal-overlay" style="display:none;">
-    <div class="modal-box">
-        <div class="modal-header"><h3>装備管理</h3> <button class="close-modal">閉じる</button></div>
-        <div class="modal-body" style="display:flex; gap:20px;">
-            <div style="width:250px; border-right:1px solid #333; padding-right:10px;">
-                <h4 style="margin-bottom:10px;">キャラクター選択</h4>
-                <div id="equip-char-list"></div>
-            </div>
-            <div style="flex:1;">
-                <div id="inv-header" style="margin-bottom:10px; border-bottom:1px solid #333; padding-bottom:10px; display:flex; justify-content:space-between;">
-                    <span>現在の装備</span>
-                    <button id="btn-sell-trash" style="padding:2px 8px; font-size:10px;" class="recycle">コモン一括売却</button>
-                </div>
-                <div id="inv-list" class="grid-list"></div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Settings -->
-<div id="modal-settings" class="modal-overlay" style="display:none;">
-    <div class="modal-box" style="max-width:500px;">
-        <div class="modal-header"><h3>設定</h3> <button class="close-modal">閉じる</button></div>
-        <div class="modal-body">
-            <div class="settings-group">
-                <h4>自動売却設定 (入手時に即売却)</h4>
-                <div class="toggle-row">
-                    <label for="as-common">コモン (Re:1) を売却</label>
-                    <input type="checkbox" id="as-common" onchange="Game.autoSell.common = this.checked; Game.save();">
-                </div>
-                <div class="toggle-row">
-                    <label for="as-uncommon">アンコモン (Re:2) を売却</label>
-                    <input type="checkbox" id="as-uncommon" onchange="Game.autoSell.uncommon = this.checked; Game.save();">
-                </div>
-            </div>
-
-            <div class="settings-row"><span>手動セーブ</span><button onclick="Game.save(true)">実行</button></div>
-            <div class="settings-row"><span>リロード</span><button onclick="location.reload()">再読込</button></div>
-            <div class="settings-row" style="border-bottom:none; margin-top:20px;">
-                <span style="color:var(--danger-color);">データ削除</span>
-                <button class="danger" onclick="Game.resetSave()">初期化</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Character Detail -->
-<div id="modal-char-detail" class="modal-overlay" style="display:none;">
-    <div class="modal-box">
-        <div class="modal-header"><h3>キャラクター詳細</h3> <button class="close-modal">閉じる</button></div>
-        <div class="modal-body" id="detail-content"></div>
-    </div>
-</div>
-
-<!-- Rule Book -->
-<div id="modal-rules" class="modal-overlay" style="display:none;">
-    <div class="modal-box">
-        <div class="modal-header"><h3>ルールブック</h3> <button class="close-modal">閉じる</button></div>
-        <div class="modal-body">
-            <div class="rule-section">
-                <h4>属性相関図</h4>
-                <div class="element-chart-container">
-                    <div class="elem-node el-fire" style="top:10px; left:135px;">火</div>
-                    <div class="elem-node el-ice" style="top:70px; left:230px;">氷</div>
-                    <div class="elem-node el-wind" style="top:180px; left:230px;">風</div>
-                    <div class="elem-node el-earth" style="top:240px; left:135px;">土</div>
-                    <div class="elem-node el-thunder" style="top:180px; left:40px;">雷</div>
-                    <div class="elem-node el-water" style="top:70px; left:40px;">水</div>
-                    <div class="elem-center-group" style="position:absolute; top:120px; left:110px; text-align:center;">
-                        <div style="display:flex; gap:10px;">
-                            <div class="elem-node el-light" style="position:relative; width:35px; height:35px; font-size:10px;">光</div>
-                            <div class="elem-node el-dark" style="position:relative; width:35px; height:35px; font-size:10px;">闇</div>
+                        <div style="flex:1;">
+                            <h4>転職先クラス</h4>
+                            <p style="font-size:12px; color:#888; margin-bottom:10px;">条件: Lv10以上, コスト: 100G</p>
+                            <div id="cc-job-list" class="grid-list"></div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
 
-<script src="db_master.js"></script>
-<script src="db_manager.js"></script>
-<script src="game.js"></script>
+    <!-- Inventory -->
+    <div id="modal-inv" class="modal-overlay" style="display:none;">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3>装備管理</h3> <button class="close-modal">閉じる</button>
+            </div>
+            <div class="modal-body" style="display:flex; gap:20px;">
+                <div style="width:250px; border-right:1px solid #333; padding-right:10px;">
+                    <h4 style="margin-bottom:10px;">キャラクター選択</h4>
+                    <div id="equip-char-list"></div>
+                </div>
+                <div style="flex:1;">
+                    <div id="inv-header"
+                        style="margin-bottom:10px; border-bottom:1px solid #333; padding-bottom:10px; display:flex; justify-content:space-between;">
+                        <span>現在の装備</span>
+                        <button id="btn-sell-trash" style="padding:2px 8px; font-size:10px;"
+                            class="recycle">コモン一括売却</button>
+                    </div>
+                    <div id="inv-list" class="grid-list"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings -->
+    <div id="modal-settings" class="modal-overlay" style="display:none;">
+        <div class="modal-box" style="max-width:500px;">
+            <div class="modal-header">
+                <h3>設定</h3> <button class="close-modal">閉じる</button>
+            </div>
+            <div class="modal-body">
+                <div class="settings-group">
+                    <h4>自動売却設定 (入手時に即売却)</h4>
+                    <div class="toggle-row">
+                        <label for="as-common">コモン (Re:1) を売却</label>
+                        <input type="checkbox" id="as-common"
+                            onchange="Game.autoSell.common = this.checked; Game.save();">
+                    </div>
+                    <div class="toggle-row">
+                        <label for="as-uncommon">アンコモン (Re:2) を売却</label>
+                        <input type="checkbox" id="as-uncommon"
+                            onchange="Game.autoSell.uncommon = this.checked; Game.save();">
+                    </div>
+                </div>
+
+                <div class="settings-row"><span>手動セーブ</span><button onclick="Game.save(true)">実行</button></div>
+                <div class="settings-row"><span>リロード</span><button onclick="location.reload()">再読込</button></div>
+                <div class="settings-row" style="border-bottom:none; margin-top:20px;">
+                    <span style="color:var(--danger-color);">データ削除</span>
+                    <button class="danger" onclick="Game.resetSave()">初期化</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Character Detail -->
+    <div id="modal-char-detail" class="modal-overlay" style="display:none;">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3>キャラクター詳細</h3> <button class="close-modal">閉じる</button>
+            </div>
+            <div class="modal-body" id="detail-content"></div>
+        </div>
+    </div>
+
+    <!-- Alert Modal -->
+    <div id="modal-custom-alert" class="modal-overlay" style="display:none; z-index:9999;">
+        <div class="modal-box" style="text-align:center;">
+            <p id="custom-alert-msg" style="margin:20px 0; white-space: pre-wrap;"></p>
+            <button id="btn-custom-alert-ok" class="primary" style="width:100px;">OK</button>
+        </div>
+    </div>
+
+    <!-- Confirm Modal -->
+    <div id="modal-custom-confirm" class="modal-overlay" style="display:none; z-index:9999;">
+        <div class="modal-box" style="text-align:center;">
+            <p id="custom-confirm-msg" style="margin:20px 0; white-space: pre-wrap;"></p>
+            <div style="display:flex; justify-content:center; gap:20px;">
+                <button id="btn-custom-confirm-yes" class="primary" style="width:80px;">はい</button>
+                <button id="btn-custom-confirm-no" class="danger" style="width:80px;">いいえ</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rule Book -->
+    <div id="modal-rules" class="modal-overlay" style="display:none;">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3>ルールブック</h3> <button class="close-modal">閉じる</button>
+            </div>
+            <div class="modal-body">
+                <div class="rule-section">
+                    <h4>属性相関図</h4>
+                    <div class="element-chart-container">
+                        <div class="elem-node el-fire" style="top:10px; left:135px;">火</div>
+                        <div class="elem-node el-ice" style="top:70px; left:230px;">氷</div>
+                        <div class="elem-node el-wind" style="top:180px; left:230px;">風</div>
+                        <div class="elem-node el-earth" style="top:240px; left:135px;">土</div>
+                        <div class="elem-node el-thunder" style="top:180px; left:40px;">雷</div>
+                        <div class="elem-node el-water" style="top:70px; left:40px;">水</div>
+                        <div class="elem-center-group"
+                            style="position:absolute; top:120px; left:110px; text-align:center;">
+                            <div style="display:flex; gap:10px;">
+                                <div class="elem-node el-light"
+                                    style="position:relative; width:35px; height:35px; font-size:10px;">光</div>
+                                <div class="elem-node el-dark"
+                                    style="position:relative; width:35px; height:35px; font-size:10px;">闇</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="db_master.js"></script>
+    <script src="db_manager.js"></script>
+    <script src="game.js"></script>
 </body>
+
 </html>
