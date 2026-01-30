@@ -269,7 +269,7 @@ const Game = {
 
             let elemMod = 1.0;
             let atkElem = c.attackElement;
-            if (atkElem && enemy.elem) {
+            if (atkElem && enemy.elem && MASTER_DATA.element_chart[atkElem]) {
                 if (MASTER_DATA.element_chart[atkElem].strong === enemy.elem) elemMod = 1.5;
                 else if (MASTER_DATA.element_chart[atkElem].weak === enemy.elem) elemMod = 0.5;
             }
