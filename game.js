@@ -16,7 +16,7 @@ const UTILS = {
 
 const Game = {
     helix: 100, floor: 1, maxFloor: 1, floorProgress: 0,
-    party: [], roster: [], inventory: [],
+    party: [], roster: [], inventory: [], relics: [],
     exploring: false, timer: null, currentEnemy: null,
     speed: 800,
     SAVE_KEY: 'genetic_rogue_v13_19', // Key update
@@ -61,7 +61,7 @@ const Game = {
     save() {
         const data = {
             helix: this.helix, floor: this.floor, maxFloor: this.maxFloor,
-            inventory: this.inventory,
+            inventory: this.inventory, relics: this.relics,
             roster: this.roster, partyIds: this.party.map(c => c.id)
         };
         localStorage.setItem(this.SAVE_KEY, JSON.stringify(data));
@@ -72,7 +72,9 @@ const Game = {
             const d = JSON.parse(localStorage.getItem(this.SAVE_KEY));
             if (!d) return false;
             this.helix = d.helix; this.maxFloor = d.maxFloor;
+            this.helix = d.helix; this.maxFloor = d.maxFloor;
             this.inventory = d.inventory || [];
+            this.relics = d.relics || []; // Load relics
             this.roster = (d.roster || []).map(x => {
                 const c = new Character(null, null, x);
                 c.validateHp();
@@ -163,12 +165,68 @@ const Game = {
             }
             UI.updateAll();
 
+            // 調整された確率: 
+            // Trap: 15%, Event: 10%, Encounter: 50%, Loot: 25%
             const r = Math.random();
-            if (r < 0.2) this.trap();
-            else if (r < 0.7) this.encounter();
+            if (r < 0.15) this.trap();
+            else if (r < 0.25) this.dungeonEvent();
+            else if (r < 0.75) this.encounter();
             else this.loot();
         }
         UI.renderParty();
+    },
+
+    dungeonEvent() {
+        // Simple events: Healing, Merchant, Treasure
+        const roll = Math.random();
+
+        if (roll < 0.4) {
+            // Healing Spring
+            const heal = Math.floor(Math.random() * 20) + 10;
+            this.party.forEach(c => {
+                if (c.hp > 0) {
+                    c.hp = Math.min(c.hp + (c.totalStats.hp * (heal / 100)), c.totalStats.hp);
+                }
+            });
+            UI.log(`回復の泉を発見！ パーティのHPが回復した。`, "log-event");
+        } else if (roll < 0.7) {
+            // Merchant (Buy/Sell) -> Simplified to "Found gold dropped by merchant" or "Sell item opportunity"
+            // For now, let's make it a 'mini-game' choice or just a bonus.
+            // Let's implement fully: Sell Trash automatically if configured? Or just a bonus item.
+            // Let's do: Trade opportunity.
+            // Simplified: "Traveling Merchant" buys a trash item for high price
+            const trash = this.inventory.find(i => i.rarity <= 2);
+            if (trash) {
+                const idx = this.inventory.indexOf(trash);
+                const price = (10 + (trash.tier * 10) + (trash.rarity * 20)) * 2; // Double price
+                this.helix += price;
+                this.inventory.splice(idx, 1);
+                UI.log(`行商人に遭遇！ ${trash.name} を ${price}G で買い取ってもらった。`, "log-imp");
+            } else {
+                UI.log(`行商人が通り過ぎた。(売るものがなかった)`, "log-event");
+            }
+        } else if (roll < 0.9) {
+            // Relic Discovery (Rare)
+            // Low chance to find a Relic if we don't have it
+            if (Math.random() < 0.2) { // 20% of 20% (Event) of 10% (Treasure) ... Rare
+                const unowned = Object.values(MASTER_DATA.relics).filter(r => !this.relics.includes(r.id));
+                if (unowned.length > 0) {
+                    const relic = unowned[Math.floor(Math.random() * unowned.length)];
+                    this.relics.push(relic.id);
+                    UI.log(`★古代の遺物発見！ [${relic.name}] を入手した！`, "log-legend");
+                    UI.logDetail(`[RELIC] Found ${relic.name}`);
+                    this.save();
+                    return;
+                }
+            }
+            // Normal treasure
+            this.loot();
+        } else {
+            // Stone Tablet
+            const exp = this.floor * 100;
+            this.party.forEach(c => c.gainExp(exp));
+            UI.log(`謎の石碑を読んだ。知識が流れ込んでくる... (+${exp} EXP)`, "log-event");
+        }
     },
 
     encounter() {
@@ -226,9 +284,22 @@ const Game = {
 
         if (enemy.hp <= 0) {
             UI.log(`${enemy.name}を倒した！`, "log-victory");
-            UI.logDetail(`[WIN] ${enemy.name} defeated. +${enemy.gold}G`);
-            this.helix += enemy.gold;
-            const exp = enemy.exp || 10;
+            UI.log(`${enemy.name}を倒した！`, "log-victory");
+
+            // Relic Bonus: Gold
+            let goldMult = 1.0;
+            if (this.relics.includes('r2')) goldMult += 0.2; // 黄金の天秤
+
+            const gold = Math.floor(enemy.gold * goldMult);
+
+            UI.logDetail(`[WIN] ${enemy.name} defeated. +${gold}G`);
+            this.helix += gold;
+
+            // Relic Bonus: Exp
+            let expMult = 1.0;
+            if (this.relics.includes('r1')) expMult += 0.1; // 経験の書
+
+            const exp = Math.floor((enemy.exp || 10) * expMult);
             activeParty.forEach(c => {
                 c.gainExp(exp);
                 c.gainJobExp(Math.floor(exp * 0.5));
@@ -443,9 +514,18 @@ class Character {
             // Stat inheritance
             const p1s = parents[0].totalStats;
             const p2s = parents[1].totalStats;
-            for (let k in this.baseStats) {
-                const bonus = Math.floor((p1s[k] + p2s[k]) * 0.05);
-                this.baseStats[k] += bonus;
+
+            // Relic Bonus: Breed
+            if (Game.relics.includes('r4')) { // 遺伝子保管庫
+                for (let k in this.baseStats) {
+                    const bonus = Math.floor((p1s[k] + p2s[k]) * 0.05 * 1.5); // 1.5x bonus with relic
+                    this.baseStats[k] += bonus;
+                }
+            } else {
+                for (let k in this.baseStats) {
+                    const bonus = Math.floor((p1s[k] + p2s[k]) * 0.05);
+                    this.baseStats[k] += bonus;
+                }
             }
         } else {
             this.pedigree = { f: null, m: null };
@@ -480,6 +560,17 @@ class Character {
             if (it) { for (let st in it.stats) s[st] = (s[st] || 0) + it.stats[st]; }
         }
         for (let k in s) s[k] += Math.floor((s[k] * 0.1) * (this.level - 1));
+
+        // Relic Stat Bonuses (Global)
+        if (Game.relics) {
+            if (Game.relics.includes('r5')) s.str = Math.floor(s.str * 1.05);
+            if (Game.relics.includes('r6')) s.vit = Math.floor(s.vit * 1.05);
+            if (Game.relics.includes('r7')) { s.mag = Math.floor(s.mag * 1.05); s.int = Math.floor(s.int * 1.05); }
+            if (Game.relics.includes('r8')) s.agi = Math.floor(s.agi * 1.05);
+            if (Game.relics.includes('r9')) s.luc = Math.floor(s.luc * 1.10);
+            if (Game.relics.includes('r10')) for (let k in s) s[k] = Math.floor(s[k] * 1.02);
+        }
+
         return s;
     }
 

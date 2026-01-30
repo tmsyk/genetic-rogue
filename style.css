@@ -149,6 +149,9 @@ footer {
 .log-err { color: var(--danger-color); border-color: var(--danger-color); }
 .log-lvlup { color: #e67e22; border-color: #e67e22; font-weight: bold; }
 .log-sell { color: #f1c40f; border-color: #f1c40f; }
+.log-event { color: #2ecc71; border-color: #2ecc71; }
+.log-imp { color: #f39c12; border-color: #f39c12; }
+.log-legend { color: #e056fd; border-color: #e056fd; font-weight: bold; background: rgba(224, 86, 253, 0.1); }
 
 /* Char Cards */
 .char-card { background: #1a1a1a; border: 1px solid #333; padding: 8px; border-radius: 4px; font-size: 11px; cursor: pointer; }
