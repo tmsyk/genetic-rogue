@@ -171,6 +171,18 @@
     <div class="modal-box" style="max-width:500px;">
         <div class="modal-header"><h3>設定</h3> <button class="close-modal">閉じる</button></div>
         <div class="modal-body">
+            <div class="settings-group">
+                <h4>自動売却設定 (入手時に即売却)</h4>
+                <div class="toggle-row">
+                    <label for="as-common">コモン (Re:1) を売却</label>
+                    <input type="checkbox" id="as-common" onchange="Game.autoSell.common = this.checked; Game.save();">
+                </div>
+                <div class="toggle-row">
+                    <label for="as-uncommon">アンコモン (Re:2) を売却</label>
+                    <input type="checkbox" id="as-uncommon" onchange="Game.autoSell.uncommon = this.checked; Game.save();">
+                </div>
+            </div>
+
             <div class="settings-row"><span>手動セーブ</span><button onclick="Game.save(true)">実行</button></div>
             <div class="settings-row"><span>リロード</span><button onclick="location.reload()">再読込</button></div>
             <div class="settings-row" style="border-bottom:none; margin-top:20px;">

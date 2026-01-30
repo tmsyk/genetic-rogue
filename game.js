@@ -17,6 +17,7 @@ const UTILS = {
 const Game = {
     helix: 100, floor: 1, maxFloor: 1, floorProgress: 0,
     party: [], roster: [], inventory: [], relics: [],
+    autoSell: { common: false, uncommon: false, weapon: false, armor: false }, // Auto-Sell Config
     exploring: false, timer: null, currentEnemy: null,
     speed: 800,
     SAVE_KEY: 'genetic_rogue_v13_19', // Key update
@@ -62,6 +63,7 @@ const Game = {
         const data = {
             helix: this.helix, floor: this.floor, maxFloor: this.maxFloor,
             inventory: this.inventory, relics: this.relics,
+            autoSell: this.autoSell,
             roster: this.roster, partyIds: this.party.map(c => c.id)
         };
         localStorage.setItem(this.SAVE_KEY, JSON.stringify(data));
@@ -74,7 +76,8 @@ const Game = {
             this.helix = d.helix; this.maxFloor = d.maxFloor;
             this.helix = d.helix; this.maxFloor = d.maxFloor;
             this.inventory = d.inventory || [];
-            this.relics = d.relics || []; // Load relics
+            this.relics = d.relics || [];
+            this.autoSell = d.autoSell || { common: false, uncommon: false, weapon: false, armor: false };
             this.roster = (d.roster || []).map(x => {
                 const c = new Character(null, null, x);
                 c.validateHp();
@@ -356,19 +359,30 @@ const Game = {
 
     loot() {
         const item = DB.createRandomItem(this.floor);
-        UI.logItem(`[獲得] ${item.name} (Tier:${item.tier})`, item.rarity);
+        if (item) {
+            // Auto-Sell Check
+            let shouldSell = false;
+            if (this.autoSell.common && item.rarity === 1) shouldSell = true;
+            if (this.autoSell.uncommon && item.rarity === 2) shouldSell = true;
+            // Additional type filters if needed, currently implementing rarity first as per proposal
 
-        let isEquipped = false;
-        for (const char of this.party) {
-            if (char.autoEquip(item)) {
-                isEquipped = true;
-                break;
+            if (shouldSell) {
+                const price = (10 + (item.tier * 10) + (item.rarity * 20));
+                this.helix += price;
+                UI.log(`自動売却: ${item.name} (+${price}G)`, "log-sell");
+            } else {
+                let isEquipped = false;
+                for (const char of this.party) {
+                    if (char.autoEquip(item)) {
+                        isEquipped = true;
+                        break;
+                    }
+                }
+                if (!isEquipped) {
+                    this.inventory.push(item);
+                    UI.log(`アイテム獲得: ${item.name}`, "log-item");
+                }
             }
-        }
-
-        if (!isEquipped) {
-            this.inventory.push(item);
-            UI.log(`獲得: ${item.name}`, "log-item");
         }
     },
 
