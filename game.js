@@ -78,9 +78,23 @@ const Game = {
             this.inventory = d.inventory || [];
             this.relics = d.relics || [];
             this.autoSell = d.autoSell || { common: false, uncommon: false, weapon: false, armor: false };
+
+            // Migration: Fix missing 'type' property in old saves
+            const fixItem = (item) => {
+                if (item && !item.type && item.kind) {
+                    const proto = Object.values(MASTER_DATA.items.types).find(p => p.kind === item.kind);
+                    if (proto) item.type = proto.type;
+                }
+            };
+            this.inventory.forEach(fixItem);
+
             this.roster = (d.roster || []).map(x => {
                 const c = new Character(null, null, x);
                 c.validateHp();
+                // Fix equipment
+                ['main_hand', 'off_hand', 'head', 'body', 'accessory1', 'accessory2'].forEach(slot => {
+                    if (c.equipment[slot]) fixItem(c.equipment[slot]);
+                });
                 return c;
             });
             this.party = [];
@@ -320,8 +334,10 @@ const Game = {
                 if (enemy.elem) {
                     const defElems = target.defenseElements;
                     for (let de of defElems) {
-                        if (MASTER_DATA.element_chart[de].strong === enemy.elem) elemMod *= 0.7;
-                        if (MASTER_DATA.element_chart[de].weak === enemy.elem) elemMod *= 1.3;
+                        if (MASTER_DATA.element_chart[de]) {
+                            if (MASTER_DATA.element_chart[de].strong === enemy.elem) elemMod *= 0.7;
+                            if (MASTER_DATA.element_chart[de].weak === enemy.elem) elemMod *= 1.3;
+                        }
                     }
                 }
 
@@ -1338,7 +1354,7 @@ const UI = {
                     <span class="${rarClass}" style="font-weight:bold;">${item.name}</span>
                     <button style="font-size:9px;" onclick="event.stopPropagation(); UI.sellItem(${idx})">売却</button>
                 </div>
-                <div style="font-size:9px; color:#aaa;">${stats} ${item.elem ? `[${MASTER_DATA.elements.find(e => e.key === item.elem).name}]` : ''}</div>
+                <div style="font-size:9px; color:#aaa;">${stats} ${item.elem && MASTER_DATA.elements.find(e => e.key === item.elem) ? `[${MASTER_DATA.elements.find(e => e.key === item.elem).name}]` : ''}</div>
                 ${!check.ok ? `<div style="color:red; font-size:9px;">${check.reason}</div>` : ''}
             `;
             if (check.ok) {
