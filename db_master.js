@@ -840,7 +840,12 @@ const RAW_RACES = DataParser.parse(CSV_RACES);
 const parsedRaces = DataParser.convertRaces(RAW_RACES);
 const RAW_RELICS = DataParser.parse(CSV_RELICS);
 const parsedRelics = DataParser.convertRelics(RAW_RELICS);
-const RAW_NAMES = DataParser.parse(CSV_NAMES).flatMap(n => Object.values(n)).filter(n => n && n !== 'name');
+// Fix: Parse CSV_NAMES manually since DataParser truncates extra columns if header has only 1 column
+const RAW_NAMES = CSV_NAMES
+    .split(/\r?\n/)
+    .filter(line => line.trim() !== '' && !line.startsWith('name'))
+    .flatMap(line => line.split(',').map(s => s.trim()))
+    .filter(s => s && s !== 'name');
 
 const MASTER_DATA = {
     config: {

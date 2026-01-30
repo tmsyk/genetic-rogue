@@ -235,13 +235,17 @@ const Game = {
     encounter() {
         const isBoss = (this.floor % 10 === 0);
         this.currentEnemy = DB.createEnemy(this.floor, isBoss);
+        if (!this.currentEnemy) {
+            console.error("Failed to create enemy.");
+            return;
+        }
 
         if (isBoss) {
             this.currentEnemy.name = "★" + this.currentEnemy.name + "★";
             this.currentEnemy.hp = Math.floor(this.currentEnemy.hp * 2.0);
             this.currentEnemy.str = Math.floor(this.currentEnemy.str * 1.3);
-            this.currentEnemy.exp *= 5;
-            this.currentEnemy.gold *= 5;
+            this.currentEnemy.exp = (this.currentEnemy.exp || 10) * 5;
+            this.currentEnemy.gold = (this.currentEnemy.gold || 10) * 5;
             this.currentEnemy.isBoss = true;
             UI.log(`警告！フロアボス ${this.currentEnemy.name} が現れた！`, "log-elite");
         }
@@ -577,12 +581,18 @@ class Character {
 
         // Relic Stat Bonuses (Global)
         if (Game.relics) {
-            if (Game.relics.includes('r5')) s.str = Math.floor(s.str * 1.05);
-            if (Game.relics.includes('r6')) s.vit = Math.floor(s.vit * 1.05);
-            if (Game.relics.includes('r7')) { s.mag = Math.floor(s.mag * 1.05); s.int = Math.floor(s.int * 1.05); }
-            if (Game.relics.includes('r8')) s.agi = Math.floor(s.agi * 1.05);
-            if (Game.relics.includes('r9')) s.luc = Math.floor(s.luc * 1.10);
-            if (Game.relics.includes('r10')) for (let k in s) s[k] = Math.floor(s[k] * 1.02);
+            if (Game.relics.includes('r5')) s.str = Math.floor((s.str || 0) * 1.05);
+            if (Game.relics.includes('r6')) s.vit = Math.floor((s.vit || 0) * 1.05);
+            if (Game.relics.includes('r7')) { s.mag = Math.floor((s.mag || 0) * 1.05); s.int = Math.floor((s.int || 0) * 1.05); }
+            if (Game.relics.includes('r8')) s.agi = Math.floor((s.agi || 0) * 1.05);
+            if (Game.relics.includes('r9')) s.luc = Math.floor((s.luc || 0) * 1.10);
+            if (Game.relics.includes('r10')) for (let k in s) s[k] = Math.floor((s[k] || 0) * 1.02);
+        }
+
+        // Final NaN Safeguard
+        for (let k in s) {
+            if (isNaN(s[k])) s[k] = 1;
+            s[k] = Math.max(1, Math.floor(s[k]));
         }
 
         return s;
