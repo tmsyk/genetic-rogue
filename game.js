@@ -1250,8 +1250,28 @@ const UI = {
         const iList = document.getElementById('inv-list');
         iList.innerHTML = "";
 
-        if (!this.equipChar) { iList.innerHTML = "<div style='padding:10px; color:#666;'>キャラクターを選択してください</div>"; return; }
+        if (!this.equipChar) {
+            iList.innerHTML = `<p style="padding:10px; color:#888;">キャラクターを選択してください</p>`;
+            return;
+        }
 
+        // Optimize Button
+        const header = document.getElementById('inv-header');
+        // Clear old buttons except title/close if needed, but cleaner to append or check existence
+        // Let's rewrite header content
+        header.innerHTML = `
+            <div style="display:flex; align-items:center; gap:10px;">
+                <span>${this.equipChar.name} の装備</span>
+                <button onclick="UI.optimizeEquip('${this.equipChar.id}')" style="font-size:10px; padding:2px 5px; background:#444;">最強装備</button>
+            </div>
+            <button id="btn-sell-trash" style="padding:2px 8px; font-size:10px;" class="recycle">コモン一括売却</button>
+        `;
+        document.getElementById('btn-sell-trash').onclick = () => Game.sellTrash();
+
+        // Slots
+        const slots = {
+            main_hand: "武(Main)", off_hand: "武(Sub)", head: "頭", body: "胴", acc: "装"
+        };
         const filters = { all: 'すべて', weapon: '武器', armor: '防具', accessory: '装飾' };
         let fHtml = '<div style="display:flex; gap:5px; margin-bottom:5px;">';
         for (let k in filters) {
@@ -1412,7 +1432,25 @@ const UI = {
     },
     log(msg, type) {
         const p = document.getElementById('log-list');
-        p.innerHTML += `<div class="log-entry ${type}">${msg}</div>`;
+        // Limit log entries
+        if (p.children.length > 200) p.removeChild(p.firstChild);
+
+        const div = document.createElement('div');
+        div.className = `log-entry ${type}`;
+        div.innerHTML = msg;
+        p.appendChild(div);
+
+        document.getElementById('log-panel').scrollTop = 99999;
+    },
+
+    filterLog(type, btn) {
+        const list = document.getElementById('log-list');
+        list.className = "";
+        if (type !== 'all') list.classList.add(`filter-${type}`);
+
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        if (btn) btn.classList.add('active');
+
         document.getElementById('log-panel').scrollTop = 99999;
     },
 
@@ -1440,6 +1478,71 @@ const UI = {
 
         btnY.onclick = () => { m.style.display = 'none'; if (onYes) onYes(); };
         btnN.onclick = () => { m.style.display = 'none'; if (onNo) onNo(); };
+    },
+
+    optimizeEquip(charId) {
+        const c = Game.party.find(x => x.id === charId) || Game.roster.find(x => x.id === charId);
+        if (!c) return;
+
+        const slots = ['main_hand', 'off_hand', 'head', 'body', 'acc'];
+        let changed = false;
+
+        slots.forEach(slot => {
+            // Find best item for this slot in inventory
+            // Criteria: Simple sum of stats for now
+            const candidates = Game.inventory.filter(i => i.slot === slot);
+            // Also include currently equipped item? No, we swap.
+
+            if (candidates.length === 0) return;
+
+            let bestItem = null;
+            let bestScore = -1;
+
+            // Check current item score
+            if (c.equipment[slot]) {
+                bestScore = Object.values(c.equipment[slot].stats).reduce((a, b) => a + b, 0);
+            }
+
+            candidates.forEach(item => {
+                const score = Object.values(item.stats).reduce((a, b) => a + b, 0);
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestItem = item;
+                }
+            });
+
+            if (bestItem) {
+                // Swap
+                c.equip(bestItem); // equip handles the swap with inventory logic (pushes old to inv)
+
+                // Remove new item from inventory (equip method pushes OLD item, but doesn't remove NEW item from source array usually if passed directly?)
+                // Wait, c.equip implementation in game.js needs to be checked.
+                // Checking previous context... c.equip usually takes an item object.
+                // Standard logic: removing from inventory is caller's responsibility usually, or equip handles it?
+                // Refind: Game.js line 49 fix: `if (!c.autoEquip(starter)) this.inventory.push(starter)`
+                // autoEquip logic matches compatible slot using loops.
+                // Let's use Game.equip wrapper or manually handle.
+
+                // Simplified: Remove from inventory, then equip.
+                const idx = Game.inventory.indexOf(bestItem);
+                if (idx > -1) {
+                    Game.inventory.splice(idx, 1);
+                    const old = c.equipment[slot];
+                    c.equipment[slot] = bestItem;
+                    if (old) Game.inventory.push(old);
+                    changed = true;
+                }
+            }
+        });
+
+        if (changed) {
+            UI.alert(`${c.name} の装備を最強にしました`);
+            Game.save();
+            UI.updateAll();
+            UI.renderInv(); // Refresh inventory view
+        } else {
+            UI.alert("変更可能なより強い装備はありません");
+        }
     }
 };
 
